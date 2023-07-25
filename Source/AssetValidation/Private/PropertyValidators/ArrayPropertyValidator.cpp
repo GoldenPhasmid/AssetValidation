@@ -13,14 +13,14 @@ bool UArrayPropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty
 	return false;
 }
 
-void UArrayPropertyValidator::ValidateProperty(UObject* Object, FProperty* Property, FPropertyValidationResult& OutValidationResult) const
+void UArrayPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
 {
 	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	check(PropertyValidators);
 	
 	FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	FProperty* ValueProperty = ArrayProperty->Inner;
-	FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Object));
+	FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(BasePointer));
 
 	const uint32 Num = Array->Num();
 	const uint32 Stride = ArrayProperty->Inner->ElementSize;
@@ -31,7 +31,6 @@ void UArrayPropertyValidator::ValidateProperty(UObject* Object, FProperty* Prope
 		PropertyValidators->IsPropertyValueValid(Data, ArrayProperty, ValueProperty, OutValidationResult);
 		Data += Stride;
 	}
-	
 }
 
 void UArrayPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
