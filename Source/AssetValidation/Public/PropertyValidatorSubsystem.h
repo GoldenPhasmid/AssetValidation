@@ -37,12 +37,12 @@ public:
 
 	/**
 	 * @brief 
-	 * @param InObject 
+	 * @param Value 
 	 * @param ParentProperty 
 	 * @param ValueProperty 
 	 * @return 
 	 */
-	virtual FPropertyValidationResult IsPropertyValueValid(UObject* InObject, FProperty* ParentProperty, FProperty* ValueProperty);
+	virtual void IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& ValidationResult);
 
 protected:
 
