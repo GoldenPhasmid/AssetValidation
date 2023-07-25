@@ -31,6 +31,7 @@ public class AssetValidation : ModuleRules
 				"UnrealEd",
 				"ToolMenus",
 				"Engine",
+				"DeveloperToolSettings",
 			}
 		);
 	}

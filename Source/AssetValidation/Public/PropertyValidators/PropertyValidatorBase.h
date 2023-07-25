@@ -10,6 +10,21 @@ struct FPropertyValidationResult;
 
 struct FPropertyValidationResult
 {
+	void Append(const FPropertyValidationResult& Other)
+	{
+		ValidationErrors.Append(Other.ValidationErrors);
+		// either Other or this has validation errors, Validation Result becomes Invalid
+		if (ValidationErrors.Num() > 0)
+		{
+			ValidationResult = EDataValidationResult::Invalid;
+		}
+		// handle NotValidated;NotValidated - Valid;NotValidated - NotValidated;Valid - Valid;Valid cases
+		else if (ValidationResult != Other.ValidationResult)
+		{
+			ValidationResult = EDataValidationResult::Valid;
+		}
+	}
+	
 	void PropertyFails(FProperty* Property, const FText& ErrorText = FText::GetEmpty())
 	{
 		ValidationResult = EDataValidationResult::Invalid;
@@ -28,7 +43,6 @@ struct FPropertyValidationResult
 		}
 	}
 	
-
 	FString Parent;
 	TArray<FText> ValidationErrors;
 	EDataValidationResult ValidationResult = EDataValidationResult::NotValidated;
