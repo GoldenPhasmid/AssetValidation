@@ -46,7 +46,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* 
 	{
 		if (PropertyValidator->CanValidateProperty(Property))
 		{
-			PropertyValidator->ValidateProperty(InObject, Property, ValidationResult);
+			PropertyValidator->ValidateProperty(Property, static_cast<void*>(InObject), ValidationResult);
 			break;
 		}
 	}
