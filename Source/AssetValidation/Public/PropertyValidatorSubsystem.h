@@ -5,6 +5,7 @@
 
 #include "PropertyValidatorSubsystem.generated.h"
 
+class UPropertyValidatorBase;
 struct FPropertyValidationResult;
 
 UCLASS(Config = Editor)
@@ -16,5 +17,10 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	virtual FPropertyValidationResult ValidateProperty(FProperty* Property) const;
+	virtual FPropertyValidationResult IsPropertyValid(UObject* InObject, FProperty* Property) const;
+
+protected:
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UPropertyValidatorBase>> Validators;
 };
