@@ -22,7 +22,6 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 					Validators.Add(Validator);
 				}
 			}
-			
 		}
 	}
 }
@@ -36,5 +35,37 @@ void UPropertyValidatorSubsystem::Deinitialize()
 
 FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* InObject, FProperty* Property) const
 {
-	return {};
+	FPropertyValidationResult ValidationResult;
+	
+	if (!Property->HasMetaData(ValidationNames::Validate))
+	{
+		return ValidationResult;
+	}
+
+	for (const auto PropertyValidator: Validators)
+	{
+		if (PropertyValidator->CanValidateProperty(Property))
+		{
+			PropertyValidator->ValidateProperty(Property, static_cast<void*>(InObject), ValidationResult);
+			break;
+		}
+	}
+	
+	return ValidationResult;
+}
+
+FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValueValid(UObject* InObject, FProperty* ParentProperty, FProperty* ValueProperty)
+{
+	FPropertyValidationResult ValidationResult;
+	
+	for (const auto PropertyValidator: Validators)
+	{
+		if (PropertyValidator->CanValidatePropertyValue(ParentProperty, ValueProperty))
+		{
+			PropertyValidator->ValidatePropertyValue(static_cast<void*>(InObject), ParentProperty, ValueProperty, ValidationResult);
+			break;
+		}
+	}
+
+	return ValidationResult;
 }
