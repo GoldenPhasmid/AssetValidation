@@ -46,7 +46,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* 
 	{
 		if (PropertyValidator->CanValidateProperty(Property))
 		{
-			PropertyValidator->ValidateProperty(Property, static_cast<void*>(InObject), ValidationResult);
+			PropertyValidator->ValidateProperty(InObject, Property, ValidationResult);
 			break;
 		}
 	}
@@ -54,18 +54,14 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* 
 	return ValidationResult;
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValueValid(UObject* InObject, FProperty* ParentProperty, FProperty* ValueProperty)
+void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& ValidationResult)
 {
-	FPropertyValidationResult ValidationResult;
-	
 	for (const auto PropertyValidator: Validators)
 	{
 		if (PropertyValidator->CanValidatePropertyValue(ParentProperty, ValueProperty))
 		{
-			PropertyValidator->ValidatePropertyValue(static_cast<void*>(InObject), ParentProperty, ValueProperty, ValidationResult);
+			PropertyValidator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationResult);
 			break;
 		}
 	}
-
-	return ValidationResult;
 }
