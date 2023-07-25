@@ -2,6 +2,8 @@
 
 #include "AssetValidationStatics.h"
 
+#define LOCTEXT_NAMESPACE "AssetValidation"
+
 bool USoftObjectPropertyValidator::CanValidateProperty(FProperty* Property) const
 {
 	return AssetValidationStatics::CanValidateProperty(Property) && Property->IsA<FSoftObjectProperty>();
@@ -20,7 +22,7 @@ void USoftObjectPropertyValidator::ValidateProperty(FProperty* Property, void* B
 		
 	if (SoftObjectPtr->IsNull()) 
 	{
-		OutValidationResult.PropertyFails(Property);
+		OutValidationResult.PropertyFails(Property, LOCTEXT("AssetValidation_SoftObjectProperty", "Soft object property not set"));
 	}
 	else
 	{
@@ -37,10 +39,12 @@ void USoftObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty*
 
 	if (SoftObjectPtr->IsNull())
 	{
-		OutValidationResult.PropertyFails(ParentProperty);
+		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_SoftObjectProperty", "Soft object property not set"));
 	}
 	else
 	{
 		OutValidationResult.PropertyPasses(ParentProperty);
 	}
 }
+
+#undef LOCTEXT_NAMESPACE
