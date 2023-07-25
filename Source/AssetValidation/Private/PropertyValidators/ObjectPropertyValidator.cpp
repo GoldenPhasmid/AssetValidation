@@ -1,7 +1,8 @@
-
 #include "PropertyValidators/ObjectPropertyValidator.h"
 
 #include "AssetValidationStatics.h"
+
+#define LOCTEXT_NAMESPACE "AssetValidation"
 
 bool UObjectPropertyValidator::CanValidateProperty(FProperty* Property) const
 {
@@ -21,7 +22,7 @@ void UObjectPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
     
     if (*ObjectPtr == nullptr || !(*ObjectPtr)->IsValidLowLevel())
     {
-    	OutValidationResult.PropertyFails(Property);
+    	OutValidationResult.PropertyFails(Property, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"));
     }
     else
     {
@@ -36,10 +37,12 @@ void UObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* Par
 	
 	if (Object == nullptr || !Object->IsValidLowLevel())
 	{
-		OutValidationResult.PropertyFails(ParentProperty);
+		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"));
 	}
 	else
 	{
 		OutValidationResult.PropertyPasses(ParentProperty);
 	}
 }
+
+#undef LOCTEXT_NAMESPACE
