@@ -32,12 +32,11 @@ void UObjectPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
 
 void UObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
 {
-	FObjectProperty* ObjectProperty = CastFieldChecked<FObjectProperty>(ValueProperty);
 	UObject* Object = *static_cast<UObject**>(Value);
 	
 	if (Object == nullptr || !Object->IsValidLowLevel())
 	{
-		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"));
+		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_ObjectPropertyValue", "Object value not set"));
 	}
 	else
 	{

@@ -33,13 +33,12 @@ void USoftObjectPropertyValidator::ValidateProperty(FProperty* Property, void* B
 
 void USoftObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
 {
-	FSoftObjectProperty* SoftObjectProperty = CastFieldChecked<FSoftObjectProperty>(ValueProperty);
 	FSoftObjectPtr* SoftObjectPtr = static_cast<FSoftObjectPtr*>(Value);
 	check(SoftObjectPtr);
 
 	if (SoftObjectPtr->IsNull())
 	{
-		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_SoftObjectProperty", "Soft object property not set"));
+		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_SoftObjectPropertyValue", "Soft object value not set"));
 	}
 	else
 	{
