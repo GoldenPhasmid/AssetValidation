@@ -16,7 +16,7 @@ bool UNamePropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty,
 
 void UNamePropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
 {
-	FName* Name = Property->ContainerPtrToValuePtr<FName>(BasePointer);
+	const FName* Name = Property->ContainerPtrToValuePtr<FName>(BasePointer);
 	check(Name);
 
 	if (*Name == NAME_None)
@@ -27,7 +27,7 @@ void UNamePropertyValidator::ValidateProperty(FProperty* Property, void* BasePoi
 
 void UNamePropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
 {
-	FName* Name = static_cast<FName*>(Value);
+	const FName* Name = static_cast<FName*>(Value);
 	check(Name);
 
 	if (*Name == NAME_None)
