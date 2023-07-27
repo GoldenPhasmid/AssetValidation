@@ -24,9 +24,19 @@ class ASSETVALIDATION_API UPropertyValidatorSubsystem: public UEditorSubsystem
 	GENERATED_BODY()
 public:
 
+	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
+
+	/**
+	 * @brief 
+	 * @param Container 
+	 * @param Struct 
+	 * @param ValidationResult 
+	 */
+	virtual void IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationResult& ValidationResult) const;
+	
 	/**
 	 * @brief 
 	 * @param Container 
@@ -47,6 +57,16 @@ public:
 
 protected:
 
+	bool CanValidatePackage(UPackage* Package) const;
+
+	bool IsBlueprintGenerated(UPackage* Package) const;
+
+	UPROPERTY(Config)
+	TArray<FString> PackagesToValidate;
+
+	UPROPERTY(Config)
+	bool bSkipBlueprintGeneratedClasses = false;
+	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPropertyValidatorBase>> Validators;
 };

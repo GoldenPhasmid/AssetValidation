@@ -2,6 +2,15 @@
 
 #include "PropertyValidators/PropertyValidatorBase.h"
 
+bool UPropertyValidatorSubsystem::ShouldCreateSubsystem(UObject* Outer) const
+{
+	TArray<UClass*> ChildClasses;
+	GetDerivedClasses(GetClass(), ChildClasses, false);
+
+	// add chance to override this subsystem with derived class
+	return ChildClasses.Num() == 0;
+}
+
 void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -33,6 +42,35 @@ void UPropertyValidatorSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
+void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationResult& ValidationResult) const
+{
+	UPackage* Package = Struct->GetPackage();
+
+	while (Struct && CanValidatePackage(Package))
+	{
+		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Package))
+		{
+			Struct = Struct->GetSuperStruct();
+			continue;
+		}
+
+		for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::None); It; ++It)
+		{
+			FProperty* Property = *It;
+			// do not validate transient or deprecated properties
+			// only validate properties that we can actually edit in editor
+			if (!Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) && Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
+			{
+				FPropertyValidationResult Result;
+				IsPropertyValid(Container, Property, Result);
+				ValidationResult.Append(Result);
+			}
+		}
+		
+		Struct = Struct->GetSuperStruct();
+	}
+}
+
 void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationResult& ValidationResult) const
 {
 	if (!Property->HasMetaData(ValidationNames::Validate))
@@ -62,4 +100,32 @@ void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* P
 			break;
 		}
 	}
+}
+
+bool UPropertyValidatorSubsystem::CanValidatePackage(UPackage* Package) const
+{
+	if (IsBlueprintGenerated(Package))
+	{
+		return true;
+	}
+	
+	const FString PackageName = Package->GetName();
+
+#if WITH_EDITOR
+	if (PackageName.StartsWith("/Script/AssetValidation"))
+	{
+		return true;
+	}
+#endif
+	
+	return PackagesToValidate.ContainsByPredicate([PackageName](const FString& ModulePath)
+	{
+		return PackageName.StartsWith(ModulePath);
+	});
+}
+
+bool UPropertyValidatorSubsystem::IsBlueprintGenerated(UPackage* Package) const
+{
+	const FString PackageName = Package->GetName();
+	return PackageName.StartsWith(TEXT("/Game/"));
 }
