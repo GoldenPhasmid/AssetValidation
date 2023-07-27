@@ -29,11 +29,12 @@ public:
 
 	/**
 	 * @brief 
-	 * @param InObject 
-	 * @param Property 
+	 * @param Container 
+	 * @param Property
+	 * @param ValidationResult
 	 * @return 
 	 */
-	virtual FPropertyValidationResult IsPropertyValid(UObject* InObject, FProperty* Property) const;
+	virtual void IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationResult& ValidationResult) const;
 
 	/**
 	 * @brief 
