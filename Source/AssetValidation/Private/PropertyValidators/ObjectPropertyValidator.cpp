@@ -1,6 +1,7 @@
 #include "PropertyValidators/ObjectPropertyValidator.h"
 
 #include "AssetValidationStatics.h"
+#include "PropertyValidatorSubsystem.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -16,17 +17,26 @@ bool UObjectPropertyValidator::CanValidatePropertyValue(FProperty* ParentPropert
 
 void UObjectPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
 {
-	FObjectProperty* ObjectProperty = CastFieldChecked<FObjectProperty>(Property);
-	UObject** ObjectPtr = ObjectProperty->ContainerPtrToValuePtr<UObject*>(BasePointer);
+	UObject** ObjectPtr = Property->ContainerPtrToValuePtr<UObject*>(BasePointer);
     check(ObjectPtr);
-    
-    if (*ObjectPtr == nullptr || !(*ObjectPtr)->IsValidLowLevel())
+
+	UObject* Object = *ObjectPtr;
+    if (Object == nullptr || !Object->IsValidLowLevel())
     {
     	OutValidationResult.PropertyFails(Property, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"));
     }
     else
     {
     	OutValidationResult.PropertyPasses(Property);
+
+    	// validate underlying object recursively
+    	if (Property->HasMetaData(ValidationNames::ValidateRecursive))
+    	{
+    		UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+    		check(PropertyValidators);
+
+    		PropertyValidators->IsPropertyContainerValid(Object, Object->GetClass(), OutValidationResult);
+    	}
     }
 }
 
@@ -41,6 +51,15 @@ void UObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* Par
 	else
 	{
 		OutValidationResult.PropertyPasses(ParentProperty);
+
+		// ValueProperty is not a uproperty but an underlying property of a ParentProperty
+		if (ParentProperty->HasMetaData(ValidationNames::ValidateRecursive))
+		{
+			UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+			check(PropertyValidators);
+
+			PropertyValidators->IsPropertyContainerValid(Object, Object->GetClass(), OutValidationResult);
+		}
 	}
 }
 

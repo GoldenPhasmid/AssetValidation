@@ -21,12 +21,7 @@ void UStructPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 
 	void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(BasePointer);
-	for (TFieldIterator<FProperty> It(StructProperty->Struct, EFieldIterationFlags::IncludeSuper); It; ++It)
-	{
-		FProperty* ChildProperty = *It;
-
-		PropertyValidators->IsPropertyValid(ContainerPtr, ChildProperty, OutValidationResult);
-	}
+	PropertyValidators->IsPropertyContainerValid(ContainerPtr, StructProperty->Struct, OutValidationResult);
 }
 
 void UStructPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
