@@ -33,25 +33,23 @@ void UPropertyValidatorSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* InObject, FProperty* Property) const
+void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationResult& ValidationResult) const
 {
-	FPropertyValidationResult ValidationResult;
-	
 	if (!Property->HasMetaData(ValidationNames::Validate))
 	{
-		return ValidationResult;
+		return;
 	}
 
 	for (const auto PropertyValidator: Validators)
 	{
 		if (PropertyValidator->CanValidateProperty(Property))
 		{
-			PropertyValidator->ValidateProperty(Property, static_cast<void*>(InObject), ValidationResult);
+			PropertyValidator->ValidateProperty(Property, Container, ValidationResult);
 			break;
 		}
 	}
 	
-	return ValidationResult;
+	return;
 }
 
 void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& ValidationResult)
