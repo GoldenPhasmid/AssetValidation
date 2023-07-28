@@ -85,6 +85,4 @@ protected:
 	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPropertyValidatorBase>> Validators;
-	
-	TMap<FFieldClass*, UPropertyValidatorBase*> GroupedValidators;
 };

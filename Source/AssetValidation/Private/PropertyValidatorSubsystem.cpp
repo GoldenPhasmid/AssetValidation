@@ -30,7 +30,6 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 				{
 					UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
 					Validators.Add(Validator);
-					GroupedValidators.Add(Validator->GetPropertyClass(), Validator);
 				}
 			}
 		}
@@ -40,7 +39,6 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 void UPropertyValidatorSubsystem::Deinitialize()
 {
 	Validators.Empty();
-	GroupedValidators.Empty();
 	
 	Super::Deinitialize();
 }
@@ -98,40 +96,23 @@ void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStr
 
 void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	const FFieldClass* PropertyClass = Property->GetClass();
-
-	UPropertyValidatorBase* const* PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
-	while (PropertyValidatorPtr == nullptr)
+	for (UPropertyValidatorBase* Validator: Validators)
 	{
-		PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
-		PropertyClass = PropertyClass->GetSuperClass();
-	}
-
-	if (PropertyValidatorPtr)
-	{
-		const UPropertyValidatorBase* PropertyValidator = *PropertyValidatorPtr;
-		if (PropertyValidator->CanValidateProperty(Property))
+		if (Property->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(Property))
 		{
-			PropertyValidator->ValidateProperty(Container, Property, ValidationContext);
+			Validator->ValidateProperty(Container, Property, ValidationContext);
 		}
 	}
 }
 
 void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	const FFieldClass* PropertyClass = ValueProperty->GetClass();
-
-	UPropertyValidatorBase* const* PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
-	while (PropertyValidatorPtr == nullptr)
+	for (UPropertyValidatorBase* Validator: Validators)
 	{
-		PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
-		PropertyClass = PropertyClass->GetSuperClass();
-	}
-
-	const UPropertyValidatorBase* PropertyValidator = *PropertyValidatorPtr;
-	if (PropertyValidator && PropertyValidator->CanValidateProperty(ParentProperty))
-	{
-		PropertyValidator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
+		if (ValueProperty->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(ValueProperty))
+		{
+			Validator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
+		}
 	}
 }
 
