@@ -1,11 +1,15 @@
 #include "PropertyValidators/MapPropertyValidator.h"
 
-#include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UMapPropertyValidator::UMapPropertyValidator()
 {
 	PropertyClass = FMapProperty::StaticClass();
+}
+
+bool UMapPropertyValidator::CanValidateProperty(FProperty* Property) const
+{
+	return Super::CanValidateProperty(Property) || Property->HasMetaData(ValidationNames::ValidateKey) || Property->HasMetaData(ValidationNames::ValidateValue);
 }
 
 void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
@@ -20,23 +24,30 @@ void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoin
 		KeyProperty->GetSize(), KeyProperty->GetMinAlignment(),
 		ValueProperty->GetSize(), ValueProperty->GetMinAlignment()
 	);
+	const bool bCanValidate = Property->HasMetaData(ValidationNames::Validate);
+	
 	const uint32 Num = Map->GetMaxIndex();
-
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
 		uint8* Data = static_cast<uint8*>(Map->GetData(Index, MapLayout));
 
 		// add map property prefix
 		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
-		
-		// validate key property value
-		ValidationContext.IsPropertyValueValid(Data, MapProperty, KeyProperty);
+
+		if (bCanValidate || Property->HasMetaData(ValidationNames::ValidateKey))
+		{
+			// validate key property value
+			ValidationContext.IsPropertyValueValid(Data, MapProperty, KeyProperty);
+		}
 
 		// offset to value property
 		Data += MapLayout.ValueOffset;
 
-		// validate value property value
-		ValidationContext.IsPropertyValueValid(Data, MapProperty, ValueProperty);
+		if (bCanValidate || Property->HasMetaData(ValidationNames::ValidateValue))
+		{
+			// validate value property value
+			ValidationContext.IsPropertyValueValid(Data, MapProperty, ValueProperty);
+		}
 
 		// pop map property prefix
 		ValidationContext.PopPrefix();
