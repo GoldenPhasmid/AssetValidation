@@ -129,7 +129,7 @@ void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* P
 	}
 
 	const UPropertyValidatorBase* PropertyValidator = *PropertyValidatorPtr;
-	if (PropertyValidator && PropertyValidator->CanValidateProperty(ValueProperty))
+	if (PropertyValidator && PropertyValidator->CanValidateProperty(ParentProperty))
 	{
 		PropertyValidator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
 	}

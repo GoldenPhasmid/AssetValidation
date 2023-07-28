@@ -21,8 +21,10 @@ void USetPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoin
 	{
 		void* Data = Set->GetData(Index, Layout);
 
+		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
 		// validate property value
 		ValidationContext.IsPropertyValueValid(Data, SetProperty, ValueProperty);
+		ValidationContext.PopPrefix();
 	}
 }
 

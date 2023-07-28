@@ -17,7 +17,7 @@ void USoftObjectPropertyValidator::ValidateProperty(FProperty* Property, void* B
 		
 	if (SoftObjectPtr->IsNull()) 
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_SoftObjectProperty", "Soft object property not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_SoftObjectProperty", "Soft object property not set"), Property->GetDisplayNameText());
 	}
 	//@todo: load soft object to verify it?
 }

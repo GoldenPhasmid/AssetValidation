@@ -1,4 +1,4 @@
-#include "PropertyValidation.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -25,18 +25,18 @@ FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() con
 	return Result;
 }
 
-void FPropertyValidationContext::PropertyFails(FProperty* Property, const FText& DefaultFailureMessage)
+void FPropertyValidationContext::PropertyFails(FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix)
 {
 	FIssue Issue;
 	Issue.IssueProperty = Property;
 	
 	if (const FString* CustomMsg = Property->FindMetaData(ValidationNames::ValidationFailureMessage))
 	{
-		Issue.Message = MakeFullMessage(FText::FromString(*CustomMsg));
+		Issue.Message = MakeFullMessage(FText::FromString(*CustomMsg), PropertyPrefix);
 	}
 	else
 	{
-		Issue.Message = MakeFullMessage(DefaultFailureMessage);
+		Issue.Message = MakeFullMessage(DefaultFailureMessage, PropertyPrefix);
 	}
 
 	if (Property->HasMetaData(ValidationNames::Validate))
@@ -55,10 +55,19 @@ void FPropertyValidationContext::PropertyFails(FProperty* Property, const FText&
 	Issues.Add(Issue);
 }
 
-FText FPropertyValidationContext::MakeFullMessage(const FText& FailureMessage) const
+FText FPropertyValidationContext::MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const
 {
-	// remove last dot
-	const FString CorrectContext = Context.RightChop(1);
+	FString CorrectContext = Context;
+	if (PropertyPrefix.IsEmpty())
+	{
+		// remove last dot
+		CorrectContext = CorrectContext.LeftChop(1);
+	}
+	else
+	{
+		// append property prefix
+		CorrectContext += PropertyPrefix.ToString();
+	}
 	
 	FFormatNamedArguments NamedArguments;
 	NamedArguments.Add(TEXT("Context"), FText::FromString(CorrectContext));

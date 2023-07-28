@@ -18,7 +18,7 @@ public:
 	
 	FPropertyValidationResult MakeValidationResult() const;
 	
-	void PropertyFails(FProperty* Property, const FText& DefaultFailureMessage);
+	void PropertyFails(FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty());
 
 	FORCEINLINE void PushPrefix(const FString& Prefix)
 	{
@@ -29,7 +29,7 @@ public:
 	FORCEINLINE void PopPrefix()
 	{
 		const FString Prefix = Prefixes.Pop();
-		Context = Context.RightChop(Prefix.Len() + 1);
+		Context = Context.LeftChop(Prefix.Len() + 1);
 	}
 
 	FORCEINLINE void IsPropertyContainerValid(void* Container, UStruct* Struct)
@@ -49,7 +49,7 @@ public:
 
 private:
 
-	FText MakeFullMessage(const FText& FailureMessage) const;
+	FText MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const;
 
 	struct FIssue
 	{

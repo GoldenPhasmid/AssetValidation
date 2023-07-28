@@ -16,7 +16,7 @@ void UEnumPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoi
 
 	if (*ValuePtr == 0)
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_EnumProperty", "Enum property not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_EnumProperty", "Enum property not set"), Property->GetDisplayNameText());
 	}
 }
 

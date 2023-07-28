@@ -16,7 +16,7 @@ void UTextPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoi
 
 	if (TextPtr->IsEmpty())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_TextProperty", "Text property is not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_TextProperty", "Text property is not set"), Property->GetDisplayNameText());
 	}
 }
 

@@ -16,7 +16,7 @@ void UNamePropertyValidator::ValidateProperty(FProperty* Property, void* BasePoi
 
 	if (*Name == NAME_None)
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_NameProperty", "Name property not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_NameProperty", "Name property not set"), Property->GetDisplayNameText());
 	}
 }
 
