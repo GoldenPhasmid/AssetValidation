@@ -1,23 +1,15 @@
 #include "PropertyValidators/ArrayPropertyValidator.h"
 
-#include "AssetValidationStatics.h"
 #include "PropertyValidatorSubsystem.h"
+#include "PropertyValidators/PropertyValidation.h"
 
-bool UArrayPropertyValidator::CanValidateProperty(FProperty* Property) const
+UArrayPropertyValidator::UArrayPropertyValidator()
 {
-	return AssetValidationStatics::CanValidateProperty(Property) && Property->IsA<FArrayProperty>();
+	PropertyClass = FArrayProperty::StaticClass();
 }
 
-bool UArrayPropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const
+void UArrayPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
 {
-	return false;
-}
-
-void UArrayPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
-{
-	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-	check(PropertyValidators);
-	
 	FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	FProperty* ValueProperty = ArrayProperty->Inner;
 	FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(BasePointer));
@@ -28,12 +20,12 @@ void UArrayPropertyValidator::ValidateProperty(FProperty* Property, void* BasePo
 	uint8* Data = static_cast<uint8*>(Array->GetData());
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
-		PropertyValidators->IsPropertyValueValid(Data, ArrayProperty, ValueProperty, OutValidationResult);
+		ValidationContext.IsPropertyValueValid(Data, ArrayProperty, ValueProperty);
 		Data += Stride;
 	}
 }
 
-void UArrayPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
+void UArrayPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
 	// array property value is always valid
 }

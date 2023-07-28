@@ -1,23 +1,15 @@
 #include "PropertyValidators/MapPropertyValidator.h"
 
-#include "AssetValidationStatics.h"
 #include "PropertyValidatorSubsystem.h"
+#include "PropertyValidators/PropertyValidation.h"
 
-bool UMapPropertyValidator::CanValidateProperty(FProperty* Property) const
+UMapPropertyValidator::UMapPropertyValidator()
 {
-	return AssetValidationStatics::CanValidateProperty(Property) && Property->IsA<FMapProperty>();
+	PropertyClass = FMapProperty::StaticClass();
 }
 
-bool UMapPropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const
+void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
 {
-	return false;
-}
-
-void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
-{
-	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-	check(PropertyValidators);
-	
 	FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
 	FScriptMap* Map = MapProperty->GetPropertyValuePtr(MapProperty->ContainerPtrToValuePtr<void>(BasePointer));
 
@@ -35,18 +27,18 @@ void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoin
 		uint8* Data = static_cast<uint8*>(Map->GetData(Index, MapLayout));
 
 		// validate key property value
-		PropertyValidators->IsPropertyValueValid(Data, MapProperty, KeyProperty, OutValidationResult);
+		ValidationContext.IsPropertyValueValid(Data, MapProperty, KeyProperty);
 
 		// offset to value property
 		Data += MapLayout.ValueOffset;
 
 		// validate value property value
-		PropertyValidators->IsPropertyValueValid(Data, MapProperty, ValueProperty, OutValidationResult);
+		ValidationContext.IsPropertyValueValid(Data, MapProperty, ValueProperty);
 	}
 
 }
 
-void UMapPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
+void UMapPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
 	// map property value always valid
 }

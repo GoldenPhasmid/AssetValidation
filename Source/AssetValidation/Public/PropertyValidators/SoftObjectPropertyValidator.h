@@ -10,11 +10,11 @@ class USoftObjectPropertyValidator: public UPropertyValidatorBase
 	GENERATED_BODY()
 public:
 
+	USoftObjectPropertyValidator();
+
 	//~Begin PropertyValidatorBase
-	virtual bool CanValidateProperty(FProperty* Property) const override;
-	virtual bool CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const override;
-	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const override;
-	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const override;
+	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 	
 };
