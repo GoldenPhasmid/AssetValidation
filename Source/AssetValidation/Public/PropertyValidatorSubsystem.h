@@ -37,20 +37,44 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	//~End USubsystem interface
-	
 
+	/** @return property validation result for given @Object */
 	FPropertyValidationResult IsPropertyContainerValid(UObject* Object) const;
-	
+
+	/** @return property validation result for given @Property for @Object */
 	FPropertyValidationResult IsPropertyValid(UObject* Object, FProperty* Property) const;
 
 protected:
 	
+	/**
+	 * @brief validate all properties in @Container
+	 * @param Container container to get data from
+	 * @param Struct struct to retrieve
+	 * @param ValidationContext provided validation context
+	 */
 	virtual void IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
-	virtual void IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const;
-	virtual void IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
-	
-	bool CanValidatePackage(UPackage* Package) const;
 
+	/**
+	 * @brief validate @Property in @Container
+	 * @param Container container to get data from
+	 * @param Property property to validate
+	 * @param ValidationContext provided validation context
+	 */
+	virtual void IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const;
+
+	/**
+	 * @brief validate given property value
+	 * @param Value property value
+	 * @param ParentProperty parent property, typically a container property where property value is stored
+	 * @param ValueProperty value property 
+	 * @param ValidationContext provided validation context
+	 */
+	virtual void IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
+
+	/** @return whether package should be validated */
+	bool ShouldValidatePackage(UPackage* Package) const;
+
+	/** @return whether package is a blueprint generated class */
 	bool IsBlueprintGenerated(UPackage* Package) const;
 
 	UPROPERTY(Config)
