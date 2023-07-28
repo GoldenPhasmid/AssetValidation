@@ -13,6 +13,7 @@ public:
 	UMapPropertyValidator();
 	
 	//~Begin PropertyValidatorBase
+	virtual bool CanValidateProperty(FProperty* Property) const override;
 	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const override;
 	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase

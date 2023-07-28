@@ -13,6 +13,8 @@ struct FPropertyValidationResult;
 namespace ValidationNames
 {
 	static const FName Validate("Validate");
+	static const FName ValidateKey("ValidateKey");
+	static const FName ValidateValue("ValidateValue");
 	static const FName ValidateWarning("ValidateWarning");
 	static const FName ValidateRecursive("ValidateRecursive");
 	static const FName ValidationFailureMessage("FailureMessage");
