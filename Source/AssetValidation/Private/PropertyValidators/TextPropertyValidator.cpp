@@ -9,9 +9,9 @@ UTextPropertyValidator::UTextPropertyValidator()
 	PropertyClass = FTextProperty::StaticClass();
 }
 
-void UTextPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UTextPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	const FText* TextPtr = Property->ContainerPtrToValuePtr<FText>(BasePointer);
+	const FText* TextPtr = Property->ContainerPtrToValuePtr<FText>(Container);
 	check(TextPtr);
 
 	if (TextPtr->IsEmpty())

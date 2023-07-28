@@ -1,6 +1,5 @@
 #include "PropertyValidators/ArrayPropertyValidator.h"
 
-#include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UArrayPropertyValidator::UArrayPropertyValidator()
@@ -8,11 +7,11 @@ UArrayPropertyValidator::UArrayPropertyValidator()
 	PropertyClass = FArrayProperty::StaticClass();
 }
 
-void UArrayPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UArrayPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	FProperty* ValueProperty = ArrayProperty->Inner;
-	FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(BasePointer));
+	FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Container));
 
 	const uint32 Num = Array->Num();
 	const uint32 Stride = ArrayProperty->Inner->ElementSize;

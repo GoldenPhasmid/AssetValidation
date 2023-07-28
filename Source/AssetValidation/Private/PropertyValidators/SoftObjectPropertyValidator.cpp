@@ -9,10 +9,10 @@ USoftObjectPropertyValidator::USoftObjectPropertyValidator()
 	PropertyClass = FSoftObjectProperty::StaticClass();
 }
 
-void USoftObjectPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void USoftObjectPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	FSoftObjectProperty* SoftObjectProperty = CastFieldChecked<FSoftObjectProperty>(Property);
-	FSoftObjectPtr* SoftObjectPtr = SoftObjectProperty->ContainerPtrToValuePtr<FSoftObjectPtr>(BasePointer);
+	FSoftObjectPtr* SoftObjectPtr = SoftObjectProperty->ContainerPtrToValuePtr<FSoftObjectPtr>(Container);
 	check(SoftObjectPtr);
 		
 	if (SoftObjectPtr->IsNull()) 

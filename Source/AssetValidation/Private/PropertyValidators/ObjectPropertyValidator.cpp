@@ -15,9 +15,9 @@ bool UObjectPropertyValidator::CanValidateProperty(FProperty* Property) const
 	return Super::CanValidateProperty(Property) || Property->HasMetaData(ValidationNames::ValidateRecursive);
 }
 
-void UObjectPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UObjectPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	UObject** ObjectPtr = Property->ContainerPtrToValuePtr<UObject*>(BasePointer);
+	UObject** ObjectPtr = Property->ContainerPtrToValuePtr<UObject*>(Container);
     check(ObjectPtr);
 
 	UObject* Object = *ObjectPtr;

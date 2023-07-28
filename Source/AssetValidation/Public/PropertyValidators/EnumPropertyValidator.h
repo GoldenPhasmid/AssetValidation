@@ -9,9 +9,11 @@ class UEnumPropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()
 public:
+
+	UEnumPropertyValidator();
+	
 	//~Begin PropertyValidatorBase
-	virtual FFieldClass* GetPropertyClass() const override;
-	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };

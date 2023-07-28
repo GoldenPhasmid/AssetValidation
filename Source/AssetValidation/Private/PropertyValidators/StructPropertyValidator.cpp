@@ -7,11 +7,11 @@ UStructPropertyValidator::UStructPropertyValidator()
 	PropertyClass = FStructProperty::StaticClass();
 }
 
-void UStructPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UStructPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 
-	void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(BasePointer);
+	void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(Container);
 	//@todo: validate struct value?
 
 	ValidationContext.PushPrefix(Property->GetName());
@@ -22,5 +22,5 @@ void UStructPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
 
 void UStructPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	ValidationContext.IsPropertyValueValid(Value, ParentProperty, ValueProperty);
+	// @todo: validate struct value
 }

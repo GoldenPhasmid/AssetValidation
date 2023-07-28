@@ -9,9 +9,9 @@ UNamePropertyValidator::UNamePropertyValidator()
 	PropertyClass = FNameProperty::StaticClass();
 }
 
-void UNamePropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UNamePropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	const FName* Name = Property->ContainerPtrToValuePtr<FName>(BasePointer);
+	const FName* Name = Property->ContainerPtrToValuePtr<FName>(Container);
 	check(Name);
 
 	if (*Name == NAME_None)
