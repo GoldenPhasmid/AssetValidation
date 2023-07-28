@@ -21,7 +21,7 @@ class ASSETVALIDATION_API UPropertyValidatorBase: public UObject
 public:
 
 	/** @return property class that this validator operates on */
-	virtual FFieldClass* GetPropertyClass() const;
+	FFieldClass* GetPropertyClass() const;
 	
 	/**
 	 * @brief Determines whether given property can be validated by this validator
@@ -32,10 +32,11 @@ public:
 	
 	/**
 	 * @brief 
+	 * @param Container 
 	 * @param Property 
-	 * @param BasePointer
+	 * @param ValidationContext 
 	 */
-	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const PURE_VIRTUAL(ValidateProperty)
+	virtual void ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const PURE_VIRTUAL(ValidateProperty)
 
 	/**
 	 * @brief validates value property nested in parent property, either struct or container

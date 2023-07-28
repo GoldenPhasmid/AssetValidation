@@ -12,10 +12,10 @@ bool UMapPropertyValidator::CanValidateProperty(FProperty* Property) const
 	return Super::CanValidateProperty(Property) || Property->HasMetaData(ValidationNames::ValidateKey) || Property->HasMetaData(ValidationNames::ValidateValue);
 }
 
-void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UMapPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
-	FScriptMap* Map = MapProperty->GetPropertyValuePtr(MapProperty->ContainerPtrToValuePtr<void>(BasePointer));
+	FScriptMap* Map = MapProperty->GetPropertyValuePtr(MapProperty->ContainerPtrToValuePtr<void>(Container));
 
 	FProperty* KeyProperty = MapProperty->KeyProp;
 	FProperty* ValueProperty = MapProperty->ValueProp;

@@ -1,6 +1,5 @@
 #include "PropertyValidators/SetPropertyValidator.h"
 
-#include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 USetPropertyValidator::USetPropertyValidator()
@@ -8,11 +7,11 @@ USetPropertyValidator::USetPropertyValidator()
 	PropertyClass = FSetProperty::StaticClass();
 }
 
-void USetPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void USetPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	FProperty* ValueProperty = SetProperty->ElementProp;
-	FScriptSet* Set = SetProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(BasePointer));
+	FScriptSet* Set = SetProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Container));
 
 	const FScriptSetLayout Layout = Set->GetScriptLayout(ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
 	

@@ -4,14 +4,14 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-FFieldClass* UEnumPropertyValidator::GetPropertyClass() const
+UEnumPropertyValidator::UEnumPropertyValidator()
 {
-	return FEnumProperty::StaticClass();
+	PropertyClass = FEnumProperty::StaticClass();
 }
 
-void UEnumPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UEnumPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	const uint8* ValuePtr = Property->ContainerPtrToValuePtr<uint8>(BasePointer);
+	const uint8* ValuePtr = Property->ContainerPtrToValuePtr<uint8>(Container);
 	check(ValuePtr);
 
 	if (*ValuePtr == 0)

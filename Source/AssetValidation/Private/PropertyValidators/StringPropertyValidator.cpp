@@ -10,9 +10,9 @@ UStringPropertyValidator::UStringPropertyValidator()
 	PropertyClass = FStrProperty::StaticClass();
 }
 
-void UStringPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
+void UStringPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	const FString* Str = Property->ContainerPtrToValuePtr<FString>(BasePointer);
+	const FString* Str = Property->ContainerPtrToValuePtr<FString>(Container);
 	check(Str);
 
 	if (Str->IsEmpty())
