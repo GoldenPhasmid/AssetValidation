@@ -1,38 +1,33 @@
 #include "PropertyValidators/TextPropertyValidator.h"
 
-#include "AssetValidationStatics.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool UTextPropertyValidator::CanValidateProperty(FProperty* Property) const
+UTextPropertyValidator::UTextPropertyValidator()
 {
-	return AssetValidationStatics::CanValidateProperty(Property) && Property->IsA<FTextProperty>();
+	PropertyClass = FTextProperty::StaticClass();
 }
 
-bool UTextPropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const
+void UTextPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
 {
-	return AssetValidationStatics::CanValidateProperty(ParentProperty) && ValueProperty->IsA<FTextProperty>();
-}
-
-void UTextPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
-{
-	FText* TextPtr = Property->ContainerPtrToValuePtr<FText>(BasePointer);
+	const FText* TextPtr = Property->ContainerPtrToValuePtr<FText>(BasePointer);
 	check(TextPtr);
 
 	if (TextPtr->IsEmpty())
 	{
-		OutValidationResult.PropertyFails(Property, LOCTEXT("AssetValidation_TextProperty", "Text property is not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_TextProperty", "Text property is not set"));
 	}
 }
 
-void UTextPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
+void UTextPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FText* TextPtr = static_cast<FText*>(Value);
+	const FText* TextPtr = static_cast<FText*>(Value);
 	check(TextPtr);
 
 	if (TextPtr->IsEmpty())
 	{
-		OutValidationResult.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_TextPropertyValue", "Text value is not set"));
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_TextPropertyValue", "Text value is not set"));
 	}
 }
 

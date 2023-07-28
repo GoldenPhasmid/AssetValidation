@@ -1,7 +1,7 @@
 #include "AssetValidators/AssetValidator_Properties.h"
 
 #include "PropertyValidatorSubsystem.h"
-#include "PropertyValidators/PropertyValidatorBase.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 UAssetValidator_Properties::UAssetValidator_Properties()
 {
@@ -22,40 +22,22 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 {
 	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	check(PropertyValidators);
-
-	FPropertyValidationResult PropertyValidation;
 	
 	UClass* Class = CastChecked<UBlueprint>(InAsset)->GeneratedClass;
 	UObject* Object = Class->GetDefaultObject();
 	check(Class && Object);
 	
-	while (Class && CanValidateClass(Class))
-	{
-		if (bSkipBlueprintGeneratedClasses && IsBlueprintGeneratedClass(Class))
-		{
-			Class = Class->GetSuperClass();
-			continue;
-		}
-		
-		for (TFieldIterator<FProperty> It(Class, EFieldIterationFlags::None); It; ++It)
-		{
-			FProperty* Property = *It;
-			// do not validate transient or deprecated properties
-			// only validate properties that we can actually edit in editor
-			if (!Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) && Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
-			{
-				PropertyValidation.Append(PropertyValidators->IsPropertyValid(Object, Property));
-			}
-		}
-		
-		Class = Class->GetSuperClass();
-	}
+	FPropertyValidationResult Result = PropertyValidators->IsPropertyContainerValid(Object);
 	
-	if (PropertyValidation.ValidationResult == EDataValidationResult::Invalid)
+	if (Result.ValidationResult == EDataValidationResult::Invalid)
 	{
-		for (const FText& Text: PropertyValidation.ValidationErrors)
+		for (const FText& Text: Result.Errors)
 		{
 			AssetFails(Object, Text, ValidationErrors);
+		}
+		for (const FText& Text: Result.Warnings)
+		{
+			AssetWarning(Object, Text);
 		}
 	}
 	else
@@ -63,7 +45,7 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 		AssetPasses(Object);
 	}
 	
-	return PropertyValidation.ValidationResult;
+	return Result.ValidationResult;
 }
 
 bool UAssetValidator_Properties::CanValidateClass(UClass* Class) const

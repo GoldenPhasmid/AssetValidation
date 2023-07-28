@@ -1,39 +1,32 @@
 #include "PropertyValidators/SetPropertyValidator.h"
 
-#include "AssetValidationStatics.h"
 #include "PropertyValidatorSubsystem.h"
+#include "PropertyValidators/PropertyValidation.h"
 
-bool USetPropertyValidator::CanValidateProperty(FProperty* Property) const
+USetPropertyValidator::USetPropertyValidator()
 {
-	return AssetValidationStatics::CanValidateProperty(Property) && Property->IsA<FSetProperty>();
+	PropertyClass = FSetProperty::StaticClass();
 }
 
-bool USetPropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const
+void USetPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationContext& ValidationContext) const
 {
-	return false;
-}
-
-void USetPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
-{
-	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-	check(PropertyValidators);
-	
 	FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	FProperty* ValueProperty = SetProperty->ElementProp;
 	FScriptSet* Set = SetProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(BasePointer));
 
-	FScriptSetLayout Layout = Set->GetScriptLayout(ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
+	const FScriptSetLayout Layout = Set->GetScriptLayout(ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
 	
 	const uint32 Num = Set->Num();
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
 		void* Data = Set->GetData(Index, Layout);
 
-		PropertyValidators->IsPropertyValueValid(Data, SetProperty, ValueProperty, OutValidationResult);
+		// validate property value
+		ValidationContext.IsPropertyValueValid(Data, SetProperty, ValueProperty);
 	}
 }
 
-void USetPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
+void USetPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
 	// set property value is always valid
 }

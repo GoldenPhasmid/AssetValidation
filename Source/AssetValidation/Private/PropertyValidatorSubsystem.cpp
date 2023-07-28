@@ -1,6 +1,7 @@
 #include "PropertyValidatorSubsystem.h"
 
 #include "PropertyValidators/PropertyValidatorBase.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 bool UPropertyValidatorSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
@@ -29,6 +30,7 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 				{
 					UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
 					Validators.Add(Validator);
+					GroupedValidators.Add(Validator->GetPropertyClass(), Validator);
 				}
 			}
 		}
@@ -38,17 +40,42 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 void UPropertyValidatorSubsystem::Deinitialize()
 {
 	Validators.Empty();
+	GroupedValidators.Empty();
 	
 	Super::Deinitialize();
 }
 
-void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationResult& ValidationResult) const
+FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyContainerValid(UObject* Object) const
 {
-	UPackage* Package = Struct->GetPackage();
-
-	while (Struct && CanValidatePackage(Package))
+	if (!IsValid(Object))
 	{
-		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Package))
+		return {};
+	}
+
+	FPropertyValidationContext ValidationContext(this);
+	IsPropertyContainerValid(static_cast<void*>(Object), Object->GetClass(), ValidationContext);
+
+	return ValidationContext.MakeValidationResult();
+}
+
+FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* Object, FProperty* Property) const
+{
+	if (!IsValid(Object) || Property == nullptr)
+	{
+		return {};
+	}
+
+	FPropertyValidationContext ValidationContext(this);
+	IsPropertyValid(static_cast<void*>(Object), Property, ValidationContext);
+
+	return ValidationContext.MakeValidationResult();
+}
+
+void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationContext& ValidationContext) const
+{
+	while (Struct && CanValidatePackage(Struct->GetPackage()))
+	{
+		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Struct->GetPackage()))
 		{
 			Struct = Struct->GetSuperStruct();
 			continue;
@@ -61,9 +88,7 @@ void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStr
 			// only validate properties that we can actually edit in editor
 			if (!Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) && Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
 			{
-				FPropertyValidationResult Result;
-				IsPropertyValid(Container, Property, Result);
-				ValidationResult.Append(Result);
+				IsPropertyValid(Container, Property, ValidationContext);
 			}
 		}
 		
@@ -71,34 +96,42 @@ void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStr
 	}
 }
 
-void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationResult& ValidationResult) const
+void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	if (!Property->HasMetaData(ValidationNames::Validate))
+	const FFieldClass* PropertyClass = Property->GetClass();
+
+	UPropertyValidatorBase* const* PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
+	while (PropertyValidatorPtr == nullptr)
 	{
-		return;
+		PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
+		PropertyClass = PropertyClass->GetSuperClass();
 	}
 
-	for (const auto PropertyValidator: Validators)
+	if (PropertyValidatorPtr)
 	{
+		const UPropertyValidatorBase* PropertyValidator = *PropertyValidatorPtr;
 		if (PropertyValidator->CanValidateProperty(Property))
 		{
-			PropertyValidator->ValidateProperty(Property, Container, ValidationResult);
-			break;
+			PropertyValidator->ValidateProperty(Property, Container, ValidationContext);
 		}
 	}
-	
-	return;
 }
 
-void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& ValidationResult)
+void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	for (const auto PropertyValidator: Validators)
+	const FFieldClass* PropertyClass = ValueProperty->GetClass();
+
+	UPropertyValidatorBase* const* PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
+	while (PropertyValidatorPtr == nullptr)
 	{
-		if (PropertyValidator->CanValidatePropertyValue(ParentProperty, ValueProperty))
-		{
-			PropertyValidator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationResult);
-			break;
-		}
+		PropertyValidatorPtr = GroupedValidators.Find(PropertyClass);
+		PropertyClass = PropertyClass->GetSuperClass();
+	}
+
+	const UPropertyValidatorBase* PropertyValidator = *PropertyValidatorPtr;
+	if (PropertyValidator && PropertyValidator->CanValidateProperty(ValueProperty))
+	{
+		PropertyValidator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
 	}
 }
 
@@ -129,3 +162,5 @@ bool UPropertyValidatorSubsystem::IsBlueprintGenerated(UPackage* Package) const
 	const FString PackageName = Package->GetName();
 	return PackageName.StartsWith(TEXT("/Game/"));
 }
+
+
