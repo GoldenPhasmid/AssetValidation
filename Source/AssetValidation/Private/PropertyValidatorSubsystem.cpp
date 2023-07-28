@@ -73,7 +73,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* 
 
 void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationContext& ValidationContext) const
 {
-	while (Struct && CanValidatePackage(Struct->GetPackage()))
+	while (Struct && ShouldValidatePackage(Struct->GetPackage()))
 	{
 		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Struct->GetPackage()))
 		{
@@ -135,7 +135,7 @@ void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* P
 	}
 }
 
-bool UPropertyValidatorSubsystem::CanValidatePackage(UPackage* Package) const
+bool UPropertyValidatorSubsystem::ShouldValidatePackage(UPackage* Package) const
 {
 	if (IsBlueprintGenerated(Package))
 	{
