@@ -28,7 +28,7 @@ void UStringPropertyValidator::ValidatePropertyValue(void* Value, FProperty* Par
 
 	if (Str->IsEmpty())
 	{
-		ValidationContext.PropertyFails(ValueProperty, LOCTEXT("AssetValidation_StrPropertyValue", "String value not set"));
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_StrPropertyValue", "String value not set"));
 	}
 }
 

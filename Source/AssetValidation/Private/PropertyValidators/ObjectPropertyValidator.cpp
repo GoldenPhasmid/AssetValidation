@@ -24,7 +24,8 @@ void UObjectPropertyValidator::ValidateProperty(void* Container, FProperty* Prop
 	const bool bObjectValid = Object != nullptr && Object->IsValidLowLevel();
     if (!bObjectValid)
     {
-    	if (Property->HasMetaData(ValidationNames::Validate))
+    	// determine whether object value should be validated
+    	if (Super::CanValidateProperty(Property))
     	{
     		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"), Property->GetDisplayNameText());
     	}
@@ -49,14 +50,11 @@ void UObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* Par
 	const bool bObjectValid = Object != nullptr && Object->IsValidLowLevel();
 	if (!bObjectValid)
 	{
-		if (ValueProperty->HasMetaData(ValidationNames::Validate))
-		{
-			ValidationContext.PropertyFails(ValueProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object value not set"));
-		}
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object value not set"));
 		return;
 	}
 	
-	if (ValueProperty->HasMetaData(ValidationNames::ValidateRecursive))
+	if (ParentProperty->HasMetaData(ValidationNames::ValidateRecursive))
 	{
 		ValidationContext.PushPrefix(Object->GetName());
 		// validate underlying object recursively
