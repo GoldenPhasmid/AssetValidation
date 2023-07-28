@@ -17,7 +17,7 @@ void UStringPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
 
 	if (Str->IsEmpty())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_StrProperty", "String property not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_StrProperty", "String property not set"), Property->GetDisplayNameText());
 	}
 }
 

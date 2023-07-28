@@ -13,8 +13,11 @@ void UStructPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
 
 	void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(BasePointer);
 	//@todo: validate struct value?
+
+	ValidationContext.PushPrefix(Property->GetName());
 	// validate underlying struct properties: structure becomes a property container
 	ValidationContext.IsPropertyContainerValid(ContainerPtr, StructProperty->Struct);
+	ValidationContext.PopPrefix();
 }
 
 void UStructPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const

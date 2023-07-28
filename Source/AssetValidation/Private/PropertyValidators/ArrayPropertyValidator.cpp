@@ -20,7 +20,11 @@ void UArrayPropertyValidator::ValidateProperty(FProperty* Property, void* BasePo
 	uint8* Data = static_cast<uint8*>(Array->GetData());
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
+		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
+		// validate property value
 		ValidationContext.IsPropertyValueValid(Data, ArrayProperty, ValueProperty);
+		ValidationContext.PopPrefix();
+		
 		Data += Stride;
 	}
 }

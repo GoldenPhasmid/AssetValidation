@@ -26,15 +26,19 @@ void UObjectPropertyValidator::ValidateProperty(FProperty* Property, void* BaseP
     {
     	if (Property->HasMetaData(ValidationNames::Validate))
     	{
-    		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"));
+    		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"), Property->GetDisplayNameText());
     	}
     	return;
     }
 	
     if (Property->HasMetaData(ValidationNames::ValidateRecursive))
     {
+    	ValidationContext.PushPrefix(Property->GetName() + "." + Object->GetName());
+
     	// validate underlying object recursively
     	ValidationContext.IsPropertyContainerValid(Object, Object->GetClass());
+
+    	ValidationContext.PopPrefix();
     }
 }
 
@@ -47,15 +51,18 @@ void UObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* Par
 	{
 		if (ValueProperty->HasMetaData(ValidationNames::Validate))
 		{
-			ValidationContext.PropertyFails(ValueProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"));
+			ValidationContext.PropertyFails(ValueProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object value not set"));
 		}
 		return;
 	}
 	
 	if (ValueProperty->HasMetaData(ValidationNames::ValidateRecursive))
 	{
+		ValidationContext.PushPrefix(Object->GetName());
 		// validate underlying object recursively
 		ValidationContext.IsPropertyContainerValid(Object, Object->GetClass());
+
+		ValidationContext.PopPrefix();
 	}
 }
 

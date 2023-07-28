@@ -26,6 +26,9 @@ void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoin
 	{
 		uint8* Data = static_cast<uint8*>(Map->GetData(Index, MapLayout));
 
+		// add map property prefix
+		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
+		
 		// validate key property value
 		ValidationContext.IsPropertyValueValid(Data, MapProperty, KeyProperty);
 
@@ -34,6 +37,9 @@ void UMapPropertyValidator::ValidateProperty(FProperty* Property, void* BasePoin
 
 		// validate value property value
 		ValidationContext.IsPropertyValueValid(Data, MapProperty, ValueProperty);
+
+		// pop map property prefix
+		ValidationContext.PopPrefix();
 	}
 
 }
