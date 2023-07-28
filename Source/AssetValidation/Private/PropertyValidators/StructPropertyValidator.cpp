@@ -12,8 +12,9 @@ void UStructPropertyValidator::ValidateProperty(void* Container, FProperty* Prop
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 
 	void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(Container);
-	//@todo: validate struct value?
-
+	
+	// struct value is validated by UStructValidator objects
+	
 	ValidationContext.PushPrefix(Property->GetName());
 	// validate underlying struct properties: structure becomes a property container
 	ValidationContext.IsPropertyContainerValid(ContainerPtr, StructProperty->Struct);
@@ -22,5 +23,5 @@ void UStructPropertyValidator::ValidateProperty(void* Container, FProperty* Prop
 
 void UStructPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	// @todo: validate struct value
+	// struct value is validated by UStructValidator objects
 }
