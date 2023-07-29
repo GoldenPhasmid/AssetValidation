@@ -81,13 +81,7 @@ void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStr
 
 		for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::None); It; ++It)
 		{
-			FProperty* Property = *It;
-			// do not validate transient or deprecated properties
-			// only validate properties that we can actually edit in editor
-			if (!Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) && Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
-			{
-				IsPropertyValid(Container, Property, ValidationContext);
-			}
+			IsPropertyValid(Container, *It, ValidationContext);
 		}
 		
 		Struct = Struct->GetSuperStruct();
@@ -96,6 +90,13 @@ void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStr
 
 void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
+	// do not validate transient or deprecated properties
+	// only validate properties that we can actually edit in editor
+	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) || !Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
+	{
+		return;
+	}
+		
 	for (UPropertyValidatorBase* Validator: Validators)
 	{
 		if (Property->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(Property))
@@ -107,9 +108,16 @@ void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Pr
 
 void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
+	// do not validate transient or deprecated properties
+	// only validate properties that we can actually edit in editor
+	if (ParentProperty->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) || !ParentProperty->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
+	{
+		return;
+	}
+	
 	for (UPropertyValidatorBase* Validator: Validators)
 	{
-		if (ValueProperty->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(ValueProperty))
+		if (ValueProperty->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(ParentProperty))
 		{
 			Validator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
 		}
