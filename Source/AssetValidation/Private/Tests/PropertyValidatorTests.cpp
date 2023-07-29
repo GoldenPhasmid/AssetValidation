@@ -6,6 +6,8 @@
 
 static TArray<TPair<FName, EDataValidationResult>> PropertyNames
 {
+	{"NoMetaProperty",			EDataValidationResult::Valid},
+	{"NoMetaEditableProperty",	EDataValidationResult::Valid},
 	{"NonEditableProperty",		EDataValidationResult::Valid},
 	{"TransientProperty",			EDataValidationResult::Valid},
 	{"TransientEditableProperty",	EDataValidationResult::Valid},
@@ -14,7 +16,7 @@ static TArray<TPair<FName, EDataValidationResult>> PropertyNames
 	{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
 };
 
-BEGIN_DEFINE_SPEC(FAutomationSpec_ValidationConditions, "Editor.PropertyValidation.Conditions", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask);
+BEGIN_DEFINE_SPEC(FAutomationSpec_ValidationConditions, "Editor.PropertyValidation.Conditions", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
 	UObject* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
 END_DEFINE_SPEC(FAutomationSpec_ValidationConditions)
@@ -22,7 +24,7 @@ void FAutomationSpec_ValidationConditions::Define()
 {
 	BeforeEach([this]()
 	{
-		TestObject = NewObject<UTestObject_ValidationConditions>(GetTransientPackage());
+		TestObject = NewObject<UValidationTestObject_ValidationConditions>(GetTransientPackage());
 		TestObject->AddToRoot();
 		
 		ValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
@@ -47,6 +49,173 @@ void FAutomationSpec_ValidationConditions::Define()
 		ValidationSubsystem = nullptr;
 	});
 }
+
+BEGIN_DEFINE_SPEC(FAutomationSpec_ContainerProperties, "Editor.PropertyValidation", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
+	UValidationTestObject_ContainerProperties* TestObject;
+	UPropertyValidatorSubsystem* ValidationSubsystem;
+	FProperty* TestProperty;
+END_DEFINE_SPEC(FAutomationSpec_ContainerProperties)
+void FAutomationSpec_ContainerProperties::Define()
+{
+	BeforeEach([this]()
+	{
+		TestObject = NewObject<UValidationTestObject_ContainerProperties>(GetTransientPackage());
+		TestObject->AddToRoot();
+		
+		ValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+	});
+
+	Describe("ArrayProperty", [this]()
+	{
+		BeforeEach([this]()
+		{
+			TestProperty = TestObject->GetClass()->FindPropertyByName("ObjectArray");
+		});
+		
+		It("empty array should be valid", [this]()
+		{
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+		});
+
+		It("array with at least one null object should be invalid", [this]()
+		{
+			TestObject->ObjectArray.Append({NewObject<UEmptyObject>(), nullptr, nullptr});
+			
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 2);
+		});
+
+		// it is questionable whether we should check for this. Not picked up by default because IsValidLowLevel doesn't check for PendingKill? weird
+		xIt("array with at least one garbage object should be invalid", [this]()
+		{
+			UObject* GarbageObject = NewObject<UEmptyObject>();
+			GarbageObject->MarkAsGarbage();
+			TestObject->ObjectArray.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), GarbageObject});
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 1);
+		});
+
+		It("array with valid objects should be valid", [this]()
+		{
+			TestObject->ObjectArray.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), NewObject<UEmptyObject>()});
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+		});
+
+		AfterEach([this]()
+		{
+			TestProperty = nullptr;
+		});
+	});
+
+	Describe("SetProperty", [this]()
+	{
+		BeforeEach([this]()
+		{
+			TestProperty = TestObject->GetClass()->FindPropertyByName("ObjectSet");
+		});
+
+		It("empty set should be valid", [this]()
+		{
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+		});
+
+		It("set with a null object should be invalid", [this]()
+		{
+			TestObject->ObjectSet.Append({NewObject<UEmptyObject>(), nullptr});
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 1);
+		});
+
+		// it is questionable whether we should check for this. Not picked up by default because IsValidLowLevel doesn't check for PendingKill? weirdx
+		xIt("set with a garbage object should be invalid", [this]()
+		{
+			UObject* GarbageObject = NewObject<UEmptyObject>();
+			GarbageObject->MarkAsGarbage();
+			TestObject->ObjectSet.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), GarbageObject});
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 1);
+		});
+
+		It("set with valid objects should be valid", [this]()
+		{
+			TestObject->ObjectSet.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), NewObject<UEmptyObject>()});
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+		});
+
+		AfterEach([this]()
+		{
+			TestProperty = nullptr;
+		});
+	});
+
+	Describe("MapProperty", [this]()
+	{
+		BeforeEach([this]()
+		{
+			TestProperty = TestObject->GetClass()->FindPropertyByName("ObjectMap");
+		});
+
+		It("empty map should be valid", [this]()
+		{
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+		});
+
+		It("map with at least one null object key or null value should be invalid", [this]()
+		{
+			TestObject->ObjectMap.Add(nullptr, NewObject<UEmptyObject>());
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 1);
+
+			TestObject->ObjectMap.Add(NewObject<UEmptyObject>(), nullptr);
+
+			Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 2);
+		});
+
+		It("map with valid keys and values should be valid", [this]()
+		{
+			TestObject->ObjectMap.Add(NewObject<UEmptyObject>(), NewObject<UEmptyObject>());
+			TestObject->ObjectMap.Add(NewObject<UEmptyObject>(), NewObject<UEmptyObject>());
+
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+		});
+
+		AfterEach([this]()
+		{
+			TestProperty = nullptr;
+		});
+	});
+	
+	AfterEach([this]()
+	{
+		TestObject->ObjectArray.Empty();
+		TestObject->ObjectMap.Empty();
+		TestObject->ObjectSet.Empty();
+		
+		TestObject->RemoveFromRoot();
+		TestObject = nullptr;
+		ValidationSubsystem = nullptr;
+	});
+}
+
 
 #if 0
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FComplexAutomationTest_ValidationConditions, "Editor.PropertyValidation.ComplexConditions", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask);

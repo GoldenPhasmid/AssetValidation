@@ -5,10 +5,22 @@
 #include "PropertyValidatorTests.generated.h"
 
 UCLASS()
-class UTestObject_ValidationConditions: public UObject
+class UEmptyObject: public UObject
+{
+	GENERATED_BODY()
+};
+
+UCLASS()
+class UValidationTestObject_ValidationConditions: public UObject
 {
 	GENERATED_BODY()
 public:
+	
+	UPROPERTY()
+	UObject* NoMetaProperty;
+
+	UPROPERTY(EditAnywhere)
+	UObject* NoMetaEditableProperty;
 
 	/** property not editable in editor, no validation */
 	UPROPERTY(meta = (Validate))
@@ -33,4 +45,21 @@ public:
 	/** property is editable, validated */
 	UPROPERTY(EditInstanceOnly, meta = (Validate))
 	UObject* EditInstanceOnlyProperty;
+	
+};
+
+UCLASS()
+class UValidationTestObject_ContainerProperties: public UObject
+{
+	GENERATED_BODY()
+public:
+	
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<UObject*> ObjectArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TSet<UObject*> ObjectSet;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TMap<UObject*, UObject*> ObjectMap;
 };
