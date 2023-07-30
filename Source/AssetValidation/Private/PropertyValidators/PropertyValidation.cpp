@@ -29,6 +29,8 @@ void FPropertyValidationContext::PropertyFails(FProperty* Property, const FText&
 {
 	FIssue Issue;
 	Issue.IssueProperty = Property;
+	// @todo: warning validation
+	Issue.Severity = EMessageSeverity::Error;
 	
 	if (const FString* CustomMsg = Property->FindMetaData(ValidationNames::ValidationFailureMessage))
 	{
@@ -37,19 +39,6 @@ void FPropertyValidationContext::PropertyFails(FProperty* Property, const FText&
 	else
 	{
 		Issue.Message = MakeFullMessage(DefaultFailureMessage, PropertyPrefix);
-	}
-
-	if (Property->HasMetaData(ValidationNames::Validate))
-	{
-		Issue.Severity = EMessageSeverity::Error;
-	}
-	else if (Property->HasMetaData(ValidationNames::ValidateWarning))
-	{
-		Issue.Severity = EMessageSeverity::Warning;
-	}
-	else
-	{
-		checkNoEntry();
 	}
 
 	Issues.Add(Issue);
