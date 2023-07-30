@@ -49,6 +49,50 @@ public:
 };
 
 UCLASS()
+class UNestedObject: public UObject
+{
+	GENERATED_BODY()
+public:
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	UObject* InvalidProperty1 = nullptr;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	UObject* InvalidProperty2 = nullptr;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	UObject* InvalidProperty3 = nullptr;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FString ValidProperty = "0123456789";
+};
+
+UCLASS()
+class UValidationTestObject_ValidationMetas: public UObject
+{
+	GENERATED_BODY()
+public:
+	
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	UObject* Validate;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateRecursive))
+	UObject* ValidateRecursive;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateRecursive))
+	UObject* ValidateBoth;
+	
+	UPROPERTY(EditAnywhere, meta = (Validate, FailureMessage="my custom message"))
+	UObject* ValidateWithCustomMessage;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateKey))
+	TMap<UObject*, UObject*> ValidateKey;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateValue))
+	TMap<UObject*, UObject*> ValidateValue;
+};
+
+UCLASS()
 class UValidationTestObject_ContainerProperties: public UObject
 {
 	GENERATED_BODY()

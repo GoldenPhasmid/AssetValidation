@@ -47,7 +47,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyContainerValid(
 {
 	if (!IsValid(Object))
 	{
-		return {};
+		// count invalid objects as valid in property validation. 
+		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
 	FPropertyValidationContext ValidationContext(this);
@@ -60,7 +61,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(UObject* 
 {
 	if (!IsValid(Object) || Property == nullptr)
 	{
-		return {};
+		// count invalid objects or properties as valid in property validation. 
+		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
 	FPropertyValidationContext ValidationContext(this);
@@ -108,16 +110,16 @@ void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Pr
 
 void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	// do not validate transient or deprecated properties
-	// only validate properties that we can actually edit in editor
-	if (ParentProperty->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient) || !ParentProperty->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
-	{
-		return;
-	}
-	
+	// do not check for property flags for ParentProperty or ValueProperty.
+	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
 	for (UPropertyValidatorBase* Validator: Validators)
 	{
-		if (ValueProperty->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(ParentProperty))
+		// don't call Validator->CanValidateProperty. The logic is the following:
+		// 1. ParentProperty has already been checked through one of validators and, as it is a container property, uses FPropertyValidationContext::IsPropertyValueValid
+		// 2. ValueProperty has no metas as it is property inside container property and not "user defined" property
+		// The problem is with metas like ValidateKey and ValidateValue, which are specific to map properties.
+		// However, we can't tell to object validator that the container is map and it is
+		if (ValueProperty->IsA(Validator->GetPropertyClass()))
 		{
 			Validator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
 		}
