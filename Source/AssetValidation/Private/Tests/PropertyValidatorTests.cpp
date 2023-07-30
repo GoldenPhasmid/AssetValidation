@@ -26,7 +26,7 @@ void FAutomationSpec_ValidationConditions::Define()
 	{
 		TestObject = NewObject<UValidationTestObject_ValidationConditions>(GetTransientPackage());
 		TestObject->AddToRoot();
-		
+
 		ValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	});
 	
@@ -44,8 +44,10 @@ void FAutomationSpec_ValidationConditions::Define()
 
 	AfterEach([this]()
 	{
+#if 0
 		TestObject->RemoveFromRoot();
 		TestObject = nullptr;
+#endif
 		ValidationSubsystem = nullptr;
 	});
 }
@@ -216,6 +218,89 @@ void FAutomationSpec_ContainerProperties::Define()
 	});
 }
 
+BEGIN_DEFINE_SPEC(FAutomationSpec_ValidateMetas, "Editor.PropertyValidation.ValidationMetas", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
+	UValidationTestObject_ValidationMetas* TestObject;
+	UPropertyValidatorSubsystem* ValidationSubsystem;
+	FProperty* TestProperty;
+END_DEFINE_SPEC(FAutomationSpec_ValidateMetas)
+void FAutomationSpec_ValidateMetas::Define()
+{
+	BeforeEach([this]()
+	{
+		TestObject = NewObject<UValidationTestObject_ValidationMetas>(GetTransientPackage());
+		TestObject->AddToRoot();
+			
+		ValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+	});
+
+	It("property with Validate meta should be validated", [this]()
+	{
+		FProperty* Property = TestObject->GetClass()->FindPropertyByName("Validate");
+
+		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+	});
+
+	It("property with ValidateRecursive meta should validate nested properties", [this]()
+	{
+		UNestedObject* NestedObject = NewObject<UNestedObject>();
+		FPropertyValidationResult NestedResult = ValidationSubsystem->IsPropertyContainerValid(NestedObject);
+
+		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateRecursive");
+		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
+
+		TestObject->ValidateRecursive = NestedObject;
+		Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+		TestEqual("NumErrors", Result.Errors.Num(), NestedResult.Errors.Num());
+	});
+
+	It("property with custom FailureMessage", [this]()
+	{
+		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateWithCustomMessage");
+		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+
+		FString CustomMessage = Property->GetMetaData(ValidationNames::ValidationFailureMessage);
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+		TestEqual("NumErrors", Result.Errors.Num(), 1);
+		TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));
+	});
+
+	It("map property with ValidateKey meta", [this]()
+	{
+		TestObject->ValidateKey.Add(NewObject<UEmptyObject>(), nullptr);
+		TestObject->ValidateKey.Add(NewObject<UEmptyObject>(), nullptr);
+		TestObject->ValidateKey.Add(nullptr, nullptr);
+
+		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateKey");
+		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+		TestEqual("NumErrors", Result.Errors.Num(), 1);
+	});
+
+	It("map property with ValidateValue meta", [this]()
+	{
+		TestObject->ValidateValue.Add(NewObject<UEmptyObject>(), nullptr);
+		TestObject->ValidateValue.Add(NewObject<UEmptyObject>(), nullptr);
+		TestObject->ValidateValue.Add(nullptr, nullptr);
+
+		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateValue");
+		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+		TestEqual("NumErrors", Result.Errors.Num(), 3);
+	});
+	
+	AfterEach([this]()
+	{
+		TestObject->RemoveFromRoot();
+		TestObject = nullptr;
+		ValidationSubsystem = nullptr;
+	});
+}
 
 #if 0
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FComplexAutomationTest_ValidationConditions, "Editor.PropertyValidation.ComplexConditions", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask);
