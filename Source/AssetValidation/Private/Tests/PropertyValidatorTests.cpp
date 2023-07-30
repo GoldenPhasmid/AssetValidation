@@ -44,10 +44,9 @@ void FAutomationSpec_ValidationConditions::Define()
 
 	AfterEach([this]()
 	{
-#if 0
 		TestObject->RemoveFromRoot();
 		TestObject = nullptr;
-#endif
+		
 		ValidationSubsystem = nullptr;
 	});
 }
