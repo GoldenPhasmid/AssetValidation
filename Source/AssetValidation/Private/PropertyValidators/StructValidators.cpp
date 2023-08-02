@@ -88,7 +88,7 @@ void UStructValidator_GameplayAttribute::ValidateProperty(void* Container, FProp
 	FGameplayAttribute* GameplayAttribute = Property->ContainerPtrToValuePtr<FGameplayAttribute>(Container);
 	check(GameplayAttribute);
 
-	if (GameplayAttribute->IsValid())
+	if (!GameplayAttribute->IsValid())
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_GameplayAttribute", "Gameplay attribute property is not set"), Property->GetDisplayNameText());
 	}
@@ -99,7 +99,7 @@ void UStructValidator_GameplayAttribute::ValidatePropertyValue(void* Value, FPro
 	FGameplayAttribute* GameplayAttribute = static_cast<FGameplayAttribute*>(Value);
 	check(GameplayAttribute);
 
-	if (GameplayAttribute->IsValid())
+	if (!GameplayAttribute->IsValid())
 	{
 		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_GameplayAttributeValue", "Gameplay attribute is not set"));
 	}
