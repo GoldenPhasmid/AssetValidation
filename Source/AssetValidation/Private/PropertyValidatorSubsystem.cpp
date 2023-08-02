@@ -101,7 +101,7 @@ void UPropertyValidatorSubsystem::IsPropertyValid(void* Container, FProperty* Pr
 		
 	for (UPropertyValidatorBase* Validator: Validators)
 	{
-		if (Property->IsA(Validator->GetPropertyClass()) && Validator->CanValidateProperty(Property))
+		if (Validator->CanValidateProperty(Property))
 		{
 			Validator->ValidateProperty(Container, Property, ValidationContext);
 		}
@@ -114,12 +114,7 @@ void UPropertyValidatorSubsystem::IsPropertyValueValid(void* Value, FProperty* P
 	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
 	for (UPropertyValidatorBase* Validator: Validators)
 	{
-		// don't call Validator->CanValidateProperty. The logic is the following:
-		// 1. ParentProperty has already been checked through one of validators and, as it is a container property, uses FPropertyValidationContext::IsPropertyValueValid
-		// 2. ValueProperty has no metas as it is property inside container property and not "user defined" property
-		// The problem is with metas like ValidateKey and ValidateValue, which are specific to map properties.
-		// However, we can't tell to object validator that the container is map and it is
-		if (ValueProperty->IsA(Validator->GetPropertyClass()))
+		if (Validator->CanValidatePropertyValue(ValueProperty, Value))
 		{
 			Validator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
 		}

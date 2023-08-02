@@ -13,6 +13,7 @@ public:
 
 	//~Begin PropertyValidatorBase
 	virtual bool CanValidateProperty(FProperty* Property) const override;
+	virtual bool CanValidatePropertyValue(FProperty* Property, void* Value) const override;
 	//~End PropertyValidatorBase
 	
 protected:
@@ -46,7 +47,6 @@ public:
 	//~End PropertyValidatorBase
 };
 
-#if 1
 UCLASS()
 class UStructValidator_GameplayAttribute: public UStructValidator
 {
@@ -59,7 +59,6 @@ public:
 	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
-#endif
 
 UCLASS()
 class ASSETVALIDATION_API UStructValidator_DataTableRowHandle: public UStructValidator

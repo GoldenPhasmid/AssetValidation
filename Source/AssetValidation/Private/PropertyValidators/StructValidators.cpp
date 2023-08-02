@@ -19,6 +19,11 @@ bool UStructValidator::CanValidateProperty(FProperty* Property) const
 	return Super::CanValidateProperty(Property) && Property->GetCPPType().Equals(CppType);
 }
 
+bool UStructValidator::CanValidatePropertyValue(FProperty* Property, void* Value) const
+{
+	return Super::CanValidatePropertyValue(Property, Value) && Property->GetCPPType().Equals(CppType);
+}
+
 UStructValidator_GameplayTag::UStructValidator_GameplayTag()
 {
 	CppType = StaticStruct<FGameplayTag>()->GetStructCPPName();
@@ -73,7 +78,6 @@ void UStructValidator_GameplayTagContainer::ValidatePropertyValue(void* Value, F
 	}
 }
 
-#if 1
 UStructValidator_GameplayAttribute::UStructValidator_GameplayAttribute()
 {
 	CppType = StaticStruct<FGameplayAttribute>()->GetStructCPPName();
@@ -100,7 +104,6 @@ void UStructValidator_GameplayAttribute::ValidatePropertyValue(void* Value, FPro
 		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_GameplayAttributeValue", "Gameplay attribute is not set"));
 	}
 }
-#endif
 
 UStructValidator_DataTableRowHandle::UStructValidator_DataTableRowHandle()
 {
