@@ -5,6 +5,20 @@
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAutomationTest_PropertyValidators, "Editor.PropertyValidation.PropertyValidators", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
+
+bool FAutomationTest_PropertyValidators::RunTest(const FString& Parameters)
+{
+	UPropertyValidatorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+	UObject* Object = NewObject<UValidationTestObject_PropertyValidators>();
+
+	FPropertyValidationResult Result = Subsystem->IsPropertyContainerValid(Object);
+	UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid)
+	UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 8);
+
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, "Editor.PropertyValidation.StructValidators.GameplayTag", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
 
 bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)

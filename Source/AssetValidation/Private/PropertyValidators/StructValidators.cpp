@@ -1,8 +1,6 @@
 #include "PropertyValidators/StructValidators.h"
 
-#if 1
 #include "AttributeSet.h"
-#endif
 #include "GameplayTagContainer.h"
 
 #include "PropertyValidators/PropertyValidation.h"
