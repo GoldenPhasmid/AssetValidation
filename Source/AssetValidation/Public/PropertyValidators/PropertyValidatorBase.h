@@ -29,6 +29,14 @@ public:
 	 * @return can property be validated
 	 */
 	virtual bool CanValidateProperty(FProperty* Property) const;
+
+	/**
+	 * @brief Determines whether given property 
+	 * @param Property property to validate
+	 * @param Value property value to validate
+	 * @return 
+	 */
+	virtual bool CanValidatePropertyValue(FProperty* Property, void* Value) const;
 	
 	/**
 	 * @brief 
