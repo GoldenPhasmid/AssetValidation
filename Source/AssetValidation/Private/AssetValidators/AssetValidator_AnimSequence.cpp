@@ -2,8 +2,6 @@
 
 #include "AssetValidators/AssetValidator_AnimSequence.h"
 
-#include "AssetValidationStatics.h"
-
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
 bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(UObject* InAsset) const
