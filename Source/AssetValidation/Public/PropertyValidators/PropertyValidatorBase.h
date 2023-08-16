@@ -6,33 +6,7 @@
 
 #include "PropertyValidatorBase.generated.h"
 
-struct FPropertyValidationResult;
-
-struct FPropertyValidationResult
-{
-	void PropertyFails(FProperty* Property, const FText& ErrorText = FText::GetEmpty())
-	{
-		ValidationResult = EDataValidationResult::Invalid;
-		if (!ErrorText.IsEmpty())
-		{
-			// @todo: construct failure message with @Property
-			ValidationErrors.Add(ErrorText);
-		}
-	}
-	
-	void PropertyPasses(FProperty* Property)
-	{
-		if (ValidationResult != EDataValidationResult::Invalid)
-		{
-			ValidationResult = EDataValidationResult::Valid;
-		}
-	}
-	
-
-	FString Parent;
-	TArray<FText> ValidationErrors;
-	EDataValidationResult ValidationResult = EDataValidationResult::NotValidated;
-};
+class FPropertyValidationContext;
 
 /**
  * PropertyValidatorBase verifies that a property value meets non-empty requirements
@@ -45,37 +19,42 @@ class ASSETVALIDATION_API UPropertyValidatorBase: public UObject
 {
 	GENERATED_BODY()
 public:
+
+	/** @return property class that this validator operates on */
+	FFieldClass* GetPropertyClass() const;
+	
 	/**
 	 * @brief Determines whether given property can be validated by this validator
 	 * @param Property property to validate
 	 * @return can property be validated
 	 */
-	virtual bool CanValidateProperty(FProperty* Property) const PURE_VIRTUAL(CanValidateProperty, return false;)
-	
+	virtual bool CanValidateProperty(FProperty* Property) const;
+
 	/**
-	 * @brief Determines whether property inside parent can be validated by this validator
-	 * @param ParentProperty parent property, either container or a struct
-	 * @param ValueProperty property that holds a value to validate
-	 * @return can property be validated
+	 * @brief Determines whether given property 
+	 * @param Property property to validate
+	 * @param Value property value to validate
+	 * @return 
 	 */
-	virtual bool CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const PURE_VIRTUAL(CanValidatePropertyValue, return false;)
+	virtual bool CanValidatePropertyValue(FProperty* Property, void* Value) const;
 	
 	/**
 	 * @brief 
+	 * @param Container 
 	 * @param Property 
-	 * @param BasePointer
-	 * @param OutValidationResult validation result
+	 * @param ValidationContext 
 	 */
-	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const PURE_VIRTUAL(ValidateProperty)
+	virtual void ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const PURE_VIRTUAL(ValidateProperty)
 
 	/**
 	 * @brief validates value property nested in parent property, either struct or container
 	 * @param Value pointer to a property value
 	 * @param ParentProperty parent property, typically container or struct
 	 * @param ValueProperty value property
-	 * @param OutValidationResult validation result 
 	 */
-	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const PURE_VIRTUAL(ValidatePropertyValue)
+	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const PURE_VIRTUAL(ValidatePropertyValue)
 
-	
+protected:
+
+	FFieldClass* PropertyClass = nullptr;
 };

@@ -10,11 +10,10 @@ class UStructPropertyValidator: public UPropertyValidatorBase
 	GENERATED_BODY()
 public:
 
+	UStructPropertyValidator();
+
 	//~Begin PropertyValidatorBase
-	virtual bool CanValidateProperty(FProperty* Property) const override;
-	virtual bool CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const override;
-	virtual void ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const override;
-	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const override;
+	virtual void ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
-	
 };

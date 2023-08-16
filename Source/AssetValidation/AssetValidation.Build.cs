@@ -7,8 +7,7 @@ public class AssetValidation : ModuleRules
 	public AssetValidation(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
-
+		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -18,9 +17,10 @@ public class AssetValidation : ModuleRules
 				"SlateCore",
 				"DataValidation",
 				"EditorSubsystem",
+				"GameplayAbilities",
+				"GameplayTags",
 			}
 		);
-			
 		
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
@@ -31,6 +31,7 @@ public class AssetValidation : ModuleRules
 				"UnrealEd",
 				"ToolMenus",
 				"Engine",
+				"DeveloperToolSettings",
 			}
 		);
 	}

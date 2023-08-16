@@ -1,16 +1,16 @@
 #pragma once
 
-#include "PropertyValidatorBase.h"
+#include "PropertyValidators/PropertyValidatorBase.h"
 
-#include "ArrayPropertyValidator.generated.h"
+#include "NamePropertyValidator.generated.h"
 
 UCLASS()
-class UArrayPropertyValidator: public UPropertyValidatorBase
+class UNamePropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()
 public:
 
-	UArrayPropertyValidator();
+	UNamePropertyValidator();
 	
 	//~Begin PropertyValidatorBase
 	virtual void ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const override;

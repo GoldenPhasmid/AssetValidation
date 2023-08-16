@@ -1,29 +1,27 @@
 #include "PropertyValidators/StructPropertyValidator.h"
 
-#include "AssetValidationStatics.h"
+#include "PropertyValidators/PropertyValidation.h"
 
-bool UStructPropertyValidator::CanValidateProperty(FProperty* Property) const
+UStructPropertyValidator::UStructPropertyValidator()
 {
-	return AssetValidationStatics::CanValidateProperty(Property) && Property->IsA<FStructProperty>();
+	PropertyClass = FStructProperty::StaticClass();
 }
 
-bool UStructPropertyValidator::CanValidatePropertyValue(FProperty* ParentProperty, FProperty* ValueProperty) const
+void UStructPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	return AssetValidationStatics::CanValidateProperty(ValueProperty) && ValueProperty->IsA<FStructProperty>();
+	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
+
+	void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(Container);
+	
+	// struct value is validated by UStructValidator objects
+	
+	ValidationContext.PushPrefix(Property->GetName());
+	// validate underlying struct properties: structure becomes a property container
+	ValidationContext.IsPropertyContainerValid(ContainerPtr, StructProperty->Struct);
+	ValidationContext.PopPrefix();
 }
 
-void UStructPropertyValidator::ValidateProperty(FProperty* Property, void* BasePointer, FPropertyValidationResult& OutValidationResult) const
+void UStructPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
-
-	UScriptStruct* Struct = StructProperty->Struct;
-	for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::IncludeSuper); It; ++It)
-	{
-		// @todo: recursive validation
-	}
-}
-
-void UStructPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationResult& OutValidationResult) const
-{
-	// @todo: value validation?
+	// struct value is validated by UStructValidator objects
 }

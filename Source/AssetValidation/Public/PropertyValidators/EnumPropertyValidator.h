@@ -2,15 +2,15 @@
 
 #include "PropertyValidatorBase.h"
 
-#include "ArrayPropertyValidator.generated.h"
+#include "EnumPropertyValidator.generated.h"
 
 UCLASS()
-class UArrayPropertyValidator: public UPropertyValidatorBase
+class UEnumPropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()
 public:
 
-	UArrayPropertyValidator();
+	UEnumPropertyValidator();
 	
 	//~Begin PropertyValidatorBase
 	virtual void ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
