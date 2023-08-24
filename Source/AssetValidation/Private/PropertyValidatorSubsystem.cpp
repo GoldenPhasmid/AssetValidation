@@ -130,6 +130,13 @@ bool UPropertyValidatorSubsystem::ShouldValidatePackage(UPackage* Package) const
 	
 	const FString PackageName = Package->GetName();
 
+	// allow validation for project package
+	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
+	if (PackageName.StartsWith(ProjectPackage))
+	{
+		return true;
+	}
+	
 #if WITH_EDITOR
 	if (PackageName.StartsWith("/Script/AssetValidation"))
 	{
@@ -146,7 +153,8 @@ bool UPropertyValidatorSubsystem::ShouldValidatePackage(UPackage* Package) const
 bool UPropertyValidatorSubsystem::IsBlueprintGenerated(UPackage* Package) const
 {
 	const FString PackageName = Package->GetName();
-	return PackageName.StartsWith(TEXT("/Game/"));
+	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
+	return PackageName.StartsWith(TEXT("/Game/")) || !PackageName.StartsWith(TEXT("/Script"));
 }
 
 

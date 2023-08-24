@@ -71,7 +71,7 @@ protected:
 	virtual void IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
 
 	/** @return whether package should be validated */
-	bool ShouldValidatePackage(UPackage* Package) const;
+	virtual bool ShouldValidatePackage(UPackage* Package) const;
 
 	/** @return whether package is a blueprint generated class */
 	bool IsBlueprintGenerated(UPackage* Package) const;
