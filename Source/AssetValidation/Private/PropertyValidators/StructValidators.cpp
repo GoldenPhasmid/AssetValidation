@@ -130,4 +130,36 @@ void UStructValidator_DataTableRowHandle::ValidatePropertyValue(void* Value, FPr
 	}
 }
 
+UStructValidator_DirectoryPath::UStructValidator_DirectoryPath()
+{
+	static UPackage* CoreUObjectPkg = FindObjectChecked<UPackage>(nullptr, TEXT("/Script/CoreUObject"));
+
+	UScriptStruct* Result = (UScriptStruct*)StaticFindObjectFastInternal(UScriptStruct::StaticClass(), CoreUObjectPkg, TEXT("DirectoryPath"), false, RF_NoFlags, EInternalObjectFlags::None);
+	check(Result);
+	
+	CppType = Result->GetStructCPPName();
+}
+
+void UStructValidator_DirectoryPath::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+{
+	FDirectoryPath* DirectoryPath = Property->ContainerPtrToValuePtr<FDirectoryPath>(Container);
+	check(DirectoryPath);
+
+	if (DirectoryPath->Path.IsEmpty() || !IFileManager::Get().DirectoryExists(*DirectoryPath->Path))
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_DirectoryPath", "Directory path is invalid"));
+	}
+}
+
+void UStructValidator_DirectoryPath::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+{
+	FDirectoryPath* DirectoryPath = static_cast<FDirectoryPath*>(Value);
+	check(DirectoryPath);
+
+	if (DirectoryPath->Path.IsEmpty() || !IFileManager::Get().DirectoryExists(*DirectoryPath->Path))
+	{
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_DirectoryPath", "Directory path is invalid"));
+	}
+}
+
 #undef LOCTEXT_NAMESPACE
