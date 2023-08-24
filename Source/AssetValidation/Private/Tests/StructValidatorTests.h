@@ -160,3 +160,32 @@ class UValidationTestObject_DataTableRow: public UObject
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FDataTableRowStruct Struct;
 };
+
+USTRUCT()
+struct FDirectoryPathStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FDirectoryPath EmptyPath;
+};
+
+UCLASS()
+class UValidationTestObject_DirectoryPath: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_DirectoryPath()
+	{
+		EmptyPathArray.AddDefaulted_GetRef();
+	}
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FDirectoryPath EmptyPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FDirectoryPath> EmptyPathArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FDirectoryPathStruct Struct;
+};
