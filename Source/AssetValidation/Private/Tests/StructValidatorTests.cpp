@@ -69,11 +69,15 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DirectoryPath, FStructVa
 
 bool FAutomationTest_DirectoryPath::RunTest(const FString& Parameters)
 {
-	return ValidateObject<UValidationTestObject_DirectoryPath>(3);
+	return ValidateObject<UValidationTestObject_DirectoryPath>(4);
 }
 
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_FilePath, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.FilePath", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
 
-
+bool FAutomationTest_FilePath::RunTest(const FString& Parameters)
+{
+	return ValidateObject<UValidationTestObject_FilePath>(4);
+}
 
 
 

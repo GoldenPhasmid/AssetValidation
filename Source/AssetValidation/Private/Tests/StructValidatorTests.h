@@ -177,6 +177,8 @@ class UValidationTestObject_DirectoryPath: public UObject
 
 	UValidationTestObject_DirectoryPath()
 	{
+		ContentDirPath.Path = TEXT("/Game/");
+		InvalidDirPath.Path = TEXT("/Game/Temp/Temp/Temp/+-=*");
 		EmptyPathArray.AddDefaulted_GetRef();
 	}
 
@@ -184,8 +186,52 @@ class UValidationTestObject_DirectoryPath: public UObject
 	FDirectoryPath EmptyPath;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
+	FDirectoryPath ContentDirPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FDirectoryPath InvalidDirPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
 	TArray<FDirectoryPath> EmptyPathArray;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FDirectoryPathStruct Struct;
+};
+
+USTRUCT()
+struct FFilePathStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FFilePath EmptyPath;
+};
+
+
+UCLASS()
+class UValidationTestObject_FilePath: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_FilePath()
+	{
+		ValidFilePath.FilePath = TEXT("/Engine/WorldPartition/WorldPartitionUnitTest");
+		InvalidFilePath.FilePath = TEXT("/Engine/Temp/Temp/Temp/SomeAsset");
+		EmptyPathArray.AddDefaulted_GetRef();
+	}
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FFilePath EmptyPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FFilePath ValidFilePath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FFilePath InvalidFilePath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FFilePath> EmptyPathArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FFilePathStruct Struct;
 };
