@@ -28,5 +28,5 @@ public:
 		return FModuleManager::Get().IsModuleLoaded("AssetValidation");
 	}
 
-	virtual void ValidateProperty(FProperty* Property, FPropertyValidationResult& OutValidationResult) const = 0;
+	virtual FPropertyValidationResult ValidateProperty(UObject* Object, FProperty* Property) const = 0;
 };

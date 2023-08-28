@@ -2,11 +2,15 @@
 
 #include "AssetValidation.h"
 #include "AssetValidationStyle.h"
-#include "AssetValidationCommands.h"
+#include "DataValidationChangelist.h"
+#include "EditorValidatorSubsystem.h"
+#include "ISourceControlModule.h"
+#include "ISourceControlProvider.h"
+#include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
-
-static const FName AssetValidationTabName("AssetValidation");
+#include "Misc/ScopedSlowTask.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 DEFINE_LOG_CATEGORY(LogAssetValidation);
 
@@ -16,22 +20,18 @@ class FAssetValidationModule : public IAssetValidationModule
 {
 public:
 
-	/** IModuleInterface implementation */
+	//~Begin IModuleInterface
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+	//~End IModuleInterface
 	
-	/** This function will be bound to Command. */
-	void PluginButtonClicked();
-
-	virtual void ValidateProperty(FProperty* Property, FPropertyValidationResult& OutValidationResult) const override;
+	virtual FPropertyValidationResult ValidateProperty(UObject* Object, FProperty* Property) const override;
 	
 private:
 
+	static void CheckContent();
+	static bool HasNoPlayWorld();
 	void RegisterMenus();
-
-
-private:
-	TSharedPtr<class FUICommandList> PluginCommands;
 };
 
 void FAssetValidationModule::StartupModule()
@@ -40,47 +40,11 @@ void FAssetValidationModule::StartupModule()
 	
 	FAssetValidationStyle::Initialize();
 	FAssetValidationStyle::ReloadTextures();
-
-	FAssetValidationCommands::Register();
 	
-	PluginCommands = MakeShareable(new FUICommandList);
-
-	PluginCommands->MapAction(
-		FAssetValidationCommands::Get().PluginAction,
-		FExecuteAction::CreateRaw(this, &FAssetValidationModule::PluginButtonClicked),
-		FCanExecuteAction());
-
-	UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FAssetValidationModule::RegisterMenus));
-}
-
-void FAssetValidationModule::ShutdownModule()
-{
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
-
-	UToolMenus::UnRegisterStartupCallback(this);
-
-	UToolMenus::UnregisterOwner(this);
-
-	FAssetValidationStyle::Shutdown();
-
-	FAssetValidationCommands::Unregister();
-}
-
-void FAssetValidationModule::ValidateProperty(FProperty* Property, FPropertyValidationResult& OutValidationResult) const
-{
-	
-}
-
-void FAssetValidationModule::PluginButtonClicked()
-{
-	// Put your "OnButtonClicked" stuff here
-	FText DialogText = FText::Format(
-							LOCTEXT("PluginButtonDialogText", "Add code to {0} in {1} to override this button's actions"),
-							FText::FromString(TEXT("FAssetValidationModule::PluginButtonClicked()")),
-							FText::FromString(TEXT("AssetValidation.cpp"))
-					   );
-	FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+	if (FSlateApplication::IsInitialized())
+	{
+		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FAssetValidationModule::RegisterMenus));
+	}
 }
 
 void FAssetValidationModule::RegisterMenus()
@@ -88,24 +52,77 @@ void FAssetValidationModule::RegisterMenus()
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
 	FToolMenuOwnerScoped OwnerScoped(this);
 
-	{
-		UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Window");
-		{
-			FToolMenuSection& Section = Menu->FindOrAddSection("WindowLayout");
-			Section.AddMenuEntryWithCommandList(FAssetValidationCommands::Get().PluginAction, PluginCommands);
-		}
-	}
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
+	FToolMenuSection& Section = Menu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
 
+	FToolMenuEntry CheckContentEntry = FToolMenuEntry::InitToolBarButton(
+		"CheckContent",
+		FUIAction(
+			FExecuteAction::CreateStatic(&FAssetValidationModule::CheckContent),
+			FCanExecuteAction::CreateStatic(&FAssetValidationModule::HasNoPlayWorld),
+			FIsActionChecked(),
+			FIsActionButtonVisible::CreateStatic(&FAssetValidationModule::HasNoPlayWorld)
+		),
+		LOCTEXT("CheckContent", "Check Content"),
+		LOCTEXT("CheckContentDescription", "Runs Content Validation job on all checked out assets"),
+		FSlateIcon(FAssetValidationStyle::GetStyleSetName(), "AssetValidation.CheckContent")
+	);
+	CheckContentEntry.StyleNameOverride = "CalloutToolbar";
+	Section.AddEntry(CheckContentEntry);
+}
+
+
+void FAssetValidationModule::ShutdownModule()
+{
+	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
+	// we call this function before unloading the module.
+
+	UToolMenus::UnRegisterStartupCallback(this);
+	UToolMenus::UnregisterOwner(this);
+
+	FAssetValidationStyle::Shutdown();
+}
+
+FPropertyValidationResult FAssetValidationModule::ValidateProperty(UObject* Object, FProperty* Property) const
+{
+	return GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>()->IsPropertyValid(Object, Property);
+}
+
+void FAssetValidationModule::CheckContent()
+{
+	if (!ISourceControlModule::Get().IsEnabled())
 	{
-		UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
-		{
-			FToolMenuSection& Section = ToolbarMenu->FindOrAddSection("PluginTools");
-			{
-				FToolMenuEntry& Entry = Section.AddEntry(FToolMenuEntry::InitToolBarButton(FAssetValidationCommands::Get().PluginAction));
-				Entry.SetCommandList(PluginCommands);
-			}
-		}
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControlDisabled", "Your source control is disabled. Enable and try again."));
+		return;
 	}
+	
+	UEditorValidatorSubsystem* ContentValidation = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
+
+	ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
+	TArray<FSourceControlChangelistRef> Changelists = SCCProvider.GetChangelists(EStateCacheUsage::ForceUpdate);
+
+	FScopedSlowTask SlowTask(Changelists.Num(), LOCTEXT("ValidateChangelistTask", "Validating changelists..."));
+	SlowTask.MakeDialogDelayed(0.1f);
+	
+	for (const FSourceControlChangelistRef& ChangelistRef: Changelists)
+	{
+		UDataValidationChangelist* Changelist = NewObject<UDataValidationChangelist>(GetTransientPackage());
+		Changelist->AddToRoot();
+		Changelist->Initialize(ChangelistRef.ToSharedPtr());
+
+		SlowTask.EnterProgressFrame(1.f, FText::GetEmpty());
+
+		TArray<FText> Warnings, Errors;
+		ContentValidation->IsObjectValid(Changelist, Errors, Warnings, EDataValidationUsecase::Manual);
+
+		Changelist->RemoveFromRoot();
+		Changelist->MarkAsGarbage();
+	}
+}
+
+bool FAssetValidationModule::HasNoPlayWorld()
+{
+	return GEditor->PlayWorld == nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE

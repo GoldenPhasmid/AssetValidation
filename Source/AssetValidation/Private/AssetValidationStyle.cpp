@@ -30,7 +30,7 @@ void FAssetValidationStyle::Shutdown()
 
 FName FAssetValidationStyle::GetStyleSetName()
 {
-	static FName StyleSetName(TEXT("AssetValidationStyle"));
+	static FName StyleSetName(TEXT("AssetValidation"));
 	return StyleSetName;
 }
 
@@ -40,10 +40,10 @@ const FVector2D Icon20x20(20.0f, 20.0f);
 
 TSharedRef< FSlateStyleSet > FAssetValidationStyle::Create()
 {
-	TSharedRef< FSlateStyleSet > Style = MakeShareable(new FSlateStyleSet("AssetValidationStyle"));
+	TSharedRef< FSlateStyleSet > Style = MakeShareable(new FSlateStyleSet(GetStyleSetName()));
 	Style->SetContentRoot(IPluginManager::Get().FindPlugin("AssetValidation")->GetBaseDir() / TEXT("Resources"));
 
-	Style->Set("AssetValidation.PluginAction", new IMAGE_BRUSH_SVG(TEXT("PlaceholderButtonIcon"), Icon20x20));
+	Style->Set("AssetValidation.CheckContent", new IMAGE_BRUSH_SVG(TEXT("CheckContentButtonIcon"), Icon20x20));
 	return Style;
 }
 
