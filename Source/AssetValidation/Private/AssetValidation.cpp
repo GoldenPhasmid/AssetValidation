@@ -1,15 +1,14 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "AssetValidation.h"
+
+#include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
-#include "DataValidationChangelist.h"
 #include "EditorValidatorSubsystem.h"
 #include "ISourceControlModule.h"
-#include "ISourceControlProvider.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
-#include "Misc/ScopedSlowTask.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 DEFINE_LOG_CATEGORY(LogAssetValidation);
@@ -30,6 +29,7 @@ public:
 private:
 
 	static void CheckContent();
+	static void ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings);
 	static bool HasNoPlayWorld();
 	void RegisterMenus();
 };
@@ -45,6 +45,8 @@ void FAssetValidationModule::StartupModule()
 	{
 		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FAssetValidationModule::RegisterMenus));
 	}
+
+	ISourceControlModule::Get().RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&FAssetValidationModule::ValidateChangelistPreSubmit));
 }
 
 void FAssetValidationModule::RegisterMenus()
@@ -81,6 +83,8 @@ void FAssetValidationModule::ShutdownModule()
 	UToolMenus::UnregisterOwner(this);
 
 	FAssetValidationStyle::Shutdown();
+
+	ISourceControlModule::Get().UnregisterPreSubmitDataValidation();
 }
 
 FPropertyValidationResult FAssetValidationModule::ValidateProperty(UObject* Object, FProperty* Property) const
@@ -95,29 +99,21 @@ void FAssetValidationModule::CheckContent()
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControlDisabled", "Your source control is disabled. Enable and try again."));
 		return;
 	}
-	
-	UEditorValidatorSubsystem* ContentValidation = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
 
-	ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
-	TArray<FSourceControlChangelistRef> Changelists = SCCProvider.GetChangelists(EStateCacheUsage::ForceUpdate);
+	TArray<FString> Warnings, Errors;
+	AssetValidationStatics::ValidateChangelistContent(true, EDataValidationUsecase::Manual, Warnings, Errors);
+}
 
-	FScopedSlowTask SlowTask(Changelists.Num(), LOCTEXT("ValidateChangelistTask", "Validating changelists..."));
-	SlowTask.MakeDialogDelayed(0.1f);
-	
-	for (const FSourceControlChangelistRef& ChangelistRef: Changelists)
-	{
-		UDataValidationChangelist* Changelist = NewObject<UDataValidationChangelist>(GetTransientPackage());
-		Changelist->AddToRoot();
-		Changelist->Initialize(ChangelistRef.ToSharedPtr());
+void FAssetValidationModule::ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings)
+{
+	TArray<FString> Warnings, Errors;
+	AssetValidationStatics::ValidateChangelistContent(true, EDataValidationUsecase::Manual, Warnings, Errors);
 
-		SlowTask.EnterProgressFrame(1.f, FText::GetEmpty());
+	OutResult = Errors.Num() > 0 ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 
-		TArray<FText> Warnings, Errors;
-		ContentValidation->IsObjectValid(Changelist, Errors, Warnings, EDataValidationUsecase::Manual);
-
-		Changelist->RemoveFromRoot();
-		Changelist->MarkAsGarbage();
-	}
+	auto Trans = [](const FString& Str) { return FText::FromString(Str); };
+	Algo::Transform(Errors, ValidationErrors, Trans);
+	Algo::Transform(Warnings, ValidationWarnings, Trans);
 }
 
 bool FAssetValidationModule::HasNoPlayWorld()
