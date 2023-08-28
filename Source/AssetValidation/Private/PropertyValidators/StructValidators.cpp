@@ -146,10 +146,18 @@ void UStructValidator_DirectoryPath::ValidateProperty(void* Container, FProperty
 	FDirectoryPath* DirectoryPath = Property->ContainerPtrToValuePtr<FDirectoryPath>(Container);
 	check(DirectoryPath);
 
-	FString RelativePath{};
-	FPackageName::TryConvertGameRelativePackagePathToLocalPath(DirectoryPath->Path, RelativePath);
+	FString RelativePath = DirectoryPath->Path;
+	if (FPackageName::IsValidLongPackageName(DirectoryPath->Path))
+	{
+		FPackageName::TryConvertGameRelativePackagePathToLocalPath(DirectoryPath->Path, RelativePath);
+	}
+
+	FString FullPath = RelativePath;
+	if (FPaths::IsRelative(RelativePath))
+	{
+		FullPath = FPaths::ConvertRelativePathToFull(RelativePath);
+	}
 	
-	const FString FullPath = FPaths::ConvertRelativePathToFull(RelativePath);
 	if (DirectoryPath->Path.IsEmpty() || !FPaths::DirectoryExists(FullPath))
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_DirectoryPath", "Directory path is invalid"));
@@ -161,7 +169,18 @@ void UStructValidator_DirectoryPath::ValidatePropertyValue(void* Value, FPropert
 	FDirectoryPath* DirectoryPath = static_cast<FDirectoryPath*>(Value);
 	check(DirectoryPath);
 
-	const FString FullPath = FPaths::ConvertRelativePathToFull(DirectoryPath->Path);
+	FString RelativePath = DirectoryPath->Path;
+	if (FPackageName::IsValidLongPackageName(DirectoryPath->Path))
+	{
+		FPackageName::TryConvertGameRelativePackagePathToLocalPath(DirectoryPath->Path, RelativePath);
+	}
+
+	FString FullPath = RelativePath;
+	if (FPaths::IsRelative(RelativePath))
+	{
+		FullPath = FPaths::ConvertRelativePathToFull(RelativePath);
+	}
+	
 	if (DirectoryPath->Path.IsEmpty() || !FPaths::DirectoryExists(FullPath))
 	{
 		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_DirectoryPathValue", "Directory path is invalid"));
