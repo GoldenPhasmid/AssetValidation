@@ -20,7 +20,7 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	if (!FPackageName::DoesPackageExist(PackageName))
 	{
 		AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_InvalidAsset", "Asset {0} is part of package {1} which doesn't exist"),
-						FText::FromString(PackageName), FText::FromString(PackageName)), ValidationErrors);
+						FText::FromString(InAsset->GetName()), FText::FromString(PackageName)), ValidationErrors);
 		return EDataValidationResult::Invalid;
 	}
 
@@ -45,7 +45,7 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 				{
 					// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
 					AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "Asset {0} references {1} which is not marked for add to source control"),
-									FText::FromString(PackageName), FText::FromString(PackageName)), ValidationErrors);
+									FText::FromString(PackageName), FText::FromString(Dependency)), ValidationErrors);
 				}
 			}
 		}
