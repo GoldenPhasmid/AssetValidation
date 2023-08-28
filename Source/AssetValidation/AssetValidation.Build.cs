@@ -32,6 +32,7 @@ public class AssetValidation : ModuleRules
 				"ToolMenus",
 				"Engine",
 				"DeveloperToolSettings",
+				"SourceControl",
 			}
 		);
 	}
