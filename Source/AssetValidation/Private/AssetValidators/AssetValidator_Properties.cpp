@@ -28,16 +28,17 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	check(Class && Object);
 	
 	FPropertyValidationResult Result = PropertyValidators->IsPropertyContainerValid(Object);
+	for (const FText& Text: Result.Warnings)
+	{
+		AssetWarning(Object, Text);
+	}
 	
 	if (Result.ValidationResult == EDataValidationResult::Invalid)
 	{
+		check(Result.Errors.Num() > 0);
 		for (const FText& Text: Result.Errors)
 		{
 			AssetFails(Object, Text, ValidationErrors);
-		}
-		for (const FText& Text: Result.Warnings)
-		{
-			AssetWarning(Object, Text);
 		}
 	}
 	else
@@ -46,33 +47,4 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	}
 	
 	return Result.ValidationResult;
-}
-
-bool UAssetValidator_Properties::CanValidateClass(UClass* Class) const
-{
-	if (IsBlueprintGeneratedClass(Class))
-	{
-		return true;
-	}
-	
-	const UPackage* Package = Class->GetPackage();
-	const FString PackageName = Package->GetName();
-
-#if WITH_EDITOR
-	if (PackageName.StartsWith("/Script/AssetValidation"))
-	{
-		return true;
-	}
-#endif
-	
-	return PackagesToValidate.ContainsByPredicate([PackageName](const FString& ModulePath)
-	{
-		return PackageName.StartsWith(ModulePath);
-	});
-}
-
-bool UAssetValidator_Properties::IsBlueprintGeneratedClass(UClass* Class) const
-{
-	const FString PackageName = Class->GetPackage()->GetName();
-	return PackageName.StartsWith(TEXT("/Game/"));
 }

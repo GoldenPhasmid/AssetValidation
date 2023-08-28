@@ -17,16 +17,4 @@ public:
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors) override;
 	//~End EditorValidatorBase
 
-	/** */
-	bool CanValidateClass(UClass* Class) const;
-
-	/** */
-	bool IsBlueprintGeneratedClass(UClass* Class) const;
-	
-	UPROPERTY(Config)
-	TArray<FString> PackagesToValidate;
-
-	UPROPERTY(Config)
-	bool bSkipBlueprintGeneratedClasses = false;
-
 };
