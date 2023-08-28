@@ -6,6 +6,11 @@
 
 bool UAssetValidator::CanValidateAsset_Implementation(UObject* InAsset) const
 {
+	if (InAsset == nullptr)
+	{
+		return false;
+	}
+	
 	const FString PackageName = InAsset->GetPackage()->GetName();
 	
 	const UProjectPackagingSettings* PackagingSettings = GetDefault<UProjectPackagingSettings>();
