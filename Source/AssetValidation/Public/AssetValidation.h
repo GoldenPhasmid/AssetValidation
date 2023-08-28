@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
+
 struct FPropertyValidationResult;
 class FToolBarBuilder;
 class FMenuBuilder;
 
-
-class UPropertyValidatorBase;
+DECLARE_LOG_CATEGORY_EXTERN(LogAssetValidation, Log, All);
 
 class ASSETVALIDATION_API IAssetValidationModule: public IModuleInterface
 {

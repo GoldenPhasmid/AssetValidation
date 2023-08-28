@@ -8,6 +8,8 @@
 
 static const FName AssetValidationTabName("AssetValidation");
 
+DEFINE_LOG_CATEGORY(LogAssetValidation);
+
 #define LOCTEXT_NAMESPACE "FAssetValidationModule"
 
 class FAssetValidationModule : public IAssetValidationModule
