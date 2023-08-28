@@ -17,7 +17,7 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	check(InAsset);
 	
 	const FString PackageName = InAsset->GetPackage()->GetName();
-	if (!FPackageName::DoesPackageExist(PackageName))
+	if (!FPackageName::DoesPackageExist(PackageName) && !PackageName.StartsWith("/Script/"))
 	{
 		AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_InvalidAsset", "Asset {0} is part of package {1} which doesn't exist"),
 						FText::FromString(InAsset->GetName()), FText::FromString(PackageName)), ValidationErrors);
@@ -46,6 +46,11 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 					// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
 					AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "Asset {0} references {1} which is not marked for add to source control"),
 									FText::FromString(PackageName), FText::FromString(Dependency)), ValidationErrors);
+				}
+				if (!DependencyState->IsCurrent())
+				{
+					AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_NotLatestRevision", "Asset {0} references {1} which is not on latest revision"),
+						FText::FromString(PackageName), FText::FromString(Dependency)), ValidationErrors);
 				}
 			}
 		}
