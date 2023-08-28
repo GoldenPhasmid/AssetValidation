@@ -177,7 +177,7 @@ class UValidationTestObject_DirectoryPath: public UObject
 
 	UValidationTestObject_DirectoryPath()
 	{
-		ContentDirPath.Path = TEXT("/Game/");
+		ContentDirPath.Path = TEXT("/Game");
 		InvalidDirPath.Path = TEXT("/Game/Temp/Temp/Temp/+-=*");
 		EmptyPathArray.AddDefaulted_GetRef();
 	}
