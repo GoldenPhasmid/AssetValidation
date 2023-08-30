@@ -73,9 +73,11 @@ void AssetValidationStatics::ValidateSourceControl(bool bInteractive, EDataValid
 			FString PackageName;
 			if (FPackageName::TryConvertFilenameToLongPackageName(Filename, PackageName))
 			{
+				// @todo: handle deleted packages separately
 				ChangedPackages.Add(PackageName);
 			}
 		}
+		// @todo: validation for header changes
 	}
 
 	// Step 2: Validate Dirty Files

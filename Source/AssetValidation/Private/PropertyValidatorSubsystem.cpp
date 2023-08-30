@@ -81,6 +81,7 @@ void UPropertyValidatorSubsystem::IsPropertyContainerValid(void* Container, UStr
 			continue;
 		}
 
+		// EFieldIterationFlags::None because we look only at given Struct valid properties
 		for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::None); It; ++It)
 		{
 			IsPropertyValid(Container, *It, ValidationContext);
