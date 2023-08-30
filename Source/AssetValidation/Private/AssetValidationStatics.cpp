@@ -122,7 +122,7 @@ void AssetValidationStatics::ValidateSourceControl(bool bInteractive, EDataValid
 	}
 	else
 	{
-		UE_LOG(LogContentValidation, Display, TEXT("Content validation for source controlled files finished. Found %d warnings, %d errors for %d files."),
+		UE_LOG(LogAssetValidation, Display, TEXT("Content validation for source controlled files finished. Found %d warnings, %d errors for %d files."),
 			OutWarnings.Num(), OutErrors.Num(), FileStates.Num());
 	}
 }
