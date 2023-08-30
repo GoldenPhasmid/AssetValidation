@@ -1,20 +1,9 @@
 #pragma once
 #include "AssetValidationStatics.h"
+#include "ISourceControlState.h"
 
+class FActorDescContainerCollection;
 enum class EDataValidationUsecase : uint8;
-
-struct FDataValidationParameters
-{
-	EDataValidationUsecase ValidationUsecase;
-	bool bInteractive;
-};
-
-struct FDataValidationResult
-{
-	EDataValidationResult Result;
-	TArray<FString> Warnings;
-	TArray<FString> Errors;
-};
 
 struct FLogMessageGatherer: public FOutputDevice
 {
@@ -61,9 +50,41 @@ private:
 class AssetValidationStatics
 {
 public:
+	/**
+	 * Validate all files under source control
+	 * @param bInteractive whether to show message dialogs or dump information to log
+	 * @param Usecase validation use case
+	 * @param OutWarnings validation warnings
+	 * @param OutErrors validation errors
+	 */
+	static void ValidateSourceControl(bool bInteractive, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
 
-	static void ValidateChangelistContent(bool bInteractive, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+	/**
+	 * Validate OFPA packages and World Partition runtime settings
+	 * Duplicates functionality from UWorldPartitionChangelistValidator because git doesn't have changelists :)
+	 * @see UWorldPartitionChangelistValidator
+	 */
+	static void ValidateWorldPartitionActors(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+
+	/**
+	 * Checks whether any source controlled files are unsaved in editor (have dirty packages)
+	 * Duplicates functionality from UDirtyFilesChangelistValidator because git doesn't have changelists :)
+	 * @see UDirtyFilesChangelistValidator
+	 */
+	static void ValidateDirtyFiles(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
 	static void ValidatePackages(const TArray<FString>& PackagesToValidate, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+
+	/**
+	 * Validates project settings.
+	 * @return whether found any validation errors
+	 */
 	static bool ValidateProjectSettings(EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+
 	static FString ValidateEmptyPackage(const FString& PackageName);
+	static FString GetPackagePath(const UPackage* Package);
+
+	static UClass* GetAssetNativeClass(const FAssetData& AssetData);
+	static FTopLevelAssetPath GetAssetWorld(const FAssetData& AssetData);
+
+	static void RegisterActorContainer(UWorld* World, FName ContainerPackageName, FActorDescContainerCollection& RegisteredContainers);
 };

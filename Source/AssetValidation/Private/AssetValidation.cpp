@@ -101,13 +101,13 @@ void FAssetValidationModule::CheckContent()
 	}
 
 	TArray<FString> Warnings, Errors;
-	AssetValidationStatics::ValidateChangelistContent(true, EDataValidationUsecase::Manual, Warnings, Errors);
+	AssetValidationStatics::ValidateSourceControl(true, EDataValidationUsecase::Manual, Warnings, Errors);
 }
 
 void FAssetValidationModule::ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings)
 {
 	TArray<FString> Warnings, Errors;
-	AssetValidationStatics::ValidateChangelistContent(true, EDataValidationUsecase::Manual, Warnings, Errors);
+	AssetValidationStatics::ValidateSourceControl(true, EDataValidationUsecase::Manual, Warnings, Errors);
 
 	OutResult = Errors.Num() > 0 ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 

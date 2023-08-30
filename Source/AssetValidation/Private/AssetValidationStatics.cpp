@@ -3,22 +3,28 @@
 #include "AssetValidation.h"
 #include "DataValidationModule.h"
 #include "EditorValidatorSubsystem.h"
+#include "FileHelpers.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "ShaderCompiler.h"
 #include "SourceControlHelpers.h"
 #include "SourceControlOperations.h"
 #include "StudioAnalytics.h"
+#include "WorldPartitionSourceControlValidator.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Logging/MessageLog.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Settings/ProjectPackagingSettings.h"
+#include "WorldPartition/ActorDescContainerCollection.h"
+#include "WorldPartition/WorldPartition.h"
+#include "WorldPartition/WorldPartitionActorDescUtils.h"
+#include "WorldPartition/DataLayer/WorldDataLayers.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-void AssetValidationStatics::ValidateChangelistContent(bool bInteractive, EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+void AssetValidationStatics::ValidateSourceControl(bool bInteractive, EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
 {
-	FStudioAnalytics::RecordEvent(TEXT("ValidateContent"));
+	FStudioAnalytics::RecordEvent(TEXT("ValidateChangelist"));
 
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 	if (AssetRegistryModule.Get().IsLoadingAssets())
@@ -34,44 +40,56 @@ void AssetValidationStatics::ValidateChangelistContent(bool bInteractive, EDataV
 		return;
 	}
 
-	TArray<FString> ChangedPackages;
-	
-	if (ISourceControlModule::Get().IsEnabled())
-	{
-		ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
-
-		auto UpdateFiles = ISourceControlOperation::Create<FUpdateStatus>();
-		UpdateFiles->SetGetOpenedOnly(true);
-		SCCProvider.Execute(UpdateFiles, EConcurrency::Synchronous);
-		
-		TArray<FSourceControlStateRef> Files = SCCProvider.GetCachedStateByPredicate([](const FSourceControlStateRef& State)
-		{
-			return State->IsCheckedOut() || State->IsAdded() || State->IsDeleted();
-		});
-
-		ChangedPackages.Reserve(Files.Num());
-		for (const FSourceControlStateRef& File: Files)
-		{
-			FString Filename = File->GetFilename();
-			if (FPackageName::IsPackageFilename(Filename))
-			{
-				FString PackageName;
-				if (FPackageName::TryConvertFilenameToLongPackageName(Filename, PackageName))
-				{
-					ChangedPackages.Add(PackageName);
-				}
-			}
-		}
-	}
-
 	if (GShaderCompilingManager)
 	{
+		// finish all shader compilation to avoid weird errors
 		FScopedSlowTask SlowTask(0.f, LOCTEXT("CompileShaders", "Compiling shaders..."));
 		SlowTask.MakeDialog();
 
 		GShaderCompilingManager->FinishAllCompilation();
 	}
+
+	// Step 1: Gather Source Control Files and Packages
+	TArray<FSourceControlStateRef> FileStates;
+	TArray<FString> ChangedPackages;
 	
+	if (ISourceControlModule::Get().IsEnabled())
+	{
+		ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
+		SCCProvider.Execute(ISourceControlOperation::Create<FUpdateStatus>(), EConcurrency::Synchronous);
+		
+		FileStates = SCCProvider.GetCachedStateByPredicate([](const FSourceControlStateRef& State)
+		{
+			return State->IsCheckedOut() || State->IsAdded() || State->IsDeleted();
+		});
+	}
+
+	ChangedPackages.Reserve(FileStates.Num());
+	for (const FSourceControlStateRef& File: FileStates)
+	{
+		FString Filename = File->GetFilename();
+		if (FPackageName::IsPackageFilename(Filename))
+		{
+			FString PackageName;
+			if (FPackageName::TryConvertFilenameToLongPackageName(Filename, PackageName))
+			{
+				ChangedPackages.Add(PackageName);
+			}
+		}
+	}
+
+	// Step 2: Validate Dirty Files
+	ValidateDirtyFiles(FileStates, OutWarnings, OutErrors);
+	
+	// Step 3: Validate World Partition Actors
+	{
+		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckContentTask", "Checking World Partition..."));
+		SlowTask.MakeDialog();
+		
+		ValidateWorldPartitionActors(FileStates, OutWarnings, OutErrors);
+	}
+	
+	// Step 4: Validate Source Control Packages
 	{
 		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckContentTask", "Checking content..."));
 		SlowTask.MakeDialog();
@@ -79,6 +97,7 @@ void AssetValidationStatics::ValidateChangelistContent(bool bInteractive, EDataV
 		ValidatePackages(ChangedPackages, ValidationUsecase, OutWarnings, OutErrors);
 	}
 
+	// Step 5: Validate Project Settings
 	ValidateProjectSettings(ValidationUsecase, OutWarnings, OutErrors);
 
 	if (bInteractive)
@@ -86,7 +105,8 @@ void AssetValidationStatics::ValidateChangelistContent(bool bInteractive, EDataV
 		const bool bAnyMessages = OutErrors.Num() > 0  || OutWarnings.Num() > 0;
 		if (!bAnyMessages)
 		{
-			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControl_Success", "Content validation completed."));
+			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("SourceControl_Success", "Content validation completed for {0} files."),
+				FText::AsNumber(FileStates.Num())));
 		}
 		else if (OutErrors.Num() == 0)
 		{
@@ -98,14 +118,179 @@ void AssetValidationStatics::ValidateChangelistContent(bool bInteractive, EDataV
 				FText::AsNumber(OutErrors.Num()), FText::AsNumber(OutWarnings.Num())));
 		}
 	}
+	else
+	{
+		UE_LOG(LogContentValidation, Display, TEXT("Content validation for source controlled files finished. Found %d warnings, %d errors for %d files."),
+			OutWarnings.Num(), OutErrors.Num(), FileStates.Num());
+	}
+}
+
+void AssetValidationStatics::ValidateWorldPartitionActors(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+{
+	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	
+	TSet<FString> DataLayerAssets;
+	bool bHasWorldDataLayers = true;
+	
+	// Figure out which world(s) these actors are in and split the files per world
+	TMap<FTopLevelAssetPath, TSet<FAssetData>> WorldToActors;
+	for (const FSourceControlStateRef& File: FileStates)
+	{
+		// Skip deleted files since we're not validating references in this validator 
+		if (File->IsDeleted())
+		{
+			continue;
+		}
+
+		FString PackageName;
+		if (!FPackageName::TryConvertFilenameToLongPackageName(File->GetFilename(), PackageName))
+		{
+			OutErrors.Add(FString::Printf(TEXT("Cannot convert %s file name to package name"), *File->GetFilename()));
+		}
+
+		TArray<FAssetData> PackageAssets;
+		USourceControlHelpers::GetAssetDataFromPackage(PackageName, PackageAssets);
+
+		for (FAssetData& AssetData : PackageAssets)
+		{
+			if (const UClass* ActorClass = AssetValidationStatics::GetAssetNativeClass(AssetData))
+			{
+				FTopLevelAssetPath WorldPath = AssetValidationStatics::GetAssetWorld(AssetData);
+				check(WorldPath.IsValid());
+				
+				WorldToActors.FindOrAdd(WorldPath).Add(ActorClass);
+
+				if (ActorClass->IsChildOf<AWorldDataLayers>())
+				{
+					bHasWorldDataLayers = true;
+					// @todo: World Data Layers
+				}
+				continue;
+			}
+			
+			UClass* AssetClass = AssetData.GetClass();
+			if (!ensureAlways(AssetClass))
+			{
+				continue;
+			}
+			
+			if (AssetClass->IsChildOf<UDataLayerAsset>())
+			{
+				// gather all packages that this data layer references
+				TArray<FName> ReferencerNames;
+				AssetRegistry.GetReferencers(AssetData.PackageName, ReferencerNames, UE::AssetRegistry::EDependencyCategory::All);
+					
+				FARFilter Filter; 
+				Filter.bIncludeOnlyOnDiskAssets = true;
+				Filter.PackageNames = MoveTemp(ReferencerNames);
+				Filter.ClassPaths.Add(AWorldDataLayers::StaticClass()->GetClassPathName());
+
+				// gather all assets that this data layer references
+				TArray<FAssetData> DataLayerReferencers;
+				AssetRegistry.GetAssets(Filter, DataLayerReferencers);
+					
+				for (const FAssetData& DataLayerReferencer : DataLayerReferencers)
+				{
+					// add data layer referencers to WorldToActors map
+					if (const UClass* DataLayerReferencerClass = AssetValidationStatics::GetAssetNativeClass(DataLayerReferencer))
+					{
+						FTopLevelAssetPath WorldPath = AssetValidationStatics::GetAssetWorld(DataLayerReferencer);
+						WorldToActors.FindOrAdd(WorldPath).Add(DataLayerReferencerClass);
+					}
+				}
+					
+				DataLayerAssets.Add(AssetData.PackageName.ToString());
+			}
+			else if (AssetClass->IsChildOf<UWorld>())
+			{
+				FTopLevelAssetPath WorldPath = AssetValidationStatics::GetAssetWorld(AssetData);
+				WorldToActors.Add(WorldPath);
+			}
+		}
+	}
+
+	// For Each world 
+	for (auto& [WorldAssetPath, AssetData]: WorldToActors)
+	{
+		// Find/Load the ActorDescContainer
+		UWorld* World = FindObject<UWorld>(nullptr, *WorldAssetPath.ToString(), true);
+
+		FActorDescContainerCollection ActorContainers;
+		for (const FAssetData& Asset: AssetData)
+		{
+			const FString ActorPackagePath = Asset.PackagePath.ToString();
+
+			//@todo: ActorPackagePath can be in content bundle.
+			RegisterActorContainer(World, WorldAssetPath.GetPackageName(), ActorContainers);
+		}
+		
+		FWorldPartitionValidatorParams ValidationParams;
+		ValidationParams.RelevantMap = WorldAssetPath;
+		ValidationParams.bHasWorldDataLayers = bHasWorldDataLayers;
+		ValidationParams.RelevantDataLayerAssets = DataLayerAssets;
+
+		// Build a set of Relevant Actor Guids to scope error messages to what's contained in the CL 
+		for (const FAssetData& Asset : AssetData)
+		{
+			// Get the FWorldPartitionActor			
+			const FWorldPartitionActorDesc* ActorDesc = ActorContainers.GetActorDesc(Asset.AssetName.ToString());
+
+			if (ActorDesc != nullptr)
+			{
+				ValidationParams.RelevantActorGuids.Add(ActorDesc->GetGuid());
+			}
+		}
+		
+		// initialize World Partition Validator with current map params
+		TSharedPtr<FWorldPartitionSourceControlValidator> Validator = MakeShared<FWorldPartitionSourceControlValidator>();
+		Validator->Initialize(MoveTemp(ValidationParams));
+
+		// Invoke static WorldPartition Validation from the ActorDescContainer
+		UWorldPartition::FCheckForErrorsParams Params;
+		Params.ErrorHandler = Validator.Get();
+		Params.bEnableStreaming = !ULevel::GetIsStreamingDisabledFromPackage(WorldAssetPath.GetPackageName());
+
+		ActorContainers.ForEachActorDescContainer([&Params](const UActorDescContainer* ActorDescContainer)
+		{
+			for (FActorDescList::TConstIterator<> ActorDescIt(ActorDescContainer); ActorDescIt; ++ActorDescIt)
+			{
+				check(!Params.ActorGuidsToContainerMap.Contains(ActorDescIt->GetGuid()));
+				Params.ActorGuidsToContainerMap.Add(ActorDescIt->GetGuid(), ActorDescContainer);
+			}
+		});
+
+		ActorContainers.ForEachActorDescContainer([&Params](const UActorDescContainer* ActorDescContainer)
+		{
+			Params.ActorDescContainer = ActorDescContainer;
+			UWorldPartition::CheckForErrors(Params);
+		});
+	}
+}
+
+void AssetValidationStatics::ValidateDirtyFiles(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+{
+	TArray<UPackage*> DirtyPackages;
+	FEditorFileUtils::GetDirtyPackages(DirtyPackages, FEditorFileUtils::FShouldIgnorePackage::Default);
+
+	TSet<FString> DirtyPackagePaths;
+	Algo::Transform(DirtyPackages, DirtyPackagePaths, AssetValidationStatics::GetPackagePath);
+	
+	for (const FSourceControlStateRef& FileState : FileStates)
+	{
+		const FString Filename = FileState->GetFilename();
+		if (DirtyPackagePaths.Contains(Filename))
+		{
+			OutErrors.Add(FString::Printf(TEXT("File %s contains unsaved modifications, save it"), *Filename));
+		}
+	}
 }
 
 FString AssetValidationStatics::ValidateEmptyPackage(const FString& PackageName)
 {
-	FString WarningMessage{};
+	FString Message{};
 	if (FPackageName::DoesPackageExist(PackageName))
 	{
-		WarningMessage = FString::Printf(TEXT("Found no assets in package %s"), *PackageName);
+		Message = FString::Printf(TEXT("Found no assets in package %s"), *PackageName);
 	}
 	else if (ISourceControlModule::Get().IsEnabled())
 	{
@@ -115,22 +300,95 @@ FString AssetValidationStatics::ValidateEmptyPackage(const FString& PackageName)
 
 		if (FileState->IsAdded())
 		{
-			WarningMessage = FString::Printf(TEXT("Package '%s' is missing from disk. It is marked for add in perforce but missing from your hard drive."), *PackageName);
+			Message = FString::Printf(TEXT("Package '%s' is missing from disk. It is marked for add in perforce but missing from your hard drive."), *PackageName);
 		}
 
 		if (FileState->IsCheckedOut())
 		{
-			WarningMessage = FString::Printf(TEXT("Package '%s' is missing from disk. It is checked out in perforce but missing from your hard drive."), *PackageName);
+			Message = FString::Printf(TEXT("Package '%s' is missing from disk. It is checked out in perforce but missing from your hard drive."), *PackageName);
 		}
 
-		if (WarningMessage.IsEmpty())
+		if (Message.IsEmpty())
 		{
-			WarningMessage = FString::Printf(TEXT("Package '%s' is missing from disk."), *PackageName);
+			Message = FString::Printf(TEXT("Package '%s' is missing from disk."), *PackageName);
 		}
 	}
-	check(!WarningMessage.IsEmpty());
+	check(!Message.IsEmpty());
 
-	return WarningMessage;
+	return Message;
+}
+
+FString AssetValidationStatics::GetPackagePath(const UPackage* Package)
+{
+	if (Package == nullptr)
+	{
+		return TEXT("");
+	}
+
+	const FString LocalFullPath(Package->GetLoadedPath().GetLocalFullPath());
+	
+	if (LocalFullPath.IsEmpty())
+	{
+		return TEXT("");
+	}
+
+	return FPaths::ConvertRelativePathToFull(LocalFullPath);
+}
+
+FTopLevelAssetPath AssetValidationStatics::GetAssetWorld(const FAssetData& AssetData)
+{
+	// Check that the asset is an actor
+	if (FWorldPartitionActorDescUtils::IsValidActorDescriptorFromAssetData(AssetData))
+	{
+		// WorldPartition actors are all in OFPA mode so they're external
+		// Extract the MapName from the ObjectPath (<PathToPackage>.<MapName>:<Level>.<ActorName>)
+
+		FSoftObjectPath ActorPath = AssetData.GetSoftObjectPath();
+		FTopLevelAssetPath MapAssetName = ActorPath.GetAssetPath();
+
+		if (ULevel::GetIsLevelPartitionedFromPackage(ActorPath.GetLongPackageFName()))
+		{
+			return MapAssetName;
+		}
+	}
+
+	return FTopLevelAssetPath{};
+}
+
+void AssetValidationStatics::RegisterActorContainer(UWorld* World, FName ContainerPackageName, FActorDescContainerCollection& RegisteredContainers)
+{
+	if (RegisteredContainers.Contains(ContainerPackageName))
+	{
+		return;
+	}
+
+	UActorDescContainer* ActorDescContainer = nullptr;
+	if (World != nullptr)
+	{
+		// World is Loaded reuse the ActorDescContainer of the Content Bundle
+		ActorDescContainer = World->GetWorldPartition()->FindContainer(ContainerPackageName);
+	}
+
+	// Even if world is valid, its world partition is not necessarily initialized
+	if (!ActorDescContainer)
+	{
+		// Find in memory failed, load the ActorDescContainer
+		ActorDescContainer = NewObject<UActorDescContainer>();
+		ActorDescContainer->Initialize({ nullptr, ContainerPackageName });
+	}
+
+	RegisteredContainers.AddContainer(ActorDescContainer);
+}
+
+UClass* AssetValidationStatics::GetAssetNativeClass(const FAssetData& AssetData)
+{
+	// Check that the asset is an actor
+	if (FWorldPartitionActorDescUtils::IsValidActorDescriptorFromAssetData(AssetData))
+	{
+		return FWorldPartitionActorDescUtils::GetActorNativeClassFromAssetData(AssetData);
+	}
+
+	return nullptr;
 }
 
 void AssetValidationStatics::ValidatePackages(const TArray<FString>& PackagesToValidate, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
