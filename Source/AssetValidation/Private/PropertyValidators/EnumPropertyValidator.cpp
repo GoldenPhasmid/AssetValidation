@@ -9,7 +9,7 @@ UEnumPropertyValidator::UEnumPropertyValidator()
 	PropertyClass = FEnumProperty::StaticClass();
 }
 
-void UEnumPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UEnumPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const uint8* ValuePtr = Property->ContainerPtrToValuePtr<uint8>(Container);
 	check(ValuePtr);
@@ -20,9 +20,9 @@ void UEnumPropertyValidator::ValidateProperty(void* Container, FProperty* Proper
 	}
 }
 
-void UEnumPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UEnumPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	const uint8* ValuePtr = static_cast<uint8*>(Value);
+	const uint8* ValuePtr = static_cast<const uint8*>(Value);
 	check(ValuePtr);
 
 	if (*ValuePtr == 0)

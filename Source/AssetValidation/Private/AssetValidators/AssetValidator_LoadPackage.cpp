@@ -10,16 +10,6 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	check(!PackageName.IsEmpty());
 
 	UPackage* Package = FindPackage(nullptr, *PackageName);
-	if (Package == nullptr)
-	{
-		FLogMessageGatherer Gatherer;
-		Package = LoadPackage(nullptr, *PackageName, LOAD_None);
-
-		OutWarnings = Gatherer.GetWarnings();
-		OutErrors = Gatherer.GetErrors();
-		return true;
-	}
-	
 	if (Package == GetTransientPackage())
 	{
 		return true;
@@ -31,7 +21,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 		return true;
 	}
 
-	if (Package->ContainsMap() || PackageName.EndsWith("_BuildData"))
+	if (Package && (Package->ContainsMap() || Package->HasAnyPackageFlags(PKG_ContainsMapData) || PackageName.EndsWith("_BuildData")))
 	{
 		// don't validate map packages
 		return true;
@@ -40,9 +30,25 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	FString SourceFilename;
 	if (!FPackageName::DoesPackageExist(PackageName, &SourceFilename))
 	{
-		// in memory but not yet saved
-		UE_LOG(LogAssetValidation, Warning, TEXT("Package %s is in memory but not yet saved (no source file)"), *PackageName);
+		if (!PackageName.StartsWith(TEXT("/Script/")))
+		{
+			// in memory but not yet saved, and its not a script package 
+			UE_LOG(LogAssetValidation, Warning, TEXT("Package %s is in memory but not yet saved (no source file)"), *PackageName);
+		}
+
+		// otherwise package is a script package and we're ok
 		return false;
+	}
+
+	if (Package == nullptr)
+	{
+		// Not in memory, just load it
+		FLogMessageGatherer Gatherer;
+		Package = LoadPackage(nullptr, *PackageName, LOAD_None);
+
+		OutWarnings = Gatherer.GetWarnings();
+		OutErrors = Gatherer.GetErrors();
+		return true;
 	}
 
 	static int32 PackageIdentifier = 0;
@@ -118,6 +124,11 @@ bool UAssetValidator_LoadPackage::IsEnabled() const
 {
 	// Commandlets do not need this validation step as they loaded the content while running.
 	return !IsRunningCommandlet() && Super::IsEnabled();
+}
+
+bool UAssetValidator_LoadPackage::CanValidate_Implementation(const EDataValidationUsecase InUsecase) const
+{
+	return true;
 }
 
 EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)

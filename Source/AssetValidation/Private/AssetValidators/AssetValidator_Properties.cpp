@@ -9,12 +9,13 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	check(PropertyValidators);
 
 	UClass* Class = InAsset->GetClass();
+	UObject* Object = InAsset;
 	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		Class = Blueprint->GeneratedClass;
+		Object = Class->GetDefaultObject();
 	}
 	
-	UObject* Object = Class->GetDefaultObject();
 	check(Class && Object);
 	
 	FPropertyValidationResult Result = PropertyValidators->IsPropertyContainerValid(Object);

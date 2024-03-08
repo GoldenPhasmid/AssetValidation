@@ -9,6 +9,7 @@
 #include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
+#include "Misc/ScopedSlowTask.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 DEFINE_LOG_CATEGORY(LogAssetValidation);
@@ -29,6 +30,7 @@ public:
 private:
 
 	static void CheckContent();
+	static void CheckProjectSettings();
 	static void ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings);
 	static bool HasNoPlayWorld();
 	void RegisterMenus();
@@ -54,23 +56,44 @@ void FAssetValidationModule::RegisterMenus()
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
 	FToolMenuOwnerScoped OwnerScoped(this);
 
-	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
-	FToolMenuSection& Section = Menu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
+	UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
 
+	const FUIAction CheckContentAction = FUIAction(
+		FExecuteAction::CreateStatic(&FAssetValidationModule::CheckContent),
+		FCanExecuteAction::CreateStatic(&FAssetValidationModule::HasNoPlayWorld),
+		FIsActionChecked(),
+		FIsActionButtonVisible::CreateStatic(&FAssetValidationModule::HasNoPlayWorld)
+	);
+	
+	FToolMenuSection& PlayGameSection = ToolbarMenu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
+	
 	FToolMenuEntry CheckContentEntry = FToolMenuEntry::InitToolBarButton(
 		"CheckContent",
-		FUIAction(
-			FExecuteAction::CreateStatic(&FAssetValidationModule::CheckContent),
-			FCanExecuteAction::CreateStatic(&FAssetValidationModule::HasNoPlayWorld),
-			FIsActionChecked(),
-			FIsActionButtonVisible::CreateStatic(&FAssetValidationModule::HasNoPlayWorld)
-		),
+		CheckContentAction,
 		LOCTEXT("CheckContent", "Check Content"),
 		LOCTEXT("CheckContentDescription", "Runs Content Validation job on all checked out assets"),
 		FSlateIcon(FAssetValidationStyle::GetStyleSetName(), "AssetValidation.CheckContent")
 	);
 	CheckContentEntry.StyleNameOverride = "CalloutToolbar";
-	Section.AddEntry(CheckContentEntry);
+	PlayGameSection.AddEntry(CheckContentEntry);
+
+	UToolMenu* ToolsMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
+	FToolMenuSection& ToolsSection = ToolsMenu->FindOrAddSection("DataValidation");
+	
+	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
+		"CheckContent",
+		LOCTEXT("CheckContent", "Check Content"),
+		LOCTEXT("CheckContentTooltip", "Check all source controlled assets."),
+		FSlateIcon(FAssetValidationStyle::GetStyleSetName(), "AssetValidation.CheckContent"),
+		CheckContentAction
+	));
+	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
+		"CheckProjectSettings",
+		LOCTEXT("CheckProjectSettings", "Check Project Settings"),
+		LOCTEXT("CheckProjectSettingsTooltip", "Check all config objects and developer settings"),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon"),
+		FUIAction(FExecuteAction::CreateStatic(&FAssetValidationModule::CheckProjectSettings))
+	));
 }
 
 
@@ -102,6 +125,24 @@ void FAssetValidationModule::CheckContent()
 
 	TArray<FString> Warnings, Errors;
 	AssetValidationStatics::ValidateSourceControl(true, EDataValidationUsecase::Manual, Warnings, Errors);
+}
+
+void FAssetValidationModule::CheckProjectSettings()
+{
+	if (!ISourceControlModule::Get().IsEnabled())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControlDisabled", "Your source control is disabled. Enable and try again."));
+		return;
+	}
+	
+	{
+		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
+		SlowTask.MakeDialog();
+		
+		TArray<FString> Warnings, Errors;
+		AssetValidationStatics::ValidateProjectSettings(EDataValidationUsecase::Manual, Warnings, Errors);
+	}
+
 }
 
 void FAssetValidationModule::ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings)

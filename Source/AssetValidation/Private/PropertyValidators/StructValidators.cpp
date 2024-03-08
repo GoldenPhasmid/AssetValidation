@@ -2,6 +2,7 @@
 
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
+#include "Engine/AssetManager.h"
 
 #include "PropertyValidators/PropertyValidation.h"
 
@@ -18,12 +19,12 @@ UStructValidator::UStructValidator()
 	PropertyClass = FStructProperty::StaticClass();
 }
 
-bool UStructValidator::CanValidateProperty(FProperty* Property) const
+bool UStructValidator::CanValidateProperty(const FProperty* Property) const
 {
 	return Super::CanValidateProperty(Property) && Property->GetCPPType().Equals(CppType);
 }
 
-bool UStructValidator::CanValidatePropertyValue(FProperty* Property, void* Value) const
+bool UStructValidator::CanValidatePropertyValue(const FProperty* Property, const void* Value) const
 {
 	return Super::CanValidatePropertyValue(Property, Value) && Property->GetCPPType().Equals(CppType);
 }
@@ -33,9 +34,9 @@ UStructValidator_GameplayTag::UStructValidator_GameplayTag()
 	CppType = StaticStruct<FGameplayTag>()->GetStructCPPName();
 }
 
-void UStructValidator_GameplayTag::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTag::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FGameplayTag* GameplayTag = Property->ContainerPtrToValuePtr<FGameplayTag>(Container);
+	const FGameplayTag* GameplayTag = Property->ContainerPtrToValuePtr<FGameplayTag>(Container);
 	check(GameplayTag);
 
 	if (!GameplayTag->IsValid())
@@ -44,9 +45,9 @@ void UStructValidator_GameplayTag::ValidateProperty(void* Container, FProperty* 
 	}
 }
 
-void UStructValidator_GameplayTag::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTag::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FGameplayTag* GameplayTag = static_cast<FGameplayTag*>(Value);
+	const FGameplayTag* GameplayTag = static_cast<const FGameplayTag*>(Value);
 	check(GameplayTag);
 
 	if (!GameplayTag->IsValid())
@@ -60,9 +61,9 @@ UStructValidator_GameplayTagContainer::UStructValidator_GameplayTagContainer()
 	CppType = StaticStruct<FGameplayTagContainer>()->GetStructCPPName();
 }
 
-void UStructValidator_GameplayTagContainer::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTagContainer::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FGameplayTagContainer* GameplayTags = Property->ContainerPtrToValuePtr<FGameplayTagContainer>(Container);
+	const FGameplayTagContainer* GameplayTags = Property->ContainerPtrToValuePtr<FGameplayTagContainer>(Container);
 	check(GameplayTags);
 
 	if (GameplayTags->IsEmpty())
@@ -71,9 +72,9 @@ void UStructValidator_GameplayTagContainer::ValidateProperty(void* Container, FP
 	}
 }
 
-void UStructValidator_GameplayTagContainer::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTagContainer::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FGameplayTagContainer* GameplayTags = static_cast<FGameplayTagContainer*>(Value);
+	const FGameplayTagContainer* GameplayTags = static_cast<const FGameplayTagContainer*>(Value);
 	check(GameplayTags);
 
 	if (GameplayTags->IsEmpty())
@@ -87,9 +88,9 @@ UStructValidator_GameplayAttribute::UStructValidator_GameplayAttribute()
 	CppType = StaticStruct<FGameplayAttribute>()->GetStructCPPName();
 }
 
-void UStructValidator_GameplayAttribute::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayAttribute::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FGameplayAttribute* GameplayAttribute = Property->ContainerPtrToValuePtr<FGameplayAttribute>(Container);
+	const FGameplayAttribute* GameplayAttribute = Property->ContainerPtrToValuePtr<FGameplayAttribute>(Container);
 	check(GameplayAttribute);
 
 	if (!GameplayAttribute->IsValid())
@@ -98,9 +99,9 @@ void UStructValidator_GameplayAttribute::ValidateProperty(void* Container, FProp
 	}
 }
 
-void UStructValidator_GameplayAttribute::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayAttribute::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FGameplayAttribute* GameplayAttribute = static_cast<FGameplayAttribute*>(Value);
+	const FGameplayAttribute* GameplayAttribute = static_cast<const FGameplayAttribute*>(Value);
 	check(GameplayAttribute);
 
 	if (!GameplayAttribute->IsValid())
@@ -114,25 +115,33 @@ UStructValidator_DataTableRowHandle::UStructValidator_DataTableRowHandle()
 	CppType = StaticStruct<FDataTableRowHandle>()->GetStructCPPName();
 }
 
-void UStructValidator_DataTableRowHandle::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_DataTableRowHandle::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FDataTableRowHandle* DataTableRow = Property->ContainerPtrToValuePtr<FDataTableRowHandle>(Container);
+	const FDataTableRowHandle* DataTableRow = Property->ContainerPtrToValuePtr<FDataTableRowHandle>(Container);
 	check(DataTableRow);
 
-	if (DataTableRow->IsNull())
+	if (DataTableRow->DataTable == nullptr || DataTableRow->RowName == NAME_None)
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_DataTableRow", "Data table row property is not set"), Property->GetDisplayNameText());
 	}
+	else if (!DataTableRow->DataTable->GetRowNames().Contains(DataTableRow->RowName))
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_DataTableRowName", "Invalid row name for data table row property"), Property->GetDisplayNameText());
+	}
 }
 
-void UStructValidator_DataTableRowHandle::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_DataTableRowHandle::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FDataTableRowHandle* DataTableRow = static_cast<FDataTableRowHandle*>(Value);
+	const FDataTableRowHandle* DataTableRow = static_cast<const FDataTableRowHandle*>(Value);
 	check(DataTableRow);
 
-	if (DataTableRow->IsNull())
+	if (DataTableRow->DataTable == nullptr || DataTableRow->RowName == NAME_None || !DataTableRow->DataTable->GetRowNames().Contains(DataTableRow->RowName))
 	{
 		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_DataTableRowValue", "Data table row is not set"));
+	}
+	else if (!DataTableRow->DataTable->GetRowNames().Contains(DataTableRow->RowName))
+	{
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_DataTableRowValueName", "Invalid row name for data table row property"));
 	}
 }
 
@@ -141,9 +150,9 @@ UStructValidator_DirectoryPath::UStructValidator_DirectoryPath()
 	CppType = GetNativeScriptStruct(TEXT("DirectoryPath"))->GetStructCPPName();
 }
 
-void UStructValidator_DirectoryPath::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_DirectoryPath::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FDirectoryPath* DirectoryPath = Property->ContainerPtrToValuePtr<FDirectoryPath>(Container);
+	const FDirectoryPath* DirectoryPath = Property->ContainerPtrToValuePtr<FDirectoryPath>(Container);
 	check(DirectoryPath);
 
 	FString RelativePath = DirectoryPath->Path;
@@ -164,9 +173,9 @@ void UStructValidator_DirectoryPath::ValidateProperty(void* Container, FProperty
 	}
 }
 
-void UStructValidator_DirectoryPath::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_DirectoryPath::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FDirectoryPath* DirectoryPath = static_cast<FDirectoryPath*>(Value);
+	const FDirectoryPath* DirectoryPath = static_cast<const FDirectoryPath*>(Value);
 	check(DirectoryPath);
 
 	FString RelativePath = DirectoryPath->Path;
@@ -192,9 +201,9 @@ UStructValidator_FilePath::UStructValidator_FilePath()
 	CppType = GetNativeScriptStruct(TEXT("FilePath"))->GetStructCPPName();
 }
 
-void UStructValidator_FilePath::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_FilePath::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FFilePath* FilePath = Property->ContainerPtrToValuePtr<FFilePath>(Container);
+	const FFilePath* FilePath = Property->ContainerPtrToValuePtr<FFilePath>(Container);
 	check(FilePath);
 	
 	if (FilePath->FilePath.IsEmpty() || !FPackageName::DoesPackageExist(FilePath->FilePath))
@@ -203,14 +212,43 @@ void UStructValidator_FilePath::ValidateProperty(void* Container, FProperty* Pro
 	}
 }
 
-void UStructValidator_FilePath::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_FilePath::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FFilePath* FilePath = static_cast<FFilePath*>(Value);
+	const FFilePath* FilePath = static_cast<const FFilePath*>(Value);
 	check(FilePath);
 	
 	if (FilePath->FilePath.IsEmpty() || !FPackageName::DoesPackageExist(FilePath->FilePath))
 	{
 		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_FilePathValue", "File path is invalid"));
+	}
+}
+
+UStructValidator_PrimaryAssetId::UStructValidator_PrimaryAssetId()
+{
+	CppType = GetNativeScriptStruct(TEXT("PrimaryAssetId"))->GetStructCPPName();
+}
+
+void UStructValidator_PrimaryAssetId::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+{
+	const FPrimaryAssetId* AssetID = Property->ContainerPtrToValuePtr<FPrimaryAssetId>(Container);
+	check(AssetID);
+
+	FAssetData AssetData;
+	if (!AssetID->IsValid() || (UAssetManager::IsInitialized() && !UAssetManager::Get().GetPrimaryAssetData(*AssetID, AssetData)))
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_PrimaryAsset", "Primary asset is invalid"));
+	}
+}
+
+void UStructValidator_PrimaryAssetId::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+{
+	const FPrimaryAssetId* AssetID = static_cast<const FPrimaryAssetId*>(Value);
+	check(AssetID);
+
+	FAssetData AssetData;
+	if (!AssetID->IsValid() || (UAssetManager::IsInitialized() && !UAssetManager::Get().GetPrimaryAssetData(*AssetID, AssetData)))
+	{
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_PrimaryAssetValue", "Primary asset is invalid"));
 	}
 }
 

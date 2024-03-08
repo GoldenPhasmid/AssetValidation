@@ -38,10 +38,16 @@ public:
 	//~End USubsystem interface
 
 	/** @return property validation result for given @Object */
-	FPropertyValidationResult IsPropertyContainerValid(UObject* Object) const;
+	FPropertyValidationResult IsPropertyContainerValid(const UObject* Object) const;
+
+	/** @return property validation result for given struct data */
+	FPropertyValidationResult IsPropertyContainerValid(const UObject* OwningObject, const UScriptStruct* ScriptStruct, void* StructData);
 
 	/** @return property validation result for given @Property for @Object */
-	FPropertyValidationResult IsPropertyValid(UObject* Object, FProperty* Property) const;
+	FPropertyValidationResult IsPropertyValid(const UObject* Object, FProperty* Property) const;
+
+	/** @return property validation result property in given struct data */
+	FPropertyValidationResult IsPropertyValid(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, void* StructData);
 
 protected:
 	
@@ -51,7 +57,7 @@ protected:
 	 * @param Struct struct to retrieve
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void IsPropertyContainerValid(void* Container, UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
+	virtual void IsPropertyContainerValidWithContext(const void* Container, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
 
 	/**
 	 * @brief validate @Property in @Container
@@ -59,8 +65,8 @@ protected:
 	 * @param Property property to validate
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void IsPropertyValid(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const;
-
+	virtual void IsPropertyValidWithContext(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
+	
 	/**
 	 * @brief validate given property value
 	 * @param Value property value
@@ -68,10 +74,13 @@ protected:
 	 * @param ValueProperty value property 
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
+	virtual void IsPropertyValueValidWithContext(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
 
-	/** @return whether package should be validated */
-	virtual bool ShouldValidatePackage(UPackage* Package) const;
+	/** @return whether package should be validated for given @ValidationContext */
+	virtual bool ShouldValidatePackage(UPackage* Package, FPropertyValidationContext& ValidationContext) const;
+
+	/** @return whether property should be validated for given @ValidationContext */
+	virtual bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
 
 	/** @return whether package is a blueprint generated class */
 	bool IsBlueprintGenerated(UPackage* Package) const;

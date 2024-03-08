@@ -9,6 +9,11 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
+bool UAssetValidator_SourceControl::CanValidate_Implementation(const EDataValidationUsecase InUsecase) const
+{
+	return true;
+}
+
 bool UAssetValidator_SourceControl::CanValidateAsset_Implementation(UObject* InAsset) const
 {
 	return Super::CanValidateAsset_Implementation(InAsset) && InAsset != nullptr;
@@ -54,9 +59,14 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 			}
 			if (!DependencyState->IsSourceControlled() && !DependencyState->IsUnknown())
 			{
-				// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
-				AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "Asset {0} references {1} which is not marked for add to source control"),
-								FText::FromString(PackageName), FText::FromString(Dependency)), ValidationErrors);
+				// ignore engine assets as we're not allowed to change them anyway or they can be under different repo
+				if (!bIgnoreEngineDependencies || !Dependency.Contains(TEXT("/Engine/")))
+				{
+					// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
+					AssetFails(InAsset, FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "Asset {0} references {1} which is not marked for add to source control"),
+									FText::FromString(PackageName), FText::FromString(Dependency)), ValidationErrors);
+				}
+
 			}
 			if (!DependencyState->IsCurrent())
 			{

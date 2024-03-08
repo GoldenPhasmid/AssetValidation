@@ -13,7 +13,7 @@ enum class EValidationEnum: uint8
 	Two = 2
 };
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_PropertyValidators: public UObject
 {
 	GENERATED_BODY()
@@ -44,6 +44,50 @@ public:
 	EValidationEnum Enum = EValidationEnum::None;
 };
 
+USTRUCT()
+struct FValidationStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FName NameToValidate = NAME_None;
+
+	friend uint32 GetTypeHash(const FValidationStruct& Struct) 
+	{
+		return GetTypeHash(Struct.NameToValidate);
+	}
+
+	friend bool operator==(const FValidationStruct& A, const FValidationStruct& B)
+	{
+		return A.NameToValidate == B.NameToValidate;
+	}
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_StructValidation: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_StructValidation()
+	{
+		StructArray.AddDefaulted();
+		StructSet.Add(FValidationStruct{});
+		StructMap.Add(FValidationStruct{}, FValidationStruct{});
+	}
+
+	
+	UPROPERTY(EditAnywhere)
+	FValidationStruct Struct;
+
+	UPROPERTY(EditAnywhere)
+	TArray<FValidationStruct> StructArray;
+
+	UPROPERTY(EditAnywhere)
+	TSet<FValidationStruct> StructSet;
+	
+	UPROPERTY(EditAnywhere)
+	TMap<FValidationStruct, FValidationStruct> StructMap;
+};
 
 USTRUCT()
 struct FGameplayTagStruct
@@ -54,7 +98,7 @@ struct FGameplayTagStruct
 	FGameplayTag EmptyTag = FGameplayTag::EmptyTag;
 };
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_GameplayTag: public UObject
 {
 	GENERATED_BODY()
@@ -83,7 +127,7 @@ struct FGameplayTagContainerStruct
 	FGameplayTagContainer EmptyTags;
 };
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_GameplayTagContainer: public UObject
 {
 	GENERATED_BODY()
@@ -112,7 +156,7 @@ struct FGameplayAttributeStruct
 	FGameplayAttribute EmptyAttribute;
 };
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_GameplayAttribute: public UObject
 {
 	GENERATED_BODY()
@@ -141,7 +185,7 @@ struct FDataTableRowStruct
 	FDataTableRowHandle EmptyRow;
 };
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_DataTableRow: public UObject
 {
 	GENERATED_BODY()
@@ -170,7 +214,7 @@ struct FDirectoryPathStruct
 	FDirectoryPath EmptyPath;
 };
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_DirectoryPath: public UObject
 {
 	GENERATED_BODY()
@@ -208,7 +252,7 @@ struct FFilePathStruct
 };
 
 
-UCLASS()
+UCLASS(HideDropdown)
 class UValidationTestObject_FilePath: public UObject
 {
 	GENERATED_BODY()
@@ -234,4 +278,41 @@ class UValidationTestObject_FilePath: public UObject
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FFilePathStruct Struct;
+};
+
+USTRUCT()
+struct FPrimaryAssetIdStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FPrimaryAssetId AssetID;
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_PrimaryAssetId: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_PrimaryAssetId()
+	{
+		InvalidID = FPrimaryAssetId{TEXT("UnknownType"), TEXT("UnknownName")};
+		EmptyIDArray.AddDefaulted();
+		StructArray.AddDefaulted();
+	}
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FPrimaryAssetId EmptyID;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FPrimaryAssetId InvalidID;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FPrimaryAssetId> EmptyIDArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FPrimaryAssetIdStruct Struct;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FPrimaryAssetIdStruct> StructArray;
 };

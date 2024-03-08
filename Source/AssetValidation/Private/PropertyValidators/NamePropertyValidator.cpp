@@ -9,7 +9,7 @@ UNamePropertyValidator::UNamePropertyValidator()
 	PropertyClass = FNameProperty::StaticClass();
 }
 
-void UNamePropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UNamePropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FName* Name = Property->ContainerPtrToValuePtr<FName>(Container);
 	check(Name);
@@ -20,9 +20,9 @@ void UNamePropertyValidator::ValidateProperty(void* Container, FProperty* Proper
 	}
 }
 
-void UNamePropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UNamePropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	const FName* Name = static_cast<FName*>(Value);
+	const FName* Name = static_cast<const FName*>(Value);
 	check(Name);
 
 	if (*Name == NAME_None)

@@ -193,8 +193,19 @@ void FWorldPartitionSourceControlValidator::OnLevelInstanceInvalidWorldAsset(con
 		case ELevelInstanceInvalidReason::WorldAssetHasInvalidContainer:
 			// We cannot treat that error as a validation error as it's possible to validate changelists without loading the world
 			break;
+		case ELevelInstanceInvalidReason::CirculalReference:
+			CurrentError = FText::Format(LOCTEXT("DataValidation.Changelist.WorldPartition.LevelInstanceCircularReference", "Level instance {0} has a circular reference {1}."),
+				FText::FromString(GetFullActorName(ActorDescView)),
+				FText::FromName(WorldAsset));
+			Errors.Add(CurrentError);
+			break;
 		};
 	}
+}
+
+void FWorldPartitionSourceControlValidator::OnInvalidActorFilterReference(const FWorldPartitionActorDescView& ActorDescView, const FWorldPartitionActorDescView& ReferenceActorDescView)
+{
+	// Not a validation error
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -9,10 +9,10 @@ USoftObjectPropertyValidator::USoftObjectPropertyValidator()
 	PropertyClass = FSoftObjectProperty::StaticClass();
 }
 
-void USoftObjectPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USoftObjectPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	FSoftObjectProperty* SoftObjectProperty = CastFieldChecked<FSoftObjectProperty>(Property);
-	FSoftObjectPtr* SoftObjectPtr = SoftObjectProperty->ContainerPtrToValuePtr<FSoftObjectPtr>(Container);
+	const FSoftObjectProperty* SoftObjectProperty = CastFieldChecked<FSoftObjectProperty>(Property);
+	const FSoftObjectPtr* SoftObjectPtr = SoftObjectProperty->ContainerPtrToValuePtr<FSoftObjectPtr>(Container);
 	check(SoftObjectPtr);
 		
 	if (SoftObjectPtr->IsNull()) 
@@ -22,9 +22,9 @@ void USoftObjectPropertyValidator::ValidateProperty(void* Container, FProperty* 
 	//@todo: load soft object to verify it?
 }
 
-void USoftObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void USoftObjectPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	FSoftObjectPtr* SoftObjectPtr = static_cast<FSoftObjectPtr*>(Value);
+	const FSoftObjectPtr* SoftObjectPtr = static_cast<const FSoftObjectPtr*>(Value);
 	check(SoftObjectPtr);
 
 	if (SoftObjectPtr->IsNull())

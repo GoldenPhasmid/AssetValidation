@@ -25,7 +25,7 @@ FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() con
 	return Result;
 }
 
-void FPropertyValidationContext::PropertyFails(FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix)
+void FPropertyValidationContext::PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix)
 {
 	FIssue Issue;
 	Issue.IssueProperty = Property;

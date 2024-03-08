@@ -7,16 +7,33 @@ UArrayPropertyValidator::UArrayPropertyValidator()
 	PropertyClass = FArrayProperty::StaticClass();
 }
 
-void UArrayPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+bool UArrayPropertyValidator::CanValidateProperty(const FProperty* Property) const
 {
-	FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
+	if (const FArrayProperty* ArrayProperty = CastField<FArrayProperty>(Property))
+	{
+		if (FStructProperty* ValueProperty = CastField<FStructProperty>(ArrayProperty->Inner))
+		{
+			// allow struct properties to be recursively validated without meta specifier
+			return true;
+		}
+
+		// otherwise, array property should have Validate meta to validate its contents
+		return ArrayProperty->HasMetaData(ValidationNames::Validate);
+	}
+	
+	return false;
+}
+
+void UArrayPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+{
+	const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	FProperty* ValueProperty = ArrayProperty->Inner;
-	FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Container));
+	const FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Container));
 
 	const uint32 Num = Array->Num();
 	const uint32 Stride = ArrayProperty->Inner->ElementSize;
 
-	uint8* Data = static_cast<uint8*>(Array->GetData());
+	const uint8* Data = static_cast<const uint8*>(Array->GetData());
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
 		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
@@ -28,7 +45,8 @@ void UArrayPropertyValidator::ValidateProperty(void* Container, FProperty* Prope
 	}
 }
 
-void UArrayPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UArrayPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
+	checkNoEntry();
 	// array property value is always valid
 }

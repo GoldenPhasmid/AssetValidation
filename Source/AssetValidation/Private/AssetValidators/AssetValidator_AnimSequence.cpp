@@ -15,18 +15,19 @@ EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implemen
 
 	USkeleton* Skeleton = AnimAsset->GetSkeleton();
 	check(Skeleton);
-
+	
 	const TArray<FFloatCurve>& Curves = AnimAsset->GetCurveData().FloatCurves;
 	for (const FFloatCurve& Curve: Curves)
 	{
-		const FName CurveName = Curve.Name.DisplayName;
-		if (!ContainsCurve(Skeleton, CurveName))
+		const FName CurveName = Curve.GetName();
+		if (!CurveExists(Skeleton, CurveName))
 		{
 			FFormatNamedArguments Arguments;
 			Arguments.Add(TEXT("CurveName"), FText::FromName(CurveName));
 			Arguments.Add(TEXT("SkeletonName"), FText::FromString(Skeleton->GetName()));
+			Arguments.Add(TEXT("AnimAsset"), FText::FromString(AnimAsset->GetName()));
 			
-			FText ErrorText = FText::Format(FTextFormat::FromString(TEXT("No curve {CurveName} present on skeleton {SkeletonName}")), Arguments);
+			FText ErrorText = FText::Format(FTextFormat::FromString(TEXT("No curve {CurveName} present on skeleton {SkeletonName}, but exists on anim asset {AnimAsset}")), Arguments);
 			AssetFails(AnimAsset, ErrorText, ValidationErrors);
 		}
 	}
@@ -39,23 +40,12 @@ EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implemen
 	return GetValidationResult();
 }
 
-bool UAssetValidator_AnimSequence::ContainsCurve(const USkeleton* Skeleton, FName CurveName) const
+bool UAssetValidator_AnimSequence::CurveExists(const USkeleton* Skeleton, FName CurveName) const
 {
 	check(IsValid(Skeleton));
 
-	FSmartName SmartName;
-	auto FindSmartName = [&](const FName& ContainerName)
-	{
-		const FSmartNameMapping* SmartNameContainer = Skeleton->GetSmartNameContainer(ContainerName);
-		return SmartNameContainer->FindSmartName(CurveName, SmartName);
-	};
-
-	if (FindSmartName(USkeleton::AnimCurveMappingName) || FindSmartName(USkeleton::AnimTrackCurveMappingName))
-	{
-		return true;
-	}
-
-	return false;
+	// @todo: does it mean that curve exists? Need to test this
+	return Skeleton->GetCurveMetaData(CurveName) != nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE

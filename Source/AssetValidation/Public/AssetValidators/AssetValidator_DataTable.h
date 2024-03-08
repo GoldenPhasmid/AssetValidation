@@ -1,21 +1,20 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿#pragma once
 
-#pragma once
-
+#include "CoreMinimal.h"
 #include "AssetValidator.h"
 
-#include "AssetValidator_AnimSequence.generated.h"
+#include "AssetValidator_DataTable.generated.h"
 
 UCLASS()
-class ASSETVALIDATION_API UAssetValidator_AnimSequence: public UAssetValidator
+class ASSETVALIDATION_API UAssetValidator_DataTable: public UAssetValidator
 {
 	GENERATED_BODY()
 public:
-	
+
+	//~Begin EditorValidatorBase
 	virtual bool CanValidateAsset_Implementation(UObject* InAsset) const override;
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors) override;
+	//~End EditorValidatorBase
 
-protected:
-
-	bool CurveExists(const USkeleton* Skeleton, FName CurveName) const;
+	
 };

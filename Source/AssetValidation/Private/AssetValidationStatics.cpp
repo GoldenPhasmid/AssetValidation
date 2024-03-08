@@ -14,7 +14,6 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Logging/MessageLog.h"
 #include "Misc/ScopedSlowTask.h"
-#include "Settings/ProjectPackagingSettings.h"
 #include "WorldPartition/ActorDescContainerCollection.h"
 #include "WorldPartition/WorldPartition.h"
 #include "WorldPartition/WorldPartitionActorDescUtils.h"
@@ -85,7 +84,7 @@ void AssetValidationStatics::ValidateSourceControl(bool bInteractive, EDataValid
 	
 	// Step 3: Validate World Partition Actors
 	{
-		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckContentTask", "Checking World Partition..."));
+		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckWorldPartition", "Checking World Partition..."));
 		SlowTask.MakeDialog();
 		
 		ValidateWorldPartitionActors(FileStates, OutWarnings, OutErrors);
@@ -100,8 +99,13 @@ void AssetValidationStatics::ValidateSourceControl(bool bInteractive, EDataValid
 	}
 
 	// Step 5: Validate Project Settings
-	ValidateProjectSettings(ValidationUsecase, OutWarnings, OutErrors);
-
+	{
+		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
+		SlowTask.MakeDialog();
+		
+		ValidateProjectSettings(ValidationUsecase, OutWarnings, OutErrors);
+	}
+	
 	if (bInteractive)
 	{
 		const bool bAnyMessages = OutErrors.Num() > 0  || OutWarnings.Num() > 0;
@@ -158,6 +162,10 @@ void AssetValidationStatics::ValidateWorldPartitionActors(const TArray<FSourceCo
 			if (const UClass* ActorClass = AssetValidationStatics::GetAssetNativeClass(AssetData))
 			{
 				FTopLevelAssetPath WorldPath = AssetValidationStatics::GetAssetWorld(AssetData);
+				if (WorldPath.IsNull())
+				{
+					continue;
+				}
 				check(WorldPath.IsValid());
 				
 				WorldToActors.FindOrAdd(WorldPath).Add(ActorClass);
@@ -171,8 +179,9 @@ void AssetValidationStatics::ValidateWorldPartitionActors(const TArray<FSourceCo
 			}
 			
 			UClass* AssetClass = AssetData.GetClass();
-			if (!ensureAlways(AssetClass))
+			if (AssetClass == nullptr)
 			{
+				// @todo: handle assets with blueprint generated base classes
 				continue;
 			}
 			
@@ -235,7 +244,7 @@ void AssetValidationStatics::ValidateWorldPartitionActors(const TArray<FSourceCo
 		for (const FAssetData& Asset : AssetData)
 		{
 			// Get the FWorldPartitionActor			
-			const FWorldPartitionActorDesc* ActorDesc = ActorContainers.GetActorDesc(Asset.AssetName.ToString());
+			const FWorldPartitionActorDesc* ActorDesc = ActorContainers.GetActorDescByName(Asset.AssetName.ToString());
 
 			if (ActorDesc != nullptr)
 			{
@@ -431,6 +440,17 @@ void AssetValidationStatics::ValidatePackages(const TArray<FString>& PackagesToV
 	{
 		if (!Asset.IsAssetLoaded())
 		{
+			UPackage* Package = Asset.GetPackage();
+			if (Package->HasAnyPackageFlags(PKG_ContainsMap | PKG_ContainsMapData))
+			{
+				continue;
+			}
+			
+			if (!UWorld::IsWorldOrExternalActorPackage(Package))
+			{
+				continue;
+			}
+			
 			UE_LOG(LogAssetValidation, Display, TEXT("Loading %s"), *Asset.GetObjectPathString());
 			
 			FLogMessageGatherer Gatherer;
@@ -470,15 +490,43 @@ void AssetValidationStatics::ValidatePackages(const TArray<FString>& PackagesToV
 
 bool AssetValidationStatics::ValidateProjectSettings(EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
 {
-	TArray<FText> Warnings, Errors;
+	TArray<UClass*> AllClasses;
+	GetDerivedClasses(UObject::StaticClass(), AllClasses, true);
+
+	TArray<FAssetData> Assets;
+	Assets.Reserve(AllClasses.Num());
+
+	// gather default config classes and classes that derive from UDeveloperSettings
+	for (const UClass* Class: AllClasses)
+	{
+		if (Class->IsChildOf(UDeveloperSettings::StaticClass()))
+		{
+			FAssetData AssetData{Class->GetDefaultObject()};
+			Assets.Add(AssetData);
+		}
+		else if (Class->HasAnyClassFlags(EClassFlags::CLASS_DefaultConfig) && Class->ClassConfigName != TEXT("Input"))
+		{
+			FAssetData AssetData{Class->GetDefaultObject()};
+			Assets.Add(AssetData);
+		}
+	}
+	
 	const UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
-	EDataValidationResult Result = ValidatorSubsystem->IsObjectValid(GetMutableDefault<UProjectPackagingSettings>(), Errors, Warnings, ValidationUsecase);
 
-	auto Trans = [](const FText& Text) { return Text.ToString(); };
-	Algo::Transform(Errors, OutErrors, Trans);
-	Algo::Transform(Warnings, OutWarnings, Trans);
+	FValidateAssetsSettings Settings;
+	Settings.bSkipExcludedDirectories = true;
+	Settings.bShowIfNoFailures = true;
+	Settings.ValidationUsecase = ValidationUsecase;
+	
+	FLogMessageGatherer Gatherer;
+	
+	FValidateAssetsResults Results;
+	ValidatorSubsystem->ValidateAssetsWithSettings(Assets, Settings, Results);
 
-	return Result != EDataValidationResult::Invalid;
+	OutErrors.Append(Gatherer.GetErrors());
+	OutWarnings.Append(Gatherer.GetWarnings());
+
+	return Results.NumInvalid > 0;
 }
 
 

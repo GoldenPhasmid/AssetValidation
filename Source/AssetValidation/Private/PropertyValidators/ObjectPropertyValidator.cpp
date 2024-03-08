@@ -10,14 +10,14 @@ UObjectPropertyValidator::UObjectPropertyValidator()
 	PropertyClass = FObjectProperty::StaticClass();
 }
 
-bool UObjectPropertyValidator::CanValidateProperty(FProperty* Property) const
+bool UObjectPropertyValidator::CanValidateProperty(const FProperty* Property) const
 {
 	return Super::CanValidateProperty(Property) || Property->HasMetaData(ValidationNames::ValidateRecursive);
 }
 
-void UObjectPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UObjectPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	UObject** ObjectPtr = Property->ContainerPtrToValuePtr<UObject*>(Container);
+	UObject* const* ObjectPtr = Property->ContainerPtrToValuePtr<UObject*>(Container);
     check(ObjectPtr);
 
 	UObject* Object = *ObjectPtr;
@@ -43,9 +43,9 @@ void UObjectPropertyValidator::ValidateProperty(void* Container, FProperty* Prop
     }
 }
 
-void UObjectPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UObjectPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
-	UObject* Object = *static_cast<UObject**>(Value);
+	UObject* Object = *static_cast<UObject* const*>(Value);
 	
 	const bool bObjectValid = Object != nullptr && Object->IsValidLowLevel();
 	if (!bObjectValid)

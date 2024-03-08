@@ -10,7 +10,7 @@ UStringPropertyValidator::UStringPropertyValidator()
 	PropertyClass = FStrProperty::StaticClass();
 }
 
-void UStringPropertyValidator::ValidateProperty(void* Container, FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStringPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FString* Str = Property->ContainerPtrToValuePtr<FString>(Container);
 	check(Str);
@@ -21,7 +21,7 @@ void UStringPropertyValidator::ValidateProperty(void* Container, FProperty* Prop
 	}
 }
 
-void UStringPropertyValidator::ValidatePropertyValue(void* Value, FProperty* ParentProperty, FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UStringPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
 {
 	const FString* Str = ValueProperty->ContainerPtrToValuePtr<FString>(Value);
 	check(Str);

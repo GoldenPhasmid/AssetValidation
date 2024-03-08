@@ -2,8 +2,13 @@
 #include "AssetValidationStatics.h"
 #include "ISourceControlState.h"
 
-class FActorDescContainerCollection;
+class UActorDescContainer;
 enum class EDataValidationUsecase : uint8;
+
+template<class ActorDescContPtrType>
+class TActorDescContainerCollection;
+
+using FActorDescContainerCollection = TActorDescContainerCollection<TObjectPtr<UActorDescContainer>>;
 
 struct FLogMessageGatherer: public FOutputDevice
 {

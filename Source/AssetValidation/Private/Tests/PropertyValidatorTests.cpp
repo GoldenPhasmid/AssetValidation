@@ -11,7 +11,6 @@ static TArray<TPair<FName, EDataValidationResult>> PropertyNames
 	{"NonEditableProperty",		EDataValidationResult::Valid},
 	{"TransientProperty",			EDataValidationResult::Valid},
 	{"TransientEditableProperty",	EDataValidationResult::Valid},
-	{"EditDefaultOnlyProperty",	EDataValidationResult::Invalid},
 	{"EditAnywhereProperty",		EDataValidationResult::Invalid},
 	{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
 };
@@ -24,29 +23,99 @@ void FAutomationSpec_ValidationConditions::Define()
 {
 	BeforeEach([this]()
 	{
-		TestObject = NewObject<UValidationTestObject_ValidationConditions>(GetTransientPackage());
-		TestObject->AddToRoot();
-
 		ValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	});
 	
-	for (auto [PropertyName, ExpectedResult]: PropertyNames)
+	Describe("For Objects", [this]()
 	{
-		It(FString::Printf(TEXT("should validate %s"), *PropertyName.ToString()),
-			[this, PropertyName, ExpectedResult]()
+		BeforeEach([this]()
 		{
-			FProperty* Property = TestObject->GetClass()->FindPropertyByName(PropertyName);
+			TestObject = NewObject<UValidationTestObject_ValidationConditions>(GetTransientPackage());
+		});
+			
+		for (const auto& Pair: PropertyNames)
+		{
+			const auto& PropertyName = Pair.Key;
+			const auto& ExpectedResult = Pair.Value;
+			
+			const FString InFix = ExpectedResult == EDataValidationResult::Invalid ? TEXT("Not"): TEXT("");
+			It(FString::Printf(TEXT("should %s validate %s"), *InFix, *PropertyName.ToString()),
+				[this, PropertyName, ExpectedResult]()
+			{
+				FProperty* Property = TestObject->GetClass()->FindPropertyByName(PropertyName);
+				FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+
+				TestEqual("ValidationResult", Result.ValidationResult, ExpectedResult);
+			});	
+		}
+
+		It("should validate EditDefaultsOnly property on template object", [this]()
+		{
+			TestObject = GetMutableDefault<UValidationTestObject_ValidationConditions>();
+			FProperty* Property = TestObject->GetClass()->FindPropertyByName(TEXT("EditDefaultOnlyProperty"));
 			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
 
-			TestEqual("ValidationResult", Result.ValidationResult, ExpectedResult);
-		});	
-	}
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 1);
+		});
+
+		AfterEach([this]()
+		{
+			if (!TestObject->IsTemplate())
+			{
+				TestObject->MarkAsGarbage();
+			}
+			TestObject = nullptr;
+		});
+	});
+
+	Describe("For Assets", [this]()
+	{
+		BeforeEach([this]()
+		{
+			UPackage* TestPackage = NewObject<UPackage>(nullptr, TEXT("/AssetValidation/TestDataAsset"), RF_Transient);
+			TestObject = NewObject<UValidationTestDataAsset>(TestPackage, TEXT("TestDataAsset"));
+		});
+
+		for (const auto& Pair: PropertyNames)
+		{
+			const auto& PropertyName = Pair.Key;
+			const auto& ExpectedResult = Pair.Value;
+			
+			const FString InFix = ExpectedResult == EDataValidationResult::Invalid ? TEXT("Not"): TEXT("");
+			It(FString::Printf(TEXT("should %s validate %s"), *InFix, *PropertyName.ToString()),
+				[this, PropertyName, ExpectedResult]()
+			{
+				FProperty* Property = TestObject->GetClass()->FindPropertyByName(PropertyName);
+				FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+
+				TestEqual("ValidationResult", Result.ValidationResult, ExpectedResult);
+			});	
+		}
+
+		It("should validate EditDefaultsOnly property on asset", [this]()
+		{
+			TestObject = GetMutableDefault<UValidationTestDataAsset>();
+			FProperty* Property = TestObject->GetClass()->FindPropertyByName(TEXT("EditDefaultOnlyProperty"));
+			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+
+			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+			TestEqual("NumErrors", Result.Errors.Num(), 1);
+		});
+
+		AfterEach([this]()
+		{
+			if (!TestObject->IsTemplate())
+			{
+				TestObject->GetPackage()->MarkAsGarbage();
+				TestObject->MarkAsGarbage();
+			}
+			TestObject = nullptr;
+		});
+	});
 
 	AfterEach([this]()
 	{
-		TestObject->RemoveFromRoot();
-		TestObject = nullptr;
-		
 		ValidationSubsystem = nullptr;
 	});
 }
@@ -220,7 +289,6 @@ void FAutomationSpec_ContainerProperties::Define()
 BEGIN_DEFINE_SPEC(FAutomationSpec_ValidateMetas, "Editor.PropertyValidation.ValidationMetas", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask)
 	UValidationTestObject_ValidationMetas* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
-	FProperty* TestProperty;
 END_DEFINE_SPEC(FAutomationSpec_ValidateMetas)
 void FAutomationSpec_ValidateMetas::Define()
 {

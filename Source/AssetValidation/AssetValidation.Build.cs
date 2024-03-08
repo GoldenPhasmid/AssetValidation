@@ -33,6 +33,7 @@ public class AssetValidation : ModuleRules
 				"Engine",
 				"DeveloperToolSettings",
 				"SourceControl",
+				"DeveloperSettings",
 			}
 		);
 	}

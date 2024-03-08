@@ -12,13 +12,14 @@ class FPropertyValidationContext: public FNoncopyable
 {
 public:
 	
-	FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem)
+	FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject)
 		: Subsystem(OwningSubsystem)
+		, SourceObject(InSourceObject)
 	{ }
 	
 	FPropertyValidationResult MakeValidationResult() const;
 	
-	void PropertyFails(FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty());
+	void PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty());
 
 	FORCEINLINE void PushPrefix(const FString& Prefix)
 	{
@@ -32,21 +33,27 @@ public:
 		Context = Context.LeftChop(Prefix.Len() + 1);
 	}
 
-	FORCEINLINE void IsPropertyContainerValid(void* Container, UStruct* Struct)
+	FORCEINLINE void IsPropertyContainerValid(const void* Container, const UStruct* Struct)
 	{
-		Subsystem->IsPropertyContainerValid(Container, Struct, *this);		
+		Subsystem->IsPropertyContainerValidWithContext(Container, Struct, *this);		
 	}
 
-	FORCEINLINE void IsPropertyValid(void* Container, FProperty* Property)
+	FORCEINLINE void IsPropertyValid(const void* Container, const FProperty* Property)
 	{
-		Subsystem->IsPropertyValid(Container, Property, *this);
+		Subsystem->IsPropertyValidWithContext(Container, Property, *this);
 	}
 
-	FORCEINLINE void IsPropertyValueValid(void* Value, FProperty* ParentProperty, FProperty* ValueProperty)
+	FORCEINLINE void IsPropertyValueValid(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty)
 	{
-		Subsystem->IsPropertyValueValid(Value, ParentProperty, ValueProperty, *this);
+		Subsystem->IsPropertyValueValidWithContext(Value, ParentProperty, ValueProperty, *this);
 	}
 
+	FORCEINLINE const UObject* GetSourceObject() const
+	{
+		check(SourceObject.IsValid());
+		return SourceObject.Get();
+	}
+	
 private:
 
 	FText MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const;
@@ -55,13 +62,14 @@ private:
 	{
 		FText Message;
 		EMessageSeverity::Type Severity = EMessageSeverity::Info;
-		FProperty* IssueProperty = nullptr;
+		const FProperty* IssueProperty = nullptr;
 	};
 
 	TArray<FIssue> Issues;
 	TArray<FString> Prefixes;
 	FString Context = "";
 	TWeakObjectPtr<const UPropertyValidatorSubsystem> Subsystem;
+	TWeakObjectPtr<const UObject> SourceObject;
 };
 
 struct FPropertyValidationResult
