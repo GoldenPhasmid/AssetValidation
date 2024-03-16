@@ -2,22 +2,19 @@
 
 #include "PropertyValidators/PropertyValidation.h"
 
-#define LOCTEXT_NAMESPACE "AssetValidation"
-
 UTextPropertyValidator::UTextPropertyValidator()
 {
 	PropertyClass = FTextProperty::StaticClass();
 }
+
+const FText EmptyTextFailure = NSLOCTEXT("AssetValidation", "TextProperty", "Text property is not set");
 
 void UTextPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FText* TextPtr = Property->ContainerPtrToValuePtr<FText>(Container);
 	check(TextPtr);
 
-	if (TextPtr->IsEmpty())
-	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_TextProperty", "Text property is not set"), Property->GetDisplayNameText());
-	}
+	ValidationContext.FailOnCondition(TextPtr->IsEmpty(), Property, EmptyTextFailure, Property->GetDisplayNameText());
 }
 
 void UTextPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
@@ -25,10 +22,5 @@ void UTextPropertyValidator::ValidatePropertyValue(const void* Value, const FPro
 	const FText* TextPtr = static_cast<const FText*>(Value);
 	check(TextPtr);
 
-	if (TextPtr->IsEmpty())
-	{
-		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_TextPropertyValue", "Text value is not set"));
-	}
+	ValidationContext.FailOnCondition(TextPtr->IsEmpty(), ParentProperty, EmptyTextFailure);
 }
-
-#undef LOCTEXT_NAMESPACE

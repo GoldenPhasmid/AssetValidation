@@ -18,19 +18,29 @@ public:
 	{ }
 	
 	FPropertyValidationResult MakeValidationResult() const;
+
+	FORCEINLINE void FailOnCondition(bool Condition, const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty())
+	{
+		if (Condition)
+		{
+			PropertyFails(Property, DefaultFailureMessage, PropertyPrefix);
+		}
+	}
 	
 	void PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty());
 
+	/** push prefix to context string */
 	FORCEINLINE void PushPrefix(const FString& Prefix)
 	{
 		Prefixes.Push(Prefix);
-		Context.Append(Prefix + TEXT("."));
+		ContextString.Append(Prefix + TEXT("."));
 	}
 
+	/** pop last prefix from context string */
 	FORCEINLINE void PopPrefix()
 	{
 		const FString Prefix = Prefixes.Pop();
-		Context = Context.LeftChop(Prefix.Len() + 1);
+		ContextString = ContextString.LeftChop(Prefix.Len() + 1);
 	}
 
 	FORCEINLINE void IsPropertyContainerValid(const void* Container, const UStruct* Struct)
@@ -66,9 +76,16 @@ private:
 	};
 
 	TArray<FIssue> Issues;
+	/** Stack of prefixes appended to @ContextString */
 	TArray<FString> Prefixes;
-	FString Context = "";
+	/**
+	 * Context string that is added to "property fails" error message.
+	 * Allows to understand property hierarchies for nested structs/arrays/objects
+	 */
+	FString ContextString = "";
+	/** Weak reference to property validator subsystem */
 	TWeakObjectPtr<const UPropertyValidatorSubsystem> Subsystem;
+	/** Weak reference to an initial object from which validation sequence has started */
 	TWeakObjectPtr<const UObject> SourceObject;
 };
 

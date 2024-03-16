@@ -244,11 +244,18 @@ void UStructValidator_PrimaryAssetId::ValidatePropertyValue(const void* Value, c
 {
 	const FPrimaryAssetId* AssetID = static_cast<const FPrimaryAssetId*>(Value);
 	check(AssetID);
-
-	FAssetData AssetData;
-	if (!AssetID->IsValid() || (UAssetManager::IsInitialized() && !UAssetManager::Get().GetPrimaryAssetData(*AssetID, AssetData)))
+	
+	if (!AssetID->IsValid())
 	{
-		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_PrimaryAssetValue", "Primary asset is invalid"));
+		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_PrimaryAsset_NotSet", "Primary asset property is not set"));
+	}
+	else if (UAssetManager* AssetManager = UAssetManager::GetIfInitialized())
+	{
+		FAssetData AssetData;
+		if (!AssetManager->GetPrimaryAssetData(*AssetID, AssetData))
+		{
+			ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_PrimaryAsset_Invalid", "Primary asset property stores invalid value"));
+		}
 	}
 }
 
