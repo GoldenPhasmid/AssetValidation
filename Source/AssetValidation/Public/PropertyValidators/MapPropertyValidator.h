@@ -4,7 +4,7 @@
 
 #include "MapPropertyValidator.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class UMapPropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()

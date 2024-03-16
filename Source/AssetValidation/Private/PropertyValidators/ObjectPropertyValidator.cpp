@@ -1,19 +1,13 @@
 #include "PropertyValidators/ObjectPropertyValidator.h"
 
-#include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
-
-#define LOCTEXT_NAMESPACE "AssetValidation"
 
 UObjectPropertyValidator::UObjectPropertyValidator()
 {
 	PropertyClass = FObjectProperty::StaticClass();
 }
 
-bool UObjectPropertyValidator::CanValidateProperty(const FProperty* Property) const
-{
-	return Super::CanValidateProperty(Property) || Property->HasMetaData(ValidationNames::ValidateRecursive);
-}
+const FText ObjectEmptyFailure = NSLOCTEXT("AssetValidation", "ObjectProperty", "Object property not set");
 
 void UObjectPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
@@ -22,25 +16,8 @@ void UObjectPropertyValidator::ValidateProperty(const void* Container, const FPr
 
 	UObject* Object = *ObjectPtr;
 	const bool bObjectValid = Object != nullptr && Object->IsValidLowLevel();
-    if (!bObjectValid)
-    {
-    	// determine whether object value should be validated
-    	if (Super::CanValidateProperty(Property))
-    	{
-    		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_ObjectProperty", "Object property not set"), Property->GetDisplayNameText());
-    	}
-    	return;
-    }
-	
-    if (Property->HasMetaData(ValidationNames::ValidateRecursive))
-    {
-    	ValidationContext.PushPrefix(Property->GetName() + "." + Object->GetName());
 
-    	// validate underlying object recursively
-    	ValidationContext.IsPropertyContainerValid(Object, Object->GetClass());
-
-    	ValidationContext.PopPrefix();
-    }
+	ValidationContext.FailOnCondition(!bObjectValid, Property, ObjectEmptyFailure, Property->GetDisplayNameText());
 }
 
 void UObjectPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
@@ -48,20 +25,5 @@ void UObjectPropertyValidator::ValidatePropertyValue(const void* Value, const FP
 	UObject* Object = *static_cast<UObject* const*>(Value);
 	
 	const bool bObjectValid = Object != nullptr && Object->IsValidLowLevel();
-	if (!bObjectValid)
-	{
-		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_ObjectProperty", "Object value not set"));
-		return;
-	}
-	
-	if (ParentProperty->HasMetaData(ValidationNames::ValidateRecursive))
-	{
-		ValidationContext.PushPrefix(Object->GetName());
-		// validate underlying object recursively
-		ValidationContext.IsPropertyContainerValid(Object, Object->GetClass());
-
-		ValidationContext.PopPrefix();
-	}
+	ValidationContext.FailOnCondition(!bObjectValid, ParentProperty, ObjectEmptyFailure);
 }
-
-#undef LOCTEXT_NAMESPACE

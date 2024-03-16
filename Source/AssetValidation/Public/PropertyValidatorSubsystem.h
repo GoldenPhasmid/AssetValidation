@@ -7,6 +7,7 @@
 
 class FFieldClass;
 class UPropertyValidatorBase;
+class UPropertyContainerValidator;
 class FPropertyValidationContext;
 struct FPropertyValidationResult;
 
@@ -90,7 +91,10 @@ protected:
 
 	UPROPERTY(Config)
 	bool bSkipBlueprintGeneratedClasses = false;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UPropertyContainerValidator>> ContainerValidators;
 	
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPropertyValidatorBase>> Validators;
+	TArray<TObjectPtr<UPropertyValidatorBase>> PropertyValidators;
 };

@@ -4,7 +4,7 @@
 
 #include "SetPropertyValidator.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class USetPropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()

@@ -4,7 +4,7 @@
 
 #include "StructPropertyValidator.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class UStructPropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()

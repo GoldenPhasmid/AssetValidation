@@ -46,7 +46,7 @@ void FPropertyValidationContext::PropertyFails(const FProperty* Property, const 
 
 FText FPropertyValidationContext::MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const
 {
-	FString CorrectContext = Context;
+	FString CorrectContext = ContextString;
 	if (PropertyPrefix.IsEmpty())
 	{
 		// remove last dot

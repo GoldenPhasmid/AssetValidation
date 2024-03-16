@@ -4,7 +4,7 @@
 
 #include "ArrayPropertyValidator.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class UArrayPropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()

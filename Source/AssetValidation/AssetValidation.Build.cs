@@ -7,6 +7,7 @@ public class AssetValidation : ModuleRules
 	public AssetValidation(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		OptimizeCode = CodeOptimization.Never;
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
