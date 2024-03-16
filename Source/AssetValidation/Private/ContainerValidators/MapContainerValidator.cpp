@@ -10,9 +10,9 @@ UMapContainerValidator::UMapContainerValidator()
 	PropertyClass = FMapProperty::StaticClass();
 }
 
-bool UMapContainerValidator::CanValidateContainerProperty(const FProperty* Property) const
+bool UMapContainerValidator::CanValidateProperty(const FProperty* Property) const
 {
-	if (Super::CanValidateContainerProperty(Property))
+	if (Super::CanValidateProperty(Property))
 	{
 		const FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
 
@@ -32,7 +32,7 @@ bool UMapContainerValidator::CanValidateContainerProperty(const FProperty* Prope
 	return false;
 }
 
-void UMapContainerValidator::ValidateContainerProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UMapContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
 	const FScriptMap* Map = MapProperty->GetPropertyValuePtr(PropertyMemory);

@@ -11,6 +11,11 @@ FAutoConsoleVariableRef ValidateStructPropertiesWithoutMeta(
 	TEXT("")
 );
 
+bool UPropertyValidatorSubsystem::IsContainerProperty(const FProperty* Property)
+{
+	return Property != nullptr && (Property->IsA(FArrayProperty::StaticClass()) || Property->IsA(FMapProperty::StaticClass()) || Property->IsA(FSetProperty::StaticClass()));
+}
+
 bool UPropertyValidatorSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
 	TArray<UClass*> ChildClasses;
@@ -27,24 +32,19 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	TArray<UClass*> ValidatorClasses;
 	GetDerivedClasses(UPropertyValidatorBase::StaticClass(), ValidatorClasses, true);
 
-	for (UClass* ValidatorClass: ValidatorClasses)
+	for (const UClass* ValidatorClass: ValidatorClasses)
 	{
 		if (!ValidatorClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
 		{
 			UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
-			PropertyValidators.Add(Validator);
-		}
-	}
-
-	TArray<UClass*> ContainerClasses;
-	GetDerivedClasses(UPropertyContainerValidator::StaticClass(), ContainerClasses, true);
-
-	for (UClass* ContainerClass: ContainerClasses)
-	{
-		if (!ContainerClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
-		{
-			UPropertyContainerValidator* Validator = NewObject<UPropertyContainerValidator>(GetTransientPackage(), ContainerClass);
-			ContainerValidators.Add(Validator);
+			if (Validator->IsA<UPropertyContainerValidator>())
+			{
+				ContainerValidators.Add(Validator);
+			}
+			else
+			{
+				PropertyValidators.Add(Validator);
+			}
 		}
 	}
 }
@@ -153,22 +153,22 @@ void UPropertyValidatorSubsystem::IsPropertyValidWithContext(const void* Contain
 	{
 		return;
 	}
-		
+
+	const void* PropertyMemory = Property->ContainerPtrToValuePtr<void>(Container);
 	for (UPropertyValidatorBase* Validator: PropertyValidators)
 	{
 		if (Validator->CanValidateProperty(Property))
 		{
-			Validator->ValidateProperty(Container, Property, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
 			break;
 		}
 	}
-
-	const void* PropertyMemory = Property->ContainerPtrToValuePtr<void>(Container);
-	for (UPropertyContainerValidator* Validator: ContainerValidators)
+	
+	for (UPropertyValidatorBase* Validator: ContainerValidators)
 	{
-		if (Validator->CanValidateContainerProperty(Property))
+		if (Validator->CanValidateProperty(Property))
 		{
-			Validator->ValidateContainerProperty(PropertyMemory, Property, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
 			break;
 		}
 	}
@@ -178,21 +178,22 @@ void UPropertyValidatorSubsystem::IsPropertyValueValidWithContext(const void* Va
 {
 	// do not check for property flags for ParentProperty or ValueProperty.
 	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
+
+	const void* PropertyMemory = Value;
 	for (UPropertyValidatorBase* Validator: PropertyValidators)
 	{
-		if (Validator->CanValidatePropertyValue(ValueProperty, Value))
+		if (Validator->CanValidateProperty(ValueProperty))
 		{
-			Validator->ValidatePropertyValue(Value, ParentProperty, ValueProperty, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
 			break;
 		}
 	}
-
-	const void* PropertyMemory = Value;
-	for (UPropertyContainerValidator* Validator: ContainerValidators)
+	
+	for (UPropertyValidatorBase* Validator: ContainerValidators)
 	{
-		if (Validator->CanValidateContainerProperty(ValueProperty))
+		if (Validator->CanValidateProperty(ValueProperty))
 		{
-			Validator->ValidateContainerProperty(PropertyMemory, ValueProperty, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
 			break;
 		}
 	}

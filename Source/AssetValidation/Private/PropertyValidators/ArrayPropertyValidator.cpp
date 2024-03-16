@@ -24,11 +24,11 @@ bool UArrayPropertyValidator::CanValidateProperty(const FProperty* Property) con
 	return false;
 }
 
-void UArrayPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UArrayPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	FProperty* ValueProperty = ArrayProperty->Inner;
-	const FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Container));
+	const FScriptArray* Array = ArrayProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(PropertyMemory));
 
 	const uint32 Num = Array->Num();
 	const uint32 Stride = ArrayProperty->Inner->ElementSize;
@@ -43,10 +43,4 @@ void UArrayPropertyValidator::ValidateProperty(const void* Container, const FPro
 		
 		Data += Stride;
 	}
-}
-
-void UArrayPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-{
-	checkNoEntry();
-	// array property value is always valid
 }

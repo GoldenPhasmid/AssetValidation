@@ -10,11 +10,19 @@ FFieldClass* UPropertyValidatorBase::GetPropertyClass() const
 bool UPropertyValidatorBase::CanValidateProperty(const FProperty* Property) const
 {
 	// don't check for property type as property validator is obtained by underlying property class
-	return Property && Property->IsA(PropertyClass) && Property->HasMetaData(ValidationNames::Validate);
-}
+	if (Property && Property->IsA(PropertyClass))
+	{
+		if (Property->HasMetaData(ValidationNames::Validate))
+		{
+			return true;
+		}
 
-bool UPropertyValidatorBase::CanValidatePropertyValue(const FProperty* Property, const void* Value) const
-{
-	// do not require Validate meta, as it is likely not a 'user defined' property
-	return Property && Property->IsA(PropertyClass);
+		if (const FProperty* OwnerProperty = Property->GetOwner<FProperty>();
+			OwnerProperty && UPropertyValidatorSubsystem::IsContainerProperty(OwnerProperty) && OwnerProperty->HasMetaData(ValidationNames::Validate))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

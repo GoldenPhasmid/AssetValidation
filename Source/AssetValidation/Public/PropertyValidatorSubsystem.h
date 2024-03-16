@@ -7,7 +7,6 @@
 
 class FFieldClass;
 class UPropertyValidatorBase;
-class UPropertyContainerValidator;
 class FPropertyValidationContext;
 struct FPropertyValidationResult;
 
@@ -31,6 +30,9 @@ class ASSETVALIDATION_API UPropertyValidatorSubsystem: public UEditorSubsystem
 	friend class FPropertyValidationContext;
 	
 public:
+
+	/** @return true if property is a container property (array, set or map) */
+	static bool IsContainerProperty(const FProperty* Property);
 
 	//~Begin USubsystem interface
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
@@ -93,7 +95,7 @@ protected:
 	bool bSkipBlueprintGeneratedClasses = false;
 
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPropertyContainerValidator>> ContainerValidators;
+	TArray<TObjectPtr<UPropertyValidatorBase>> ContainerValidators;
 	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UPropertyValidatorBase>> PropertyValidators;

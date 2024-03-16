@@ -9,9 +9,9 @@ USetContainerValidator::USetContainerValidator()
 	PropertyClass = FSetProperty::StaticClass();
 }
 
-bool USetContainerValidator::CanValidateContainerProperty(const FProperty* Property) const
+bool USetContainerValidator::CanValidateProperty(const FProperty* Property) const
 {
-	if (Super::CanValidateContainerProperty(Property))
+	if (Super::CanValidateProperty(Property))
 	{
 		if (Property->HasMetaData(ValidationNames::Validate))
 		{
@@ -34,7 +34,7 @@ bool USetContainerValidator::CanValidateContainerProperty(const FProperty* Prope
 	return false;
 }
 
-void USetContainerValidator::ValidateContainerProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USetContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	const FScriptSet* Set = SetProperty->GetPropertyValuePtr(PropertyMemory);

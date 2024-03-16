@@ -29,32 +29,15 @@ public:
 	 * @return can property be validated
 	 */
 	virtual bool CanValidateProperty(const FProperty* Property) const;
-
-	/**
-	 * @brief Determines whether given property 
-	 * @param Property property to validate
-	 * @param Value property value to validate
-	 * @return 
-	 */
-	virtual bool CanValidatePropertyValue(const FProperty* Property, const void* Value) const;
 	
 	/**
-	 * @brief 
-	 * @param Container 
-	 * @param Property 
-	 * @param ValidationContext 
+	 * @brief validates property value defined by property memory
+	 * @param PropertyMemory pointer to a property value
+	 * @param Property property that can be analyzed by this property validator
+	 * @param ValidationContext validation context
 	 */
-	virtual void ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 	PURE_VIRTUAL(ValidateProperty)
-
-	/**
-	 * @brief validates value property nested in parent property, either struct or container
-	 * @param Value pointer to a property value
-	 * @param ParentProperty parent property, typically container or struct
-	 * @param ValueProperty value property
-	 */
-	virtual void ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-	PURE_VIRTUAL(ValidatePropertyValue)
 
 protected:
 

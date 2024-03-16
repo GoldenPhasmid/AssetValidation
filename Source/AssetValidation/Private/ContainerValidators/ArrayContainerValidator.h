@@ -13,7 +13,7 @@ public:
 	UArrayContainerValidator();
 
 	//~Begin ContainerPropertyValidator
-	virtual bool CanValidateContainerProperty(const FProperty* Property) const override;
-	virtual void ValidateContainerProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual bool CanValidateProperty(const FProperty* Property) const override;
+	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End ContainerPropertyValidator
 };

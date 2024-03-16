@@ -24,10 +24,10 @@ bool UMapPropertyValidator::CanValidateProperty(const FProperty* Property) const
 	return false;
 }
 
-void UMapPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UMapPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
-	const FScriptMap* Map = MapProperty->GetPropertyValuePtr(MapProperty->ContainerPtrToValuePtr<void>(Container));
+	const FScriptMap* Map = MapProperty->GetPropertyValuePtr(MapProperty->ContainerPtrToValuePtr<void>(PropertyMemory));
 
 	FProperty* KeyProperty = MapProperty->KeyProp;
 	FProperty* ValueProperty = MapProperty->ValueProp;
@@ -81,9 +81,4 @@ void UMapPropertyValidator::ValidateProperty(const void* Container, const FPrope
 		// remove Validate meta if it wasn't on map property in a first place
 		const_cast<FMapProperty*>(MapProperty)->RemoveMetaData(ValidationNames::Validate);
 	}
-}
-
-void UMapPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-{
-	// map property value always valid
 }

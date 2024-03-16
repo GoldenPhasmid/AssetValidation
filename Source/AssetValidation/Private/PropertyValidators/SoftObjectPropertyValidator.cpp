@@ -2,35 +2,16 @@
 
 #include "PropertyValidators/PropertyValidation.h"
 
-#define LOCTEXT_NAMESPACE "AssetValidation"
-
 USoftObjectPropertyValidator::USoftObjectPropertyValidator()
 {
 	PropertyClass = FSoftObjectProperty::StaticClass();
 }
 
-void USoftObjectPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USoftObjectPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	const FSoftObjectProperty* SoftObjectProperty = CastFieldChecked<FSoftObjectProperty>(Property);
-	const FSoftObjectPtr* SoftObjectPtr = SoftObjectProperty->ContainerPtrToValuePtr<FSoftObjectPtr>(Container);
-	check(SoftObjectPtr);
-		
-	if (SoftObjectPtr->IsNull()) 
-	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("AssetValidation_SoftObjectProperty", "Soft object property not set"), Property->GetDisplayNameText());
-	}
-	//@todo: load soft object to verify it?
-}
-
-void USoftObjectPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-{
-	const FSoftObjectPtr* SoftObjectPtr = static_cast<const FSoftObjectPtr*>(Value);
+	const FSoftObjectPtr* SoftObjectPtr = GetPropertyValuePtr<FSoftObjectProperty>(PropertyMemory, Property);
 	check(SoftObjectPtr);
 
-	if (SoftObjectPtr->IsNull())
-	{
-		ValidationContext.PropertyFails(ParentProperty, LOCTEXT("AssetValidation_SoftObjectPropertyValue", "Soft object value not set"));
-	}
+	// @todo: load soft object to verify it?
+	ValidationContext.FailOnCondition(SoftObjectPtr->IsNull(), Property, NSLOCTEXT("AssetValidation", "SoftObjectProperty", "Soft object property not set"));
 }
-
-#undef LOCTEXT_NAMESPACE

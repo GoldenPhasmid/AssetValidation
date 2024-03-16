@@ -25,12 +25,20 @@ FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() con
 	return Result;
 }
 
-void FPropertyValidationContext::PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix)
+void FPropertyValidationContext::PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage)
 {
+	FProperty* OwnerProperty = Property->GetOwner<FProperty>();
+	const bool bContainerProperty = UPropertyValidatorSubsystem::IsContainerProperty(OwnerProperty);
+
 	FIssue Issue;
-	Issue.IssueProperty = Property;
-	// @todo: warning validation
+	Issue.IssueProperty = bContainerProperty ? OwnerProperty : Property;
 	Issue.Severity = EMessageSeverity::Error;
+
+	FText PropertyPrefix = FText::GetEmpty();
+	if (!bContainerProperty)
+	{
+		PropertyPrefix = Property->GetDisplayNameText();
+	}
 	
 	if (const FString* CustomMsg = Property->FindMetaData(ValidationNames::ValidationFailureMessage))
 	{

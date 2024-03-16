@@ -24,11 +24,11 @@ bool USetPropertyValidator::CanValidateProperty(const FProperty* Property) const
 	return false;
 }
 
-void USetPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USetPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	FProperty* ValueProperty = SetProperty->ElementProp;
-	const FScriptSet* Set = SetProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(Container));
+	const FScriptSet* Set = SetProperty->GetPropertyValuePtr(Property->ContainerPtrToValuePtr<void>(PropertyMemory));
 
 	const FScriptSetLayout Layout = Set->GetScriptLayout(ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
 	
@@ -42,10 +42,4 @@ void USetPropertyValidator::ValidateProperty(const void* Container, const FPrope
 		ValidationContext.IsPropertyValueValid(Data, SetProperty, ValueProperty);
 		ValidationContext.PopPrefix();
 	}
-}
-
-void USetPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-{
-	checkNoEntry();
-	// set property value is always valid
 }

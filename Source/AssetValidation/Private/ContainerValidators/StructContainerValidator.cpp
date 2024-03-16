@@ -10,9 +10,9 @@ UStructContainerValidator::UStructContainerValidator()
 	PropertyClass = FStructProperty::StaticClass();
 }
 
-bool UStructContainerValidator::CanValidateContainerProperty(const FProperty* Property) const
+bool UStructContainerValidator::CanValidateProperty(const FProperty* Property) const
 {
-	if (Super::CanValidateContainerProperty(Property))
+	if (Super::CanValidateProperty(Property))
 	{
 		// do not require meta = (Validate) to perform validation for struct properties.
 		// Use Validate meta for structs when you want to validate struct "value", not the underlying struct properties
@@ -22,7 +22,7 @@ bool UStructContainerValidator::CanValidateContainerProperty(const FProperty* Pr
 	return false;
 }
 
-void UStructContainerValidator::ValidateContainerProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 

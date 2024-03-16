@@ -8,12 +8,12 @@ UObjectContainerValidator::UObjectContainerValidator()
 	PropertyClass = FObjectPropertyBase::StaticClass();
 }
 
-bool UObjectContainerValidator::CanValidateContainerProperty(const FProperty* Property) const
+bool UObjectContainerValidator::CanValidateProperty(const FProperty* Property) const
 {
-	return Super::CanValidateContainerProperty(Property) && Property->HasMetaData(ValidationNames::ValidateRecursive);
+	return Super::CanValidateProperty(Property) && Property->HasMetaData(ValidationNames::ValidateRecursive);
 }
 
-void UObjectContainerValidator::ValidateContainerProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UObjectContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FObjectPropertyBase* ObjectProperty = CastFieldChecked<FObjectPropertyBase>(Property);
 

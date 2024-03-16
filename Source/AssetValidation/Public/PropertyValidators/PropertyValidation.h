@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Experimental/Coroutine/Coroutine.h"
 #include "UObject/UObjectGlobals.h"
 
 class UPropertyValidatorSubsystem;
@@ -19,15 +20,15 @@ public:
 	
 	FPropertyValidationResult MakeValidationResult() const;
 
-	FORCEINLINE void FailOnCondition(bool Condition, const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty())
+	FORCEINLINE void FailOnCondition(bool Condition, const FProperty* Property, const FText& DefaultFailureMessage)
 	{
 		if (Condition)
 		{
-			PropertyFails(Property, DefaultFailureMessage, PropertyPrefix);
+			PropertyFails(Property, DefaultFailureMessage);
 		}
 	}
 	
-	void PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage, const FText& PropertyPrefix = FText::GetEmpty());
+	void PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage);
 
 	/** push prefix to context string */
 	FORCEINLINE void PushPrefix(const FString& Prefix)
@@ -100,3 +101,25 @@ struct FPropertyValidationResult
 	TArray<FText> Warnings;
 	EDataValidationResult ValidationResult = EDataValidationResult::NotValidated;
 };
+
+template <typename TPropertyType>
+struct TPropertyTypeResolverImpl
+{
+	using Type = typename TPropertyType::TCppType;
+};
+
+template <typename TPropertyType>
+typename TPropertyType::TCppType GetPropertyValue(const void* PropertyMemory, const FProperty* Property)
+{
+	return CastFieldChecked<TPropertyType>(Property)->GetPropertyValue(PropertyMemory);
+}
+
+template <typename TPropertyType>
+const typename TPropertyType::TCppType* GetPropertyValuePtr(const void* PropertyMemory, const FProperty* Property)
+{
+	return CastFieldChecked<TPropertyType>(Property)->GetPropertyValuePtr(PropertyMemory);
+}
+
+
+
+

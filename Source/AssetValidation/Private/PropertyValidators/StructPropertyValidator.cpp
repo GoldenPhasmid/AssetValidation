@@ -14,27 +14,15 @@ bool UStructPropertyValidator::CanValidateProperty(const FProperty* Property) co
 	return Property && Property->IsA(PropertyClass);
 }
 
-void UStructPropertyValidator::ValidateProperty(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 
-	const void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(Container);
+	const void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(PropertyMemory);
 	
 	// struct value is validated by UStructValidator objects
 	ValidationContext.PushPrefix(Property->GetName());
 	// validate underlying struct properties: structure becomes a property container
 	ValidationContext.IsPropertyContainerValid(ContainerPtr, StructProperty->Struct);
-	ValidationContext.PopPrefix();
-}
-
-void UStructPropertyValidator::ValidatePropertyValue(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-{
-	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(ValueProperty);
-	
-	// struct value is validated by UStructValidator objects
-
-	ValidationContext.PushPrefix(ValueProperty->GetName());
-	// validate underlying struct properties: structure becomes a property container
-	ValidationContext.IsPropertyContainerValid(Value, StructProperty->Struct);
 	ValidationContext.PopPrefix();
 }

@@ -9,9 +9,9 @@ UArrayContainerValidator::UArrayContainerValidator()
 	PropertyClass = FArrayProperty::StaticClass();
 }
 
-bool UArrayContainerValidator::CanValidateContainerProperty(const FProperty* Property) const
+bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property) const
 {
-	if (Super::CanValidateContainerProperty(Property))
+	if (Super::CanValidateProperty(Property))
 	{
 		if (Property->HasMetaData(ValidationNames::Validate))
 		{
@@ -34,7 +34,7 @@ bool UArrayContainerValidator::CanValidateContainerProperty(const FProperty* Pro
 	return false;
 }
 
-void UArrayContainerValidator::ValidateContainerProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UArrayContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	const FProperty* ValueProperty = ArrayProperty->Inner;
