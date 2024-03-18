@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "PropertyValidatorSubsystem.h"
+#include "PropertyValidatorTests.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 class FStructValidatorAutomationTest: public FAutomationTestBase
@@ -30,19 +31,67 @@ public:
 	}
 };
 
-constexpr uint32 AutomationFlags = EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask;
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructProperties, FStructValidatorAutomationTest, "Editor.PropertyValidation.SubsystemAPI", AutomationFlags)
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PropertyValidators, FStructValidatorAutomationTest, "Editor.PropertyValidation.PropertyValidators", AutomationFlags)
-
-bool FAutomationTest_PropertyValidators::RunTest(const FString& Parameters)
+bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 {
-	return ValidateObject<UValidationTestObject_PropertyValidators>(8);
+	// ensures that ValidateObjectProperty, ValidateNestedStruct and ValidateNestedStructProperty work as expected in relation to one another
+	UPropertyValidatorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+	check(Subsystem);
+	
+	UObject* Object = NewObject<UValidationTestObject_StructValidation>();
+	const UScriptStruct* StructType = FValidationStruct::StaticStruct();
+	const FProperty* StructProperty = Object->GetClass()->FindPropertyByName("Struct");
+	
+	{
+		// validate struct as an object's property
+		FPropertyValidationResult Result = Subsystem->ValidateObjectProperty(Object, StructProperty);
+		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
+		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
+	}
+
+	const uint8* StructMemory = StructProperty->ContainerPtrToValuePtr<uint8>(Object);
+	{
+		// validate struct in a separate "nested struct" flow
+		FPropertyValidationResult Result = Subsystem->ValidateNestedStruct(Object, StructType, StructMemory);
+		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
+		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
+	}
+
+	FProperty* NameProperty = StructType->FindPropertyByName("TagToValidate");
+	{
+		// validate single "TagToValidate" property inside same struct
+		FPropertyValidationResult Result = Subsystem->ValidateNestedStructProperty(Object, StructType, NameProperty, StructMemory);
+		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
+		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
+	}
+
+	// @todo: currently ValidateNestedStruct ignores the actual struct and does only property validation.
+	// We should also check if there's a struct validator for this struct type and if the struct value is valid
+#if 0
+	{
+		// validate "FGameplayTag: TagToValidate" directly as a double nested struct inside an object
+		FPropertyValidationResult Result = Subsystem->ValidateNestedStruct(Object, FGameplayTag::StaticStruct(), NameProperty->ContainerPtrToValuePtr<uint8>(StructMemory));
+		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
+		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
+	}
+#endif
+
+	return !HasAnyErrors();
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructValidation, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidation", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PropertyTypes, FStructValidatorAutomationTest, "Editor.PropertyValidation.PropertyTypes", AutomationFlags)
+
+bool FAutomationTest_PropertyTypes::RunTest(const FString& Parameters)
+{
+	return ValidateObject<UValidationTestObject_PropertyTypes>(8);
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructValidation, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructProperties", AutomationFlags)
 
 bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 {
+	// struct properties should be validated automatically, either as a part of UObject storage or container storage
 	return ValidateObject<UValidationTestObject_StructValidation>(5);
 }
 
@@ -50,6 +99,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, FStructVali
 
 bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)
 {
+	// GameplayTag struct value should be validated
 	return ValidateObject<UValidationTestObject_GameplayTag>(3);
 }
 
@@ -57,6 +107,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTagContainer, FS
 
 bool FAutomationTest_GameplayTagContainer::RunTest(const FString& Parameters)
 {
+	// GameplayTagContainer struct value should be validated
 	return ValidateObject<UValidationTestObject_GameplayTagContainer>(3);
 }
 
@@ -64,6 +115,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayAttribute, FStru
 
 bool FAutomationTest_GameplayAttribute::RunTest(const FString& Parameters)
 {
+	// GameplayAttribute struct value should be validated
 	return ValidateObject<UValidationTestObject_GameplayAttribute>(3);
 }
 
@@ -71,6 +123,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DataTableRow, FStructVal
 
 bool FAutomationTest_DataTableRow::RunTest(const FString& Parameters)
 {
+	// DataTableRowHandle struct value should be validated
 	return ValidateObject<UValidationTestObject_DataTableRow>(3);
 }
 
@@ -78,6 +131,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DirectoryPath, FStructVa
 
 bool FAutomationTest_DirectoryPath::RunTest(const FString& Parameters)
 {
+	// DirectoryPath struct value should be validated
 	return ValidateObject<UValidationTestObject_DirectoryPath>(4);
 }
 
@@ -85,6 +139,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_FilePath, FStructValidat
 
 bool FAutomationTest_FilePath::RunTest(const FString& Parameters)
 {
+	// FilePath struct value should be validated
 	return ValidateObject<UValidationTestObject_FilePath>(4);
 }
 
@@ -92,6 +147,7 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PrimaryAssetId, FStructV
 
 bool FAutomationTest_PrimaryAssetId::RunTest(const FString& Parameters)
 {
+	// PrimaryAssetID struct value should be validated
 	return ValidateObject<UValidationTestObject_PrimaryAssetId>(5);
 }
 

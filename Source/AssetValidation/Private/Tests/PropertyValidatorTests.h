@@ -4,6 +4,8 @@
 
 #include "PropertyValidatorTests.generated.h"
 
+static constexpr uint32 AutomationFlags = EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask;
+
 UCLASS(HideDropdown)
 class UEmptyObject: public UObject
 {
@@ -47,6 +49,46 @@ public:
 	UObject* EditInstanceOnlyProperty;
 	
 };
+
+UENUM()
+enum class EValidationEnum: uint8
+{
+	None = 0,
+	One = 1,
+	Two = 2
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_PropertyTypes: public UObject
+{
+	GENERATED_BODY()
+public:
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TObjectPtr<UObject> ObjectProperty;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TSubclassOf<UObject> ClassProperty;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TSoftObjectPtr<UObject> SoftObjectProperty;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TSoftClassPtr<UClass> SoftClassProperty;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FName Name;
+	
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FString Str;
+	
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FText Text;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	EValidationEnum Enum = EValidationEnum::None;
+};
+
 
 UCLASS(HideDropdown)
 class UNestedObject: public UObject

@@ -86,14 +86,16 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStruct(cons
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(const UObject* Object, FProperty* Property) const
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(const UObject* Object, const FProperty* Property) const
 {
 	if (!IsValid(Object) || Property == nullptr)
 	{
 		// count invalid objects or properties as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
-
+	// sanity check that property belongs to object class
+	check(Object->IsA(Property->GetOwner<UClass>()));
+	
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, Object);
 	if (!CanValidatePackage(Object->GetPackage()))
@@ -113,6 +115,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStructPrope
 		// count invalid objects or properties as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
+	// sanity check that property belongs to script struct
+	check(ScriptStruct->IsA(Property->GetOwner<UScriptStruct>()));
 
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, OwningObject);
@@ -126,7 +130,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStructPrope
 	return ValidationContext.MakeValidationResult();
 }
 
-bool UPropertyValidatorSubsystem::CanValidatePackage(UPackage* Package) const
+bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) const
 {
 	if (IsBlueprintGenerated(Package))
 	{
@@ -157,9 +161,12 @@ bool UPropertyValidatorSubsystem::CanValidatePackage(UPackage* Package) const
 
 void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const
 {
-	while (Struct && CanValidatePackage(Struct->GetPackage()))
+	const bool bIsStruct = Cast<UScriptStruct>(Struct) != nullptr;
+	const UPackage* Package = Struct->GetPackage();
+	
+	while (Struct && (bIsStruct || CanValidatePackage(Package)))
 	{
-		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Struct->GetPackage()))
+		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Package))
 		{
 			Struct = Struct->GetSuperStruct();
 			continue;
@@ -261,7 +268,7 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 	return false;
 }
 
-bool UPropertyValidatorSubsystem::IsBlueprintGenerated(UPackage* Package) const
+bool UPropertyValidatorSubsystem::IsBlueprintGenerated(const UPackage* Package) const
 {
 	const FString PackageName = Package->GetName();
 	// package is blueprint generated if it is either in Content folder or Plugins/Content folder

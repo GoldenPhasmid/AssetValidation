@@ -49,9 +49,9 @@ public:
 
 	/**
 	 * @return property validation result for given struct inside another object
-	 * @param OwningObject object that script struct is part of and owns StructData memory
+	 * @param OwningObject logically owns script struct (doesn't mean that struct data is a part of object's memory) and indicates object of validation
 	 * @param ScriptStruct struct type to perform full validation
-	 * @param StructData memory that represents @ScriptStruct and is part of @OwningObject
+	 * @param StructData memory that represents @ScriptStruct
 	 */
 	FPropertyValidationResult ValidateNestedStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* StructData);
 
@@ -60,19 +60,19 @@ public:
 	 * @param Object object that property is part of and located in
 	 * @param Property property to validate
 	 */
-	FPropertyValidationResult ValidateObjectProperty(const UObject* Object, FProperty* Property) const;
+	FPropertyValidationResult ValidateObjectProperty(const UObject* Object, const FProperty* Property) const;
 
 	/**
-	 * @return validation result for given property, that is not part of an owning object
-	 * @param OwningObject object that struct data memory is part of
+	 * @return validation result for given property that belongs to struct type and stored inside struct data
+	 * @param OwningObject logically owns script struct (doesn't mean that struct data is a part of object's memory) and indicates object of validation
 	 * @param ScriptStruct struct type given property belongs to
 	 * @param Property property to validate
-	 * @param StructData a region of memory that holds @ScriptStruct object type, located inside @OwningObject
+	 * @param StructData a region of memory that holds @ScriptStruct object type
 	 */
 	FPropertyValidationResult ValidateNestedStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData);
 
 	/** @return whether validator subsystem can run validators on a given object */
-	bool CanValidatePackage(UPackage* Package) const;
+	bool CanValidatePackage(const UPackage* Package) const;
 
 protected:
 	
@@ -105,7 +105,7 @@ protected:
 	virtual bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
 
 	/** @return whether package is a blueprint generated class */
-	bool IsBlueprintGenerated(UPackage* Package) const;
+	bool IsBlueprintGenerated(const UPackage* Package) const;
 
 	UPROPERTY(Config)
 	TArray<FString> PackagesToValidate;
