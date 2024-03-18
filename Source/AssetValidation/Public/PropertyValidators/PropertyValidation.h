@@ -44,19 +44,19 @@ public:
 		ContextString = ContextString.LeftChop(Prefix.Len() + 1);
 	}
 
-	FORCEINLINE void IsPropertyContainerValid(const void* Container, const UStruct* Struct)
+	FORCEINLINE void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct)
 	{
-		Subsystem->IsPropertyContainerValidWithContext(Container, Struct, *this);		
+		Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);		
 	}
 
-	FORCEINLINE void IsPropertyValid(const void* Container, const FProperty* Property)
+	FORCEINLINE void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property)
 	{
-		Subsystem->IsPropertyValidWithContext(Container, Property, *this);
+		Subsystem->ValidatePropertyWithContext(ContainerMemory, Property, *this);
 	}
 
-	FORCEINLINE void IsPropertyValueValid(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty)
+	FORCEINLINE void IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty)
 	{
-		Subsystem->IsPropertyValueValidWithContext(Value, ParentProperty, ValueProperty, *this);
+		Subsystem->ValidatePropertyValueWithContext(PropertyMemory, ParentProperty, ValueProperty, *this);
 	}
 
 	FORCEINLINE const UObject* GetSourceObject() const

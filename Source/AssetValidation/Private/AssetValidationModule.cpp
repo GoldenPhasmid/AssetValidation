@@ -112,7 +112,7 @@ void FAssetValidationModule::ShutdownModule()
 
 FPropertyValidationResult FAssetValidationModule::ValidateProperty(UObject* Object, FProperty* Property) const
 {
-	return GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>()->IsPropertyValid(Object, Property);
+	return GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>()->ValidateObjectProperty(Object, Property);
 }
 
 void FAssetValidationModule::CheckContent()

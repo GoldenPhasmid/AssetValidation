@@ -13,6 +13,6 @@ public:
 	UNamePropertyValidator();
 	
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };

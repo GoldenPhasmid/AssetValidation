@@ -18,7 +18,7 @@ EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementat
 
 	for (auto& [Name, StructData]: DataTable->GetRowMap())
 	{
-		FPropertyValidationResult Result = PropertyValidators->IsPropertyContainerValid(DataTable, RowStruct, StructData);
+		FPropertyValidationResult Result = PropertyValidators->ValidateNestedStruct(DataTable, RowStruct, StructData);
 		for (const FText& Text: Result.Warnings)
 		{
 			AssetWarning(DataTable, Text);

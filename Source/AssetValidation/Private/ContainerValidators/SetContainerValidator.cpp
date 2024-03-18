@@ -34,7 +34,7 @@ bool USetContainerValidator::CanValidateProperty(const FProperty* Property) cons
 	return false;
 }
 
-void USetContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USetContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	const FScriptSet* Set = SetProperty->GetPropertyValuePtr(PropertyMemory);
@@ -45,7 +45,7 @@ void USetContainerValidator::ValidateProperty(const void* PropertyMemory, const 
 	const uint32 Num = Set->Num();
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
-		const void* Data = Set->GetData(Index, Layout);
+		const uint8* Data = static_cast<const uint8*>(Set->GetData(Index, Layout));
 
 		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
 		// validate property value

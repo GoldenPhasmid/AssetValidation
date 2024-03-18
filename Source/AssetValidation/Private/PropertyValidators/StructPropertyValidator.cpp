@@ -14,11 +14,11 @@ bool UStructPropertyValidator::CanValidateProperty(const FProperty* Property) co
 	return Property && Property->IsA(PropertyClass);
 }
 
-void UStructPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 
-	const void* ContainerPtr = StructProperty->ContainerPtrToValuePtr<void*>(PropertyMemory);
+	const uint8* ContainerPtr = StructProperty->ContainerPtrToValuePtr<uint8>(PropertyMemory);
 	
 	// struct value is validated by UStructValidator objects
 	ValidationContext.PushPrefix(Property->GetName());

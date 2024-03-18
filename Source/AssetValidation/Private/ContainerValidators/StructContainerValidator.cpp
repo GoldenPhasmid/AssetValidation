@@ -22,7 +22,7 @@ bool UStructContainerValidator::CanValidateProperty(const FProperty* Property) c
 	return false;
 }
 
-void UStructContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 

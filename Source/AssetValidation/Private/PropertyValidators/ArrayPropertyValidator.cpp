@@ -24,7 +24,7 @@ bool UArrayPropertyValidator::CanValidateProperty(const FProperty* Property) con
 	return false;
 }
 
-void UArrayPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UArrayPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	FProperty* ValueProperty = ArrayProperty->Inner;

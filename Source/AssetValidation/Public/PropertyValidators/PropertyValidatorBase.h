@@ -2,6 +2,7 @@
 
 
 #include "CoreMinimal.h"
+#include "Templates/NonNullPointer.h"
 #include "UObject/Object.h"
 
 #include "PropertyValidatorBase.generated.h"
@@ -36,7 +37,7 @@ public:
 	 * @param Property property that can be analyzed by this property validator
 	 * @param ValidationContext validation context
 	 */
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 	PURE_VIRTUAL(ValidateProperty)
 
 protected:

@@ -43,7 +43,7 @@ void FAutomationSpec_ValidationConditions::Define()
 				[this, PropertyName, ExpectedResult]()
 			{
 				FProperty* Property = TestObject->GetClass()->FindPropertyByName(PropertyName);
-				FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+				FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 				TestEqual("ValidationResult", Result.ValidationResult, ExpectedResult);
 			});	
@@ -53,7 +53,7 @@ void FAutomationSpec_ValidationConditions::Define()
 		{
 			TestObject = GetMutableDefault<UValidationTestObject_ValidationConditions>();
 			FProperty* Property = TestObject->GetClass()->FindPropertyByName(TEXT("EditDefaultOnlyProperty"));
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 1);
@@ -87,7 +87,7 @@ void FAutomationSpec_ValidationConditions::Define()
 				[this, PropertyName, ExpectedResult]()
 			{
 				FProperty* Property = TestObject->GetClass()->FindPropertyByName(PropertyName);
-				FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+				FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 				TestEqual("ValidationResult", Result.ValidationResult, ExpectedResult);
 			});	
@@ -97,7 +97,7 @@ void FAutomationSpec_ValidationConditions::Define()
 		{
 			TestObject = GetMutableDefault<UValidationTestDataAsset>();
 			FProperty* Property = TestObject->GetClass()->FindPropertyByName(TEXT("EditDefaultOnlyProperty"));
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 1);
@@ -144,7 +144,7 @@ void FAutomationSpec_ContainerProperties::Define()
 		
 		It("empty array should be valid", [this]()
 		{
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 		});
 
@@ -152,7 +152,7 @@ void FAutomationSpec_ContainerProperties::Define()
 		{
 			TestObject->ObjectArray.Append({NewObject<UEmptyObject>(), nullptr, nullptr});
 			
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 2);
 		});
@@ -164,7 +164,7 @@ void FAutomationSpec_ContainerProperties::Define()
 			GarbageObject->MarkAsGarbage();
 			TestObject->ObjectArray.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), GarbageObject});
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 1);
 		});
@@ -173,7 +173,7 @@ void FAutomationSpec_ContainerProperties::Define()
 		{
 			TestObject->ObjectArray.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), NewObject<UEmptyObject>()});
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 		});
 
@@ -192,7 +192,7 @@ void FAutomationSpec_ContainerProperties::Define()
 
 		It("empty set should be valid", [this]()
 		{
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 		});
 
@@ -200,7 +200,7 @@ void FAutomationSpec_ContainerProperties::Define()
 		{
 			TestObject->ObjectSet.Append({NewObject<UEmptyObject>(), nullptr});
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 1);
 		});
@@ -212,7 +212,7 @@ void FAutomationSpec_ContainerProperties::Define()
 			GarbageObject->MarkAsGarbage();
 			TestObject->ObjectSet.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), GarbageObject});
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 1);
 		});
@@ -221,7 +221,7 @@ void FAutomationSpec_ContainerProperties::Define()
 		{
 			TestObject->ObjectSet.Append({NewObject<UEmptyObject>(), NewObject<UEmptyObject>(), NewObject<UEmptyObject>()});
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 		});
 
@@ -240,7 +240,7 @@ void FAutomationSpec_ContainerProperties::Define()
 
 		It("empty map should be valid", [this]()
 		{
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 		});
 
@@ -248,13 +248,13 @@ void FAutomationSpec_ContainerProperties::Define()
 		{
 			TestObject->ObjectMap.Add(nullptr, NewObject<UEmptyObject>());
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 1);
 
 			TestObject->ObjectMap.Add(NewObject<UEmptyObject>(), nullptr);
 
-			Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 			TestEqual("NumErrors", Result.Errors.Num(), 2);
 		});
@@ -264,7 +264,7 @@ void FAutomationSpec_ContainerProperties::Define()
 			TestObject->ObjectMap.Add(NewObject<UEmptyObject>(), NewObject<UEmptyObject>());
 			TestObject->ObjectMap.Add(NewObject<UEmptyObject>(), NewObject<UEmptyObject>());
 
-			FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, TestProperty);
+			FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, TestProperty);
 			TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 		});
 
@@ -304,21 +304,21 @@ void FAutomationSpec_ValidateMetas::Define()
 	{
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("Validate");
 
-		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 	});
 
 	It("property with ValidateRecursive meta should validate nested properties", [this]()
 	{
 		UNestedObject* NestedObject = NewObject<UNestedObject>();
-		FPropertyValidationResult NestedResult = ValidationSubsystem->IsPropertyContainerValid(NestedObject);
+		FPropertyValidationResult NestedResult = ValidationSubsystem->ValidateObject(NestedObject);
 
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateRecursive");
-		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Valid);
 
 		TestObject->ValidateRecursive = NestedObject;
-		Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 		
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 		TestEqual("NumErrors", Result.Errors.Num(), NestedResult.Errors.Num());
@@ -327,7 +327,7 @@ void FAutomationSpec_ValidateMetas::Define()
 	It("property with custom FailureMessage", [this]()
 	{
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateWithCustomMessage");
-		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 		FString CustomMessage = Property->GetMetaData(ValidationNames::ValidationFailureMessage);
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
@@ -342,7 +342,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		TestObject->ValidateKey.Add(nullptr, nullptr);
 
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateKey");
-		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 		TestEqual("NumErrors", Result.Errors.Num(), 1);
@@ -355,7 +355,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		TestObject->ValidateValue.Add(nullptr, nullptr);
 
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateValue");
-		FPropertyValidationResult Result = ValidationSubsystem->IsPropertyValid(TestObject, Property);
+		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 		TestEqual("NumErrors", Result.Errors.Num(), 3);

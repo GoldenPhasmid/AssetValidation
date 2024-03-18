@@ -24,7 +24,7 @@ bool USetPropertyValidator::CanValidateProperty(const FProperty* Property) const
 	return false;
 }
 
-void USetPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USetPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	FProperty* ValueProperty = SetProperty->ElementProp;
@@ -35,7 +35,7 @@ void USetPropertyValidator::ValidateProperty(const void* PropertyMemory, const F
 	const uint32 Num = Set->Num();
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
-		const void* Data = Set->GetData(Index, Layout);
+		const uint8* Data = static_cast<const uint8*>(Set->GetData(Index, Layout));
 
 		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
 		// validate property value

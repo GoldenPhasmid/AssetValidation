@@ -32,7 +32,7 @@ bool UMapContainerValidator::CanValidateProperty(const FProperty* Property) cons
 	return false;
 }
 
-void UMapContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
 	const FScriptMap* Map = MapProperty->GetPropertyValuePtr(PropertyMemory);

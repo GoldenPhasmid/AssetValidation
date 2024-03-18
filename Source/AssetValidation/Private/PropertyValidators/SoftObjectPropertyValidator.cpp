@@ -7,7 +7,7 @@ USoftObjectPropertyValidator::USoftObjectPropertyValidator()
 	PropertyClass = FSoftObjectProperty::StaticClass();
 }
 
-void USoftObjectPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USoftObjectPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FSoftObjectPtr* SoftObjectPtr = GetPropertyValuePtr<FSoftObjectProperty>(PropertyMemory, Property);
 	check(SoftObjectPtr);

@@ -17,6 +17,12 @@ public:
 	
 protected:
 
+	template <typename T>
+	static const T* ConvertStructMemory(const uint8* Memory)
+	{
+		return static_cast<const T*>((const void*)Memory);
+	}
+
 	FString CppType = "";
 };
 
@@ -28,7 +34,7 @@ public:
 	UStructValidator_GameplayTag();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
 
@@ -40,7 +46,7 @@ public:
 	UStructValidator_GameplayTagContainer();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
 
@@ -52,7 +58,7 @@ public:
 	UStructValidator_GameplayAttribute();
 	
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
 
@@ -64,7 +70,7 @@ public:
 	UStructValidator_DataTableRowHandle();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
 
@@ -76,7 +82,7 @@ public:
 	UStructValidator_DirectoryPath();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
 
@@ -88,7 +94,7 @@ public:
 	UStructValidator_FilePath();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };
 
@@ -100,6 +106,6 @@ public:
 	UStructValidator_PrimaryAssetId();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };

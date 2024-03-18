@@ -7,7 +7,7 @@ UTextPropertyValidator::UTextPropertyValidator()
 	PropertyClass = FTextProperty::StaticClass();
 }
 
-void UTextPropertyValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UTextPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FText* TextPtr = GetPropertyValuePtr<FTextProperty>(PropertyMemory, Property);
 	check(TextPtr);

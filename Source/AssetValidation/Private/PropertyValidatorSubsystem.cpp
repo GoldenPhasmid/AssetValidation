@@ -56,7 +56,7 @@ void UPropertyValidatorSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyContainerValid(const UObject* Object) const
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObject(const UObject* Object) const
 {
 	if (!IsValid(Object))
 	{
@@ -66,12 +66,12 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyContainerValid(
 
 	// package check happens inside WithContext call
 	FPropertyValidationContext ValidationContext(this, Object);
-	IsPropertyContainerValidWithContext(static_cast<const void*>(Object), Object->GetClass(), ValidationContext);
+	ValidateContainerWithContext(reinterpret_cast<const uint8*>(Object), Object->GetClass(), ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyContainerValid(const UObject* OwningObject, const UScriptStruct* ScriptStruct, void* Data)
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* Data)
 {
 	if (!IsValid(OwningObject) || ScriptStruct == nullptr || Data == nullptr)
 	{
@@ -81,12 +81,12 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyContainerValid(
 
 	// package check happens inside WithContext call
 	FPropertyValidationContext ValidationContext(this, OwningObject);
-	IsPropertyContainerValidWithContext(Data, ScriptStruct, ValidationContext);
+	ValidateContainerWithContext(Data, ScriptStruct, ValidationContext);
 	
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(const UObject* Object, FProperty* Property) const
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(const UObject* Object, FProperty* Property) const
 {
 	if (!IsValid(Object) || Property == nullptr)
 	{
@@ -96,19 +96,19 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(const UOb
 
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, Object);
-	if (!ShouldValidatePackage(Object->GetPackage(), ValidationContext))
+	if (!CanValidatePackage(Object->GetPackage()))
 	{
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 	
-	IsPropertyValidWithContext(static_cast<const void*>(Object), Property, ValidationContext);
+	ValidatePropertyWithContext(reinterpret_cast<const uint8*>(Object), Property, ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, void* Data)
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData)
 {
-	if (!IsValid(OwningObject) || ScriptStruct == nullptr || Property == nullptr || Data == nullptr)
+	if (!IsValid(OwningObject) || ScriptStruct == nullptr || Property == nullptr || StructData == nullptr)
 	{
 		// count invalid objects or properties as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
@@ -116,90 +116,17 @@ FPropertyValidationResult UPropertyValidatorSubsystem::IsPropertyValid(const UOb
 
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, OwningObject);
-	if (!ShouldValidatePackage(OwningObject->GetPackage(), ValidationContext))
+	if (!CanValidatePackage(OwningObject->GetPackage()))
 	{
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
-	IsPropertyValidWithContext(Data, Property, ValidationContext);
+	ValidatePropertyWithContext(StructData, Property, ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
 
-void UPropertyValidatorSubsystem::IsPropertyContainerValidWithContext(const void* Container, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const
-{
-	while (Struct && ShouldValidatePackage(Struct->GetPackage(), ValidationContext))
-	{
-		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Struct->GetPackage()))
-		{
-			Struct = Struct->GetSuperStruct();
-			continue;
-		}
-
-		// EFieldIterationFlags::None because we look only at given Struct valid properties
-		for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::None); It; ++It)
-		{
-			IsPropertyValidWithContext(Container, *It, ValidationContext);
-		}
-		
-		Struct = Struct->GetSuperStruct();
-	}
-}
-
-void UPropertyValidatorSubsystem::IsPropertyValidWithContext(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
-{
-	// check whether we should validate property at all
-	if (!ShouldValidateProperty(Property, ValidationContext))
-	{
-		return;
-	}
-
-	const void* PropertyMemory = Property->ContainerPtrToValuePtr<void>(Container);
-	for (UPropertyValidatorBase* Validator: PropertyValidators)
-	{
-		if (Validator->CanValidateProperty(Property))
-		{
-			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
-			break;
-		}
-	}
-	
-	for (UPropertyValidatorBase* Validator: ContainerValidators)
-	{
-		if (Validator->CanValidateProperty(Property))
-		{
-			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
-			break;
-		}
-	}
-}
-
-void UPropertyValidatorSubsystem::IsPropertyValueValidWithContext(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
-{
-	// do not check for property flags for ParentProperty or ValueProperty.
-	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
-
-	const void* PropertyMemory = Value;
-	for (UPropertyValidatorBase* Validator: PropertyValidators)
-	{
-		if (Validator->CanValidateProperty(ValueProperty))
-		{
-			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
-			break;
-		}
-	}
-	
-	for (UPropertyValidatorBase* Validator: ContainerValidators)
-	{
-		if (Validator->CanValidateProperty(ValueProperty))
-		{
-			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
-			break;
-		}
-	}
-}
-
-bool UPropertyValidatorSubsystem::ShouldValidatePackage(UPackage* Package, FPropertyValidationContext& ValidationContext) const
+bool UPropertyValidatorSubsystem::CanValidatePackage(UPackage* Package) const
 {
 	if (IsBlueprintGenerated(Package))
 	{
@@ -226,6 +153,78 @@ bool UPropertyValidatorSubsystem::ShouldValidatePackage(UPackage* Package, FProp
 	{
 		return PackageName.StartsWith(ModulePath);
 	});
+}
+
+void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const
+{
+	while (Struct && CanValidatePackage(Struct->GetPackage()))
+	{
+		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Struct->GetPackage()))
+		{
+			Struct = Struct->GetSuperStruct();
+			continue;
+		}
+
+		// EFieldIterationFlags::None because we look only at given Struct valid properties
+		for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::None); It; ++It)
+		{
+			ValidatePropertyWithContext(ContainerMemory, *It, ValidationContext);
+		}
+		
+		Struct = Struct->GetSuperStruct();
+	}
+}
+
+void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+{
+	// check whether we should validate property at all
+	if (!ShouldValidateProperty(Property, ValidationContext))
+	{
+		return;
+	}
+
+	TNonNullPtr<const uint8> PropertyMemory{Property->ContainerPtrToValuePtr<uint8>(ContainerMemory)};
+	for (const UPropertyValidatorBase* Validator: PropertyValidators)
+	{
+		if (Validator->CanValidateProperty(Property))
+		{
+			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
+			break;
+		}
+	}
+	
+	for (const UPropertyValidatorBase* Validator: ContainerValidators)
+	{
+		if (Validator->CanValidateProperty(Property))
+		{
+			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
+			break;
+		}
+	}
+}
+
+void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+{
+	// do not check for property flags for ParentProperty or ValueProperty.
+	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
+	
+	for (const UPropertyValidatorBase* Validator: PropertyValidators)
+	{
+		if (Validator->CanValidateProperty(ValueProperty))
+		{
+			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
+			break;
+		}
+	}
+	
+	for (const UPropertyValidatorBase* Validator: ContainerValidators)
+	{
+		if (Validator->CanValidateProperty(ValueProperty))
+		{
+			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
+			break;
+		}
+	}
 }
 
 bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const

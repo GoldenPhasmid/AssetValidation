@@ -18,7 +18,7 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	
 	check(Class && Object);
 	
-	FPropertyValidationResult Result = PropertyValidators->IsPropertyContainerValid(Object);
+	FPropertyValidationResult Result = PropertyValidators->ValidateObject(Object);
 	for (const FText& Text: Result.Warnings)
 	{
 		AssetWarning(Object, Text);

@@ -13,7 +13,7 @@ bool UObjectContainerValidator::CanValidateProperty(const FProperty* Property) c
 	return Super::CanValidateProperty(Property) && Property->HasMetaData(ValidationNames::ValidateRecursive);
 }
 
-void UObjectContainerValidator::ValidateProperty(const void* PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UObjectContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
 	const FObjectPropertyBase* ObjectProperty = CastFieldChecked<FObjectPropertyBase>(Property);
 
@@ -21,7 +21,7 @@ void UObjectContainerValidator::ValidateProperty(const void* PropertyMemory, con
 	{
 		ValidationContext.PushPrefix(Property->GetName() + "." + Object->GetName());
 		// validate underlying object recursively
-		ValidationContext.IsPropertyContainerValid(Object, Object->GetClass());
+		ValidationContext.IsPropertyContainerValid(reinterpret_cast<const uint8*>(Object), Object->GetClass());
 		ValidationContext.PopPrefix();
 	}
 }

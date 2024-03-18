@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
+#include "Templates/NonNullPointer.h"
 
 #include "PropertyValidatorSubsystem.generated.h"
 
@@ -40,47 +41,65 @@ public:
 	virtual void Deinitialize() override;
 	//~End USubsystem interface
 
-	/** @return property validation result for given @Object */
-	FPropertyValidationResult IsPropertyContainerValid(const UObject* Object) const;
+	/**
+	 * @return validation result for given object
+	 * @param Object object to perform full validation on
+	 */
+	FPropertyValidationResult ValidateObject(const UObject* Object) const;
 
-	/** @return property validation result for given struct data */
-	FPropertyValidationResult IsPropertyContainerValid(const UObject* OwningObject, const UScriptStruct* ScriptStruct, void* StructData);
+	/**
+	 * @return property validation result for given struct inside another object
+	 * @param OwningObject object that script struct is part of and owns StructData memory
+	 * @param ScriptStruct struct type to perform full validation
+	 * @param StructData memory that represents @ScriptStruct and is part of @OwningObject
+	 */
+	FPropertyValidationResult ValidateNestedStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* StructData);
 
-	/** @return property validation result for given @Property for @Object */
-	FPropertyValidationResult IsPropertyValid(const UObject* Object, FProperty* Property) const;
+	/**
+	 * @return validation result for given property that is part of given object
+	 * @param Object object that property is part of and located in
+	 * @param Property property to validate
+	 */
+	FPropertyValidationResult ValidateObjectProperty(const UObject* Object, FProperty* Property) const;
 
-	/** @return property validation result property in given struct data */
-	FPropertyValidationResult IsPropertyValid(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, void* StructData);
+	/**
+	 * @return validation result for given property, that is not part of an owning object
+	 * @param OwningObject object that struct data memory is part of
+	 * @param ScriptStruct struct type given property belongs to
+	 * @param Property property to validate
+	 * @param StructData a region of memory that holds @ScriptStruct object type, located inside @OwningObject
+	 */
+	FPropertyValidationResult ValidateNestedStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData);
+
+	/** @return whether validator subsystem can run validators on a given object */
+	bool CanValidatePackage(UPackage* Package) const;
 
 protected:
 	
 	/**
 	 * @brief validate all properties in @Container
-	 * @param Container container to get data from
+	 * @param ContainerMemory container to get data from
 	 * @param Struct struct to retrieve
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void IsPropertyContainerValidWithContext(const void* Container, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
+	virtual void ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
 
 	/**
 	 * @brief validate @Property in @Container
-	 * @param Container container to get data from
+	 * @param ContainerMemory container to get data from
 	 * @param Property property to validate
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void IsPropertyValidWithContext(const void* Container, const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
+	virtual void ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
 	
 	/**
 	 * @brief validate given property value
-	 * @param Value property value
+	 * @param PropertyMemory property value
 	 * @param ParentProperty parent property, typically a container property where property value is stored
 	 * @param ValueProperty value property 
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void IsPropertyValueValidWithContext(const void* Value, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
-
-	/** @return whether package should be validated for given @ValidationContext */
-	virtual bool ShouldValidatePackage(UPackage* Package, FPropertyValidationContext& ValidationContext) const;
+	virtual void ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
 
 	/** @return whether property should be validated for given @ValidationContext */
 	virtual bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;

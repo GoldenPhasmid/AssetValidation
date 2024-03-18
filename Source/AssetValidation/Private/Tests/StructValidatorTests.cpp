@@ -20,7 +20,7 @@ public:
 		
 		UObject* Object = NewObject<TObjectClass>();
 		
-		FPropertyValidationResult Result = Subsystem->IsPropertyContainerValid(Object);
+		FPropertyValidationResult Result = Subsystem->ValidateObject(Object);
 		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid)
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), ExpectedErrors);
 
