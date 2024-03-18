@@ -1,7 +1,7 @@
 #include "AssetValidators/AssetValidator_LoadPackage.h"
 
 #include "AssetCompilingManager.h"
-#include "AssetValidation.h"
+#include "AssetValidationModule.h"
 #include "AssetValidationStatics.h"
 
 bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)

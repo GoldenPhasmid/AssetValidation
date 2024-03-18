@@ -1,6 +1,6 @@
 #include "AssetValidationStatics.h"
 
-#include "AssetValidation.h"
+#include "AssetValidationModule.h"
 #include "DataValidationModule.h"
 #include "EditorValidatorSubsystem.h"
 #include "FileHelpers.h"

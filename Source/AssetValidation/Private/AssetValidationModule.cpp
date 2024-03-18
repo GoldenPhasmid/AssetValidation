@@ -1,6 +1,6 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "AssetValidation.h"
+#include "..\Public\AssetValidationModule.h"
 
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
