@@ -170,10 +170,10 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 			continue;
 		}
 
-		// EFieldIterationFlags::None because we look only at given Struct valid properties
-		for (TFieldIterator<FProperty> It(Struct, EFieldIterationFlags::None); It; ++It)
+		// EFieldIterationFlags::None because we look only at Struct type properties
+		for (const FProperty* Property: TFieldRange<FProperty>(Struct, EFieldIterationFlags::None))
 		{
-			ValidatePropertyWithContext(ContainerMemory, *It, ValidationContext);
+			ValidatePropertyWithContext(ContainerMemory, Property, ValidationContext);
 		}
 		
 		Struct = Struct->GetSuperStruct();
