@@ -66,12 +66,12 @@ bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
 	}
 
-	// @todo: currently ValidateNestedStruct ignores the actual struct and does only property validation.
+	// @todo: currently ValidateStruct ignores the actual struct and does only property validation.
 	// We should also check if there's a struct validator for this struct type and if the struct value is valid
 #if 0
 	{
 		// validate "FGameplayTag: TagToValidate" directly as a double nested struct inside an object
-		FPropertyValidationResult Result = Subsystem->ValidateNestedStruct(Object, FGameplayTag::StaticStruct(), NameProperty->ContainerPtrToValuePtr<uint8>(StructMemory));
+		FPropertyValidationResult Result = Subsystem->ValidateStruct(Object, FGameplayTag::StaticStruct(), NameProperty->ContainerPtrToValuePtr<uint8>(StructMemory));
 		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
 	}

@@ -1,5 +1,7 @@
 #include "PropertyValidators/PropertyValidation.h"
 
+#include "PropertyValidatorSubsystem.h"
+
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
 FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() const
@@ -50,6 +52,21 @@ void FPropertyValidationContext::PropertyFails(const FProperty* Property, const 
 	}
 
 	Issues.Add(Issue);
+}
+
+void FPropertyValidationContext::IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct)
+{
+	Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);
+}
+
+void FPropertyValidationContext::IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property)
+{
+	Subsystem->ValidatePropertyWithContext(ContainerMemory, Property, *this);
+}
+
+void FPropertyValidationContext::IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty)
+{
+	Subsystem->ValidatePropertyValueWithContext(PropertyMemory, ParentProperty, ValueProperty, *this);
 }
 
 FText FPropertyValidationContext::MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const

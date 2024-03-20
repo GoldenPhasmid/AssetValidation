@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PropertyValidatorSubsystem.h"
+#include "Templates/NonNullPointer.h"
 #include "UObject/UObjectGlobals.h"
 
 class UPropertyValidatorSubsystem;
@@ -53,20 +53,12 @@ public:
 		ContextString = ContextString.LeftChop(Prefix.Len() + 1);
 	}
 
-	FORCEINLINE void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct)
-	{
-		Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);		
-	}
-
-	FORCEINLINE void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property)
-	{
-		Subsystem->ValidatePropertyWithContext(ContainerMemory, Property, *this);
-	}
-
-	FORCEINLINE void IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty)
-	{
-		Subsystem->ValidatePropertyValueWithContext(PropertyMemory, ParentProperty, ValueProperty, *this);
-	}
+	/** Route property container validation request to validator subsystem */
+	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct);
+	/** Route property validation request to validator subsystem */
+	void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property);
+	/** Route property value validation request to validator subsystem */
+	void IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty);
 
 	FORCEINLINE const UObject* GetSourceObject() const
 	{
@@ -97,24 +89,6 @@ private:
 	TWeakObjectPtr<const UPropertyValidatorSubsystem> Subsystem;
 	/** Weak reference to an initial object from which validation sequence has started */
 	TWeakObjectPtr<const UObject> SourceObject;
-};
-
-struct FPropertyValidationResult
-{
-	FPropertyValidationResult() = default;
-	FPropertyValidationResult(EDataValidationResult InResult)
-		: ValidationResult(InResult)
-	{ }
-	
-	TArray<FText> Errors;
-	TArray<FText> Warnings;
-	EDataValidationResult ValidationResult = EDataValidationResult::NotValidated;
-};
-
-template <typename TPropertyType>
-struct TPropertyTypeResolverImpl
-{
-	using Type = typename TPropertyType::TCppType;
 };
 
 template <typename TPropertyType>
