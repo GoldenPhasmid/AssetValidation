@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
+#include "PropertyValidators/PropertyValidation.h"
 #include "Templates/NonNullPointer.h"
 
 #include "PropertyValidatorSubsystem.generated.h"
@@ -44,7 +45,13 @@ public:
 	 * @param ScriptStruct struct type to perform full validation
 	 * @param StructData memory that represents @ScriptStruct
 	 */
-	FPropertyValidationResult ValidateNestedStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* StructData);
+	FPropertyValidationResult ValidateStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* StructData);
+
+	template <typename TStructType>
+	FPropertyValidationResult ValidateStruct(const UObject* OwningObject, const TStructType& Value)
+	{
+		return ValidateStruct(OwningObject, TStructType::StaticStruct(), reinterpret_cast<const uint8*>(&Value));
+	}
 
 	/**
 	 * @return validation result for given property that is part of given object
@@ -60,7 +67,13 @@ public:
 	 * @param Property property to validate
 	 * @param StructData a region of memory that holds @ScriptStruct object type
 	 */
-	FPropertyValidationResult ValidateNestedStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData);
+	FPropertyValidationResult ValidateStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData);
+
+	template <typename TStructType>
+	FPropertyValidationResult ValidateStructProperty(const UObject* OwningObject, FProperty* Property, const TStructType& Value)
+	{
+		return ValidateStructProperty(OwningObject, TStructType::StaticStruct(), Property, reinterpret_cast<const uint8*>(&Value));
+	}
 
 	/** @return whether validator subsystem can run validators on a given object */
 	bool CanValidatePackage(const UPackage* Package) const;

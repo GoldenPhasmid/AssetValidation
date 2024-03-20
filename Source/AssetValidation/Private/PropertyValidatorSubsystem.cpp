@@ -71,7 +71,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObject(const UObj
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* Data)
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* Data)
 {
 	if (!IsValid(OwningObject) || ScriptStruct == nullptr || Data == nullptr)
 	{
@@ -108,7 +108,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(co
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData)
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStructProperty(const UObject* OwningObject, const UScriptStruct* ScriptStruct, FProperty* Property, const uint8* StructData)
 {
 	if (!IsValid(OwningObject) || ScriptStruct == nullptr || Property == nullptr || StructData == nullptr)
 	{

@@ -53,7 +53,7 @@ bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 	const uint8* StructMemory = StructProperty->ContainerPtrToValuePtr<uint8>(Object);
 	{
 		// validate struct in a separate "nested struct" flow
-		FPropertyValidationResult Result = Subsystem->ValidateNestedStruct(Object, StructType, StructMemory);
+		FPropertyValidationResult Result = Subsystem->ValidateStruct(Object, StructType, StructMemory);
 		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
 	}
@@ -61,7 +61,7 @@ bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 	FProperty* NameProperty = StructType->FindPropertyByName("TagToValidate");
 	{
 		// validate single "TagToValidate" property inside same struct
-		FPropertyValidationResult Result = Subsystem->ValidateNestedStructProperty(Object, StructType, NameProperty, StructMemory);
+		FPropertyValidationResult Result = Subsystem->ValidateStructProperty(Object, StructType, NameProperty, StructMemory);
 		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
 	}
