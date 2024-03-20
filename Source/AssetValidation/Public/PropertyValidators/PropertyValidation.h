@@ -2,12 +2,21 @@
 
 #include "CoreMinimal.h"
 #include "PropertyValidatorSubsystem.h"
-#include "Experimental/Coroutine/Coroutine.h"
 #include "UObject/UObjectGlobals.h"
 
 class UPropertyValidatorSubsystem;
 class FPropertyValidationContext;
 struct FPropertyValidationResult;
+
+namespace UE::AssetValidation
+{
+	static const FName Validate("Validate");
+	static const FName ValidateKey("ValidateKey");
+	static const FName ValidateValue("ValidateValue");
+	static const FName ValidateRecursive("ValidateRecursive");
+	static const FName ValidationFailureMessage("FailureMessage");
+}
+
 
 class FPropertyValidationContext: public FNoncopyable
 {

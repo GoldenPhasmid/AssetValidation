@@ -13,7 +13,7 @@ bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property) co
 {
 	if (Super::CanValidateProperty(Property))
 	{
-		if (Property->HasMetaData(ValidationNames::Validate))
+		if (Property->HasMetaData(UE::AssetValidation::Validate))
 		{
 			// in general, array contents should be validated if Validate meta is present
 			return true;

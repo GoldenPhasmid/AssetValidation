@@ -10,7 +10,7 @@ UObjectContainerValidator::UObjectContainerValidator()
 
 bool UObjectContainerValidator::CanValidateProperty(const FProperty* Property) const
 {
-	return Super::CanValidateProperty(Property) && Property->HasMetaData(ValidationNames::ValidateRecursive);
+	return Super::CanValidateProperty(Property) && Property->HasMetaData(UE::AssetValidation::ValidateRecursive);
 }
 
 void UObjectContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const

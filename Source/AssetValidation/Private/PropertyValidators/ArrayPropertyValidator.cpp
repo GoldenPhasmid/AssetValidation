@@ -18,7 +18,7 @@ bool UArrayPropertyValidator::CanValidateProperty(const FProperty* Property) con
 		}
 
 		// otherwise, array property should have Validate meta to validate its contents
-		return ArrayProperty->HasMetaData(ValidationNames::Validate);
+		return ArrayProperty->HasMetaData(UE::AssetValidation::Validate);
 	}
 	
 	return false;

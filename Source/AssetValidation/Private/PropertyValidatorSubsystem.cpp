@@ -115,8 +115,6 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateNestedStructPrope
 		// count invalid objects or properties as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
-	// sanity check that property belongs to script struct
-	check(ScriptStruct->IsA(Property->GetOwner<UScriptStruct>()));
 
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, OwningObject);

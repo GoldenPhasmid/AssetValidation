@@ -18,7 +18,7 @@ bool UMapPropertyValidator::CanValidateProperty(const FProperty* Property) const
 		}
 
 		// any validation meta data: Validate, ValidateKey, ValidateValue
-		return Property->HasMetaData(ValidationNames::Validate) || Property->HasMetaData(ValidationNames::ValidateKey) || Property->HasMetaData(ValidationNames::ValidateValue);
+		return Property->HasMetaData(UE::AssetValidation::Validate) || Property->HasMetaData(UE::AssetValidation::ValidateKey) || Property->HasMetaData(UE::AssetValidation::ValidateValue);
 	}
 	
 	return false;
@@ -37,9 +37,9 @@ void UMapPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMe
 		ValueProperty->GetSize(), ValueProperty->GetMinAlignment()
 	);
 
-	const bool bHasValidateMeta = MapProperty->HasMetaData(ValidationNames::Validate);
-	const bool bCanValidateKey = bHasValidateMeta || KeyProperty->IsA(FStructProperty::StaticClass()) || MapProperty->HasMetaData(ValidationNames::ValidateKey);
-	const bool bCanValidateValue = bHasValidateMeta || ValueProperty->IsA(FStructProperty::StaticClass()) || MapProperty->HasMetaData(ValidationNames::ValidateValue);
+	const bool bHasValidateMeta = MapProperty->HasMetaData(UE::AssetValidation::Validate);
+	const bool bCanValidateKey = bHasValidateMeta || KeyProperty->IsA(FStructProperty::StaticClass()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateKey);
+	const bool bCanValidateValue = bHasValidateMeta || ValueProperty->IsA(FStructProperty::StaticClass()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateValue);
 
 	// UPropertyValidateBase::CanValidatePropertyValue usually checks for Validate meta on ParentProperty to continue with actual validation
 	// To work with other metas like ValidateKey and ValidateValue (to validate only map key or only map value),
@@ -47,7 +47,7 @@ void UMapPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMe
 	// as well as that it is correct validation meta (not ValidateKey for value property)
 	// To simplify our lives, we temporarily set Validate meta, so that checks inside other validators pass
 	// while we're checking whether we should validate properties in below for-loop
-	const_cast<FMapProperty*>(MapProperty)->SetMetaData(ValidationNames::Validate, FString{});
+	const_cast<FMapProperty*>(MapProperty)->SetMetaData(UE::AssetValidation::Validate, FString{});
 	
 	const uint32 Num = Map->GetMaxIndex();
 	for (uint32 Index = 0; Index < Num; ++Index)
@@ -79,6 +79,6 @@ void UMapPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMe
 	if (!bHasValidateMeta)
 	{
 		// remove Validate meta if it wasn't on map property in a first place
-		const_cast<FMapProperty*>(MapProperty)->RemoveMetaData(ValidationNames::Validate);
+		const_cast<FMapProperty*>(MapProperty)->RemoveMetaData(UE::AssetValidation::Validate);
 	}
 }

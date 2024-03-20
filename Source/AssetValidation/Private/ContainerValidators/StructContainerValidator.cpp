@@ -16,7 +16,7 @@ bool UStructContainerValidator::CanValidateProperty(const FProperty* Property) c
 	{
 		// do not require meta = (Validate) to perform validation for struct properties.
 		// Use Validate meta for structs when you want to validate struct "value", not the underlying struct properties
-		return GValidateStructPropertiesWithoutMeta || Property->HasMetaData(ValidationNames::Validate);
+		return GValidateStructPropertiesWithoutMeta || Property->HasMetaData(UE::AssetValidation::Validate);
 	}
 
 	return false;

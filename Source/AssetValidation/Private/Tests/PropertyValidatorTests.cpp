@@ -329,7 +329,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateWithCustomMessage");
 		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
 
-		FString CustomMessage = Property->GetMetaData(ValidationNames::ValidationFailureMessage);
+		FString CustomMessage = Property->GetMetaData(UE::AssetValidation::ValidationFailureMessage);
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 		TestEqual("NumErrors", Result.Errors.Num(), 1);
 		TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));

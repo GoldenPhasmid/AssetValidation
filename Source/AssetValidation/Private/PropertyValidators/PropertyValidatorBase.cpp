@@ -12,13 +12,13 @@ bool UPropertyValidatorBase::CanValidateProperty(const FProperty* Property) cons
 	// don't check for property type as property validator is obtained by underlying property class
 	if (Property && Property->IsA(PropertyClass))
 	{
-		if (Property->HasMetaData(ValidationNames::Validate))
+		if (Property->HasMetaData(UE::AssetValidation::Validate))
 		{
 			return true;
 		}
 
 		if (const FProperty* OwnerProperty = Property->GetOwner<FProperty>();
-			OwnerProperty && UPropertyValidatorSubsystem::IsContainerProperty(OwnerProperty) && OwnerProperty->HasMetaData(ValidationNames::Validate))
+			OwnerProperty && UPropertyValidatorSubsystem::IsContainerProperty(OwnerProperty) && OwnerProperty->HasMetaData(UE::AssetValidation::Validate))
 		{
 			return true;
 		}

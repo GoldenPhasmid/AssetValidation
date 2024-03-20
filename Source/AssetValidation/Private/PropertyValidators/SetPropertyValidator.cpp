@@ -18,7 +18,7 @@ bool USetPropertyValidator::CanValidateProperty(const FProperty* Property) const
 		}
 
 		// otherwise, set property should have Validate meta to validate its contents
-		return SetProperty->HasMetaData(ValidationNames::Validate);
+		return SetProperty->HasMetaData(UE::AssetValidation::Validate);
 	}
 	
 	return false;
