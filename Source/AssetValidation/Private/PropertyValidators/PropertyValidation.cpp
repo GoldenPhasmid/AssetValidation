@@ -42,7 +42,7 @@ void FPropertyValidationContext::PropertyFails(const FProperty* Property, const 
 		PropertyPrefix = Property->GetDisplayNameText();
 	}
 	
-	if (const FString* CustomMsg = Property->FindMetaData(UE::AssetValidation::ValidationFailureMessage))
+	if (const FString* CustomMsg = Property->FindMetaData(UE::AssetValidation::FailureMessage))
 	{
 		Issue.Message = MakeFullMessage(FText::FromString(*CustomMsg), PropertyPrefix);
 	}

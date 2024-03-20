@@ -14,7 +14,7 @@ namespace UE::AssetValidation
 	static const FName ValidateKey("ValidateKey");
 	static const FName ValidateValue("ValidateValue");
 	static const FName ValidateRecursive("ValidateRecursive");
-	static const FName ValidationFailureMessage("FailureMessage");
+	static const FName FailureMessage("FailureMessage");
 }
 
 

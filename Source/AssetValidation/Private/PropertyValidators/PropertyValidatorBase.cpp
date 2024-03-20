@@ -1,6 +1,7 @@
 #include "PropertyValidators/PropertyValidatorBase.h"
 
 #include "PropertyValidatorSubsystem.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 FFieldClass* UPropertyValidatorBase::GetPropertyClass() const
 {

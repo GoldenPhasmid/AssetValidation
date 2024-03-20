@@ -157,6 +157,36 @@ bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) co
 	});
 }
 
+bool UPropertyValidatorSubsystem::HasValidatorForPropertyValue(const FProperty* PropertyType) const
+{
+	// attempt to find property validator for given property type
+	for (const UPropertyValidatorBase* Validator: PropertyValidators)
+	{
+		if (PropertyType->IsA(Validator->GetPropertyClass()))
+		{
+			return true;
+		}
+	}
+
+	if (!IsContainerProperty(PropertyType))
+	{
+		// if we failed to find a property validator for a given property type, it is probably a struct and we can't validate the value.
+		// Validate means "validate container data" for other "containers", while for "object" and "struct" container validate means the value itself
+		return false;
+	}
+	
+	// property type is a container
+	for (const UPropertyValidatorBase* Validator: ContainerValidators)
+	{
+		if (PropertyType->IsA(Validator->GetPropertyClass()))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const
 {
 	const bool bIsStruct = Cast<UScriptStruct>(Struct) != nullptr;
@@ -232,14 +262,19 @@ void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<c
 	}
 }
 
-bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+bool UPropertyValidatorSubsystem::CanEverValidateProperty(const FProperty* Property) const
 {
 	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Deprecated | EPropertyFlags::CPF_Transient | EPropertyFlags::CPF_SkipSerialization))
 	{
 		return false;
 	}
-	
-	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
+
+	return Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit);
+}
+
+bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+{
+	if (CanEverValidateProperty(Property))
 	{
 		const UObject* SourceObject = ValidationContext.GetSourceObject();
 		if (SourceObject->IsAsset())

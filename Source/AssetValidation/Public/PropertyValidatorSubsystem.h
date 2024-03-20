@@ -78,6 +78,12 @@ public:
 	/** @return whether validator subsystem can run validators on a given object */
 	bool CanValidatePackage(const UPackage* Package) const;
 
+	/** @return whether subsystem can validate following property type */
+	bool HasValidatorForPropertyValue(const FProperty* PropertyType) const;
+
+	/** @return whether property can be ever validated based on its property flags */
+	bool CanEverValidateProperty(const FProperty* Property) const;
+
 protected:
 	
 	/**
@@ -104,9 +110,9 @@ protected:
 	 * @param ValidationContext provided validation context
 	 */
 	virtual void ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
-
+	
 	/** @return whether property should be validated for given @ValidationContext */
-	virtual bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
+	bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
 
 	/** @return whether package is a blueprint generated class */
 	bool IsBlueprintGenerated(const UPackage* Package) const;

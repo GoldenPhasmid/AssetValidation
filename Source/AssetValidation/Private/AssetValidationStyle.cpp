@@ -19,6 +19,8 @@ void FAssetValidationStyle::Initialize()
 		StyleInstance = Create();
 		FSlateStyleRegistry::RegisterSlateStyle(*StyleInstance);
 	}
+
+	FAssetValidationStyle::ReloadTextures();
 }
 
 void FAssetValidationStyle::Shutdown()

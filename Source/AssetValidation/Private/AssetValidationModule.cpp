@@ -1,16 +1,17 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "..\Public\AssetValidationModule.h"
+#include "AssetValidationModule.h"
 
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
+#include "BlueprintEditorModule.h"
 #include "EditorValidatorSubsystem.h"
 #include "ISourceControlModule.h"
+#include "PropertyValidationVariableDetailCustomization.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
 #include "Misc/ScopedSlowTask.h"
-#include "PropertyValidators/PropertyValidation.h"
 
 DEFINE_LOG_CATEGORY(LogAssetValidation);
 
@@ -34,19 +35,22 @@ private:
 	static void ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings);
 	static bool HasNoPlayWorld();
 	void RegisterMenus();
+
+	FDelegateHandle VariableCustomizationHandle;
 };
 
 void FAssetValidationModule::StartupModule()
 {
-	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-	
 	FAssetValidationStyle::Initialize();
-	FAssetValidationStyle::ReloadTextures();
 	
 	if (FSlateApplication::IsInitialized())
 	{
 		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FAssetValidationModule::RegisterMenus));
 	}
+
+	// Register Blueprint editor variable customization
+	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
+	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationVariableDetailCustomization::MakeInstance));
 
 	ISourceControlModule::Get().RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&FAssetValidationModule::ValidateChangelistPreSubmit));
 }
@@ -107,6 +111,9 @@ void FAssetValidationModule::ShutdownModule()
 
 	FAssetValidationStyle::Shutdown();
 
+	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
+	BlueprintEditorModule.UnregisterVariableCustomization(FProperty::StaticClass(), VariableCustomizationHandle);
+	
 	ISourceControlModule::Get().UnregisterPreSubmitDataValidation();
 }
 

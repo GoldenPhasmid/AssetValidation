@@ -35,6 +35,7 @@ public class AssetValidation : ModuleRules
 				"DeveloperToolSettings",
 				"SourceControl",
 				"DeveloperSettings",
+				"Kismet",
 			}
 		);
 	}
