@@ -11,6 +11,8 @@ class ASSETVALIDATION_API UStructValidator: public UPropertyValidatorBase
 public:
 	UStructValidator();
 
+	FORCEINLINE FString GetCppType() const { return CppType; }
+
 	//~Begin PropertyValidatorBase
 	virtual bool CanValidateProperty(const FProperty* Property) const override;
 	//~End PropertyValidatorBase

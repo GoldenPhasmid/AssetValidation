@@ -3,6 +3,7 @@
 #include "ContainerValidators/PropertyContainerValidator.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
+#include "PropertyValidators/StructValidators.h"
 
 bool GValidateStructPropertiesWithoutMeta = true;
 FAutoConsoleVariableRef ValidateStructPropertiesWithoutMeta(
@@ -39,12 +40,17 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 			UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
 			if (Validator->IsA<UPropertyContainerValidator>())
 			{
-				ContainerValidators.Add(Validator);
+				ContainerValidators.Add(Validator->GetPropertyClass(), Validator);
+			}
+			else if (Validator->IsA<UStructValidator>())
+			{
+				StructValidators.Add(CastChecked<UStructValidator>(Validator)->GetCppType(), Validator);
 			}
 			else
 			{
-				PropertyValidators.Add(Validator);
+				PropertyValidators.Add(Validator->GetPropertyClass(), Validator);
 			}
+			AllValidators.Add(Validator);
 		}
 	}
 }
@@ -61,6 +67,12 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObject(const UObj
 	if (!IsValid(Object))
 	{
 		// count invalid objects as valid in property validation. 
+		return FPropertyValidationResult{EDataValidationResult::Valid};
+	}
+
+	if (UClass* Class = Object->GetClass(); Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
+	{
+		// do not validate abstract or deprecated classes.
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
@@ -93,8 +105,16 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(co
 		// count invalid objects or properties as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
+
+	if (UClass* Class = Object->GetClass(); Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
+	{
+		// do not validate abstract or deprecated classes.
+		return FPropertyValidationResult{EDataValidationResult::Valid};
+	}
+	
 	// sanity check that property belongs to object class
 	check(Object->IsA(Property->GetOwner<UClass>()));
+
 	
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, Object);
@@ -160,14 +180,11 @@ bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) co
 bool UPropertyValidatorSubsystem::HasValidatorForPropertyValue(const FProperty* PropertyType) const
 {
 	// attempt to find property validator for given property type
-	for (const UPropertyValidatorBase* Validator: PropertyValidators)
+	if (FindPropertyValidator(PropertyType) != nullptr)
 	{
-		if (PropertyType->IsA(Validator->GetPropertyClass()))
-		{
-			return true;
-		}
+		return true;
 	}
-
+	
 	if (!IsContainerProperty(PropertyType))
 	{
 		// if we failed to find a property validator for a given property type, it is probably a struct and we can't validate the value.
@@ -176,12 +193,9 @@ bool UPropertyValidatorSubsystem::HasValidatorForPropertyValue(const FProperty* 
 	}
 	
 	// property type is a container
-	for (const UPropertyValidatorBase* Validator: ContainerValidators)
+	if (FindContainerValidator(PropertyType) != nullptr)
 	{
-		if (PropertyType->IsA(Validator->GetPropertyClass()))
-		{
-			return true;
-		}
+		return true;
 	}
 
 	return false;
@@ -219,21 +233,21 @@ void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const 
 	}
 
 	TNonNullPtr<const uint8> PropertyMemory{Property->ContainerPtrToValuePtr<uint8>(ContainerMemory)};
-	for (const UPropertyValidatorBase* Validator: PropertyValidators)
+	// validate property value
+	if (auto PropertyValidator = FindPropertyValidator(Property))
 	{
-		if (Validator->CanValidateProperty(Property))
+		if (PropertyValidator->CanValidateProperty(Property))
 		{
-			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
-			break;
+			PropertyValidator->ValidateProperty(PropertyMemory, Property, ValidationContext);
 		}
 	}
-	
-	for (const UPropertyValidatorBase* Validator: ContainerValidators)
+
+	// validate property as a container
+	if (auto ContainerValidator = FindContainerValidator(Property))
 	{
-		if (Validator->CanValidateProperty(Property))
+		if (ContainerValidator->CanValidateProperty(Property))
 		{
-			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
-			break;
+			ContainerValidator->ValidateProperty(PropertyMemory, Property, ValidationContext);
 		}
 	}
 }
@@ -242,22 +256,20 @@ void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<c
 {
 	// do not check for property flags for ParentProperty or ValueProperty.
 	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
-	
-	for (const UPropertyValidatorBase* Validator: PropertyValidators)
+
+	if (auto Validator = FindPropertyValidator(ValueProperty))
 	{
 		if (Validator->CanValidateProperty(ValueProperty))
 		{
 			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
-			break;
 		}
 	}
-	
-	for (const UPropertyValidatorBase* Validator: ContainerValidators)
+
+	if (auto Validator = FindContainerValidator(ValueProperty))
 	{
 		if (Validator->CanValidateProperty(ValueProperty))
 		{
 			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
-			break;
 		}
 	}
 }
@@ -306,6 +318,40 @@ bool UPropertyValidatorSubsystem::IsBlueprintGenerated(const UPackage* Package) 
 	const FString PackageName = Package->GetName();
 	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
 	return PackageName.StartsWith(TEXT("/Game/")) || !PackageName.StartsWith(TEXT("/Script"));
+}
+
+const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator(const FProperty* PropertyType) const
+{
+	const UPropertyValidatorBase* PropertyValidator = nullptr;
+	// find suitable validator for property value
+	if (PropertyType->IsA<FStructProperty>())
+	{
+		const FString Key = PropertyType->GetCPPType();
+		if (auto ValidatorPtr = StructValidators.Find(Key))
+		{
+			PropertyValidator = *ValidatorPtr;
+		}
+	}
+	else
+	{
+		const FFieldClass* Key = PropertyType->GetClass();
+		if (auto ValidatorPtr = PropertyValidators.Find(Key))
+		{
+			PropertyValidator = *ValidatorPtr;
+		}
+	}
+
+	return PropertyValidator;
+}
+
+const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidator(const FProperty* PropertyType) const
+{
+	if (auto ValidatorPtr = ContainerValidators.Find(PropertyType->GetClass()))
+	{
+		return *ValidatorPtr;
+	}
+
+	return nullptr;
 }
 
 

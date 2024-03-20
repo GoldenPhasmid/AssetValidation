@@ -21,9 +21,8 @@ class ASSETVALIDATION_API UPropertyValidatorSubsystem: public UEditorSubsystem
 	GENERATED_BODY()
 
 	friend class FPropertyValidationContext;
-	
 public:
-
+	
 	/** @return true if property is a container property (array, set or map) */
 	static bool IsContainerProperty(const FProperty* Property);
 
@@ -117,15 +116,21 @@ protected:
 	/** @return whether package is a blueprint generated class */
 	bool IsBlueprintGenerated(const UPackage* Package) const;
 
+	/** @return property validator for a given property type */
+	const UPropertyValidatorBase* FindPropertyValidator(const FProperty* PropertyType) const;
+	/** @return container  validator for a given property type */
+	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
+
 	UPROPERTY(Config)
 	TArray<FString> PackagesToValidate;
 
 	UPROPERTY(Config)
 	bool bSkipBlueprintGeneratedClasses = false;
+	
+	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;
+	TMap<FFieldClass*, UPropertyValidatorBase*> PropertyValidators;
+	TMap<FString, UPropertyValidatorBase*> StructValidators;
 
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPropertyValidatorBase>> ContainerValidators;
-	
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPropertyValidatorBase>> PropertyValidators;
+	TArray<UPropertyValidatorBase*> AllValidators;
 };
