@@ -279,7 +279,7 @@ FText FPropertyValidationVariableDetailCustomization::GetFailureMessage() const
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
-		FText::FromString(Property->GetMetaData(UE::AssetValidation::FailureMessage));
+		return FText::FromString(Property->GetMetaData(UE::AssetValidation::FailureMessage));
 	}
 
 	return FText::GetEmpty();
