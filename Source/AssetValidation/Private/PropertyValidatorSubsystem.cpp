@@ -335,9 +335,17 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator
 	else
 	{
 		const FFieldClass* Key = PropertyType->GetClass();
-		if (auto ValidatorPtr = PropertyValidators.Find(Key))
+		while (Key && !Key->HasAnyClassFlags(CLASS_Abstract))
 		{
-			PropertyValidator = *ValidatorPtr;
+			if (auto ValidatorPtr = PropertyValidators.Find(Key))
+			{
+				PropertyValidator = *ValidatorPtr;
+				break;
+			}
+			else
+			{
+				Key = Key->GetSuperClass();
+			}
 		}
 	}
 
