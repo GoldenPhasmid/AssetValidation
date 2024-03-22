@@ -213,13 +213,26 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateVisibilit
 	{
 		if (const FProperty* Property = CachedProperty.Get())
 		{
+			auto GetVisibility = [Subsystem=CachedValidationSubsystem.Get()](const FProperty* InProperty)
+			{
+				return Subsystem->HasValidatorForPropertyType(InProperty) ? EVisibility::Visible : EVisibility::Collapsed;	
+			};
+			
 			if (Property->IsA<FMapProperty>())
 			{
 				// for map properties show ValidateKey/ValidateValue check boxes instead
 				return EVisibility::Collapsed;
 			}
+			if (const FArrayProperty* ArrayProperty = CastField<FArrayProperty>(Property))
+			{
+				return GetVisibility(ArrayProperty->Inner);
+			}
+			if (const FSetProperty* SetProperty = CastField<FSetProperty>(Property))
+			{
+				return GetVisibility(SetProperty->ElementProp);
+			}
 			
-			return CachedValidationSubsystem->HasValidatorForPropertyValue(Property) ? EVisibility::Visible : EVisibility::Collapsed;
+			return GetVisibility(Property);
 		}
 	}
 	
@@ -343,7 +356,7 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateKeyVisibi
 	{
 		if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
 		{
-			return CachedValidationSubsystem->HasValidatorForPropertyValue(MapProperty->KeyProp) ? EVisibility::Visible : EVisibility::Collapsed;
+			return CachedValidationSubsystem->HasValidatorForPropertyType(MapProperty->KeyProp) ? EVisibility::Visible : EVisibility::Collapsed;
 		}
 	}
 
@@ -356,7 +369,7 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateValueVisi
 	{
 		if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
 		{
-			return CachedValidationSubsystem->HasValidatorForPropertyValue(MapProperty->ValueProp) ? EVisibility::Visible : EVisibility::Collapsed;
+			return CachedValidationSubsystem->HasValidatorForPropertyType(MapProperty->ValueProp) ? EVisibility::Visible : EVisibility::Collapsed;
 		}
 	}
 	

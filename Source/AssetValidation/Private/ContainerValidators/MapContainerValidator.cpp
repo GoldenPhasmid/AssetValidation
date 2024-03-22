@@ -1,9 +1,8 @@
 #include "MapContainerValidator.h"
 
+#include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
-
-extern bool GValidateStructPropertiesWithoutMeta;
 
 UMapContainerValidator::UMapContainerValidator()
 {
@@ -22,7 +21,7 @@ bool UMapContainerValidator::CanValidateProperty(const FProperty* Property) cons
 			return true;
 		}
 		
-		if (GValidateStructPropertiesWithoutMeta && (MapProperty->KeyProp->IsA<FStructProperty>() || MapProperty->ValueProp->IsA<FStructProperty>()))
+		if (UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties && (MapProperty->KeyProp->IsA<FStructProperty>() || MapProperty->ValueProp->IsA<FStructProperty>()))
 		{
 			// if either key or value property is a struct and we can validate it without meta
 			return true;
@@ -44,9 +43,10 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	KeyProperty->GetSize(), KeyProperty->GetMinAlignment(),
 	ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
 
+	const bool bValidateStructs = UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties;
 	const bool bHasValidateMeta = MapProperty->HasMetaData(UE::AssetValidation::Validate);
-	const bool bCanValidateKey = bHasValidateMeta || (GValidateStructPropertiesWithoutMeta && KeyProperty->IsA<FStructProperty>()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateKey);
-	const bool bCanValidateValue = bHasValidateMeta || (GValidateStructPropertiesWithoutMeta && ValueProperty->IsA<FStructProperty>()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateValue);
+	const bool bCanValidateKey = bHasValidateMeta || (bValidateStructs && KeyProperty->IsA<FStructProperty>()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateKey);
+	const bool bCanValidateValue = bHasValidateMeta || (bValidateStructs && ValueProperty->IsA<FStructProperty>()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateValue);
 
 	// UPropertyValidateBase::CanValidatePropertyValue usually checks for Validate meta on ParentProperty to continue with actual validation
 	// To work with other metas like ValidateKey and ValidateValue (to validate only map key or only map value),

@@ -19,13 +19,16 @@ public:
 
 	UPROPERTY(Config, meta = (Validate))
 	TArray<FString> PackagesToValidate;
+
+	UPROPERTY(Config)
+	bool bAutoValidateStructInnerProperties = true;
 	
 	UPROPERTY(Config)
 	bool bSkipBlueprintGeneratedClasses = false;
 
 	UPROPERTY(Config)
-	bool bAutomaticallyValidateBlueprintComponents = true;
+	bool bAddMetaToNewBlueprintComponents = true;
 
 	UPROPERTY(Config)
-	bool bAutomaticallyValidateBlueprintVariables = true;
+	bool bAddMetaToNewBlueprintVariables = true;
 };

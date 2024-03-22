@@ -1,8 +1,8 @@
 #include "ArrayContainerValidator.h"
 
+#include "PropertyValidationSettings.h"
+#include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
-
-extern bool GValidateStructPropertiesWithoutMeta;
 
 UArrayContainerValidator::UArrayContainerValidator()
 {
@@ -13,21 +13,21 @@ bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property) co
 {
 	if (Super::CanValidateProperty(Property))
 	{
-		if (Property->HasMetaData(UE::AssetValidation::Validate))
+		// cast checked because Super call checks for property compatibility
+		const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
+		const FProperty* InnerProperty = ArrayProperty->Inner;
+		
+		if (UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties && InnerProperty->IsA<FStructProperty>())
 		{
-			// in general, array contents should be validated if Validate meta is present
+			// allow struct properties to be recursively validated without meta specifier
 			return true;
 		}
 
-		if (GValidateStructPropertiesWithoutMeta)
+		const UPropertyValidatorSubsystem* ValidatorSubsystem = UPropertyValidatorSubsystem::Get();
+		if (Property->HasMetaData(UE::AssetValidation::Validate) && ValidatorSubsystem->HasValidatorForPropertyType(InnerProperty))
 		{
-			// cast checked because Super call checks for property compatibility
-			const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
-			if (ArrayProperty->Inner->IsA<FStructProperty>())
-			{
-				// allow struct properties to be recursively validated without meta specifier
-				return true;
-			}
+			// in general, array contents should be validated if Validate meta is present
+			return true;
 		}
 	}
 

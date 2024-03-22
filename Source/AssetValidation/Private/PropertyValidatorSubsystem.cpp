@@ -11,12 +11,10 @@
 #include "PropertyValidators/PropertyValidation.h"
 #include "PropertyValidators/StructValidators.h"
 
-bool GValidateStructPropertiesWithoutMeta = true;
-FAutoConsoleVariableRef ValidateStructPropertiesWithoutMeta(
-	TEXT("PropertyValidation.ValidateStructsWithoutMeta"),
-	GValidateStructPropertiesWithoutMeta,
-	TEXT("")
-);
+UPropertyValidatorSubsystem* UPropertyValidatorSubsystem::Get()
+{
+	return GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+}
 
 bool UPropertyValidatorSubsystem::IsContainerProperty(const FProperty* Property)
 {
@@ -206,7 +204,7 @@ bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) co
 	return UPropertyValidationSettings::CanValidatePackage(PackageName);
 }
 
-bool UPropertyValidatorSubsystem::HasValidatorForPropertyValue(const FProperty* PropertyType) const
+bool UPropertyValidatorSubsystem::HasValidatorForPropertyType(const FProperty* PropertyType) const
 {
 	// attempt to find property validator for given property type
 	if (FindPropertyValidator(PropertyType) != nullptr)
@@ -407,7 +405,7 @@ void UPropertyValidatorSubsystem::HandleObjectModified(UObject* ModifiedObject) 
 
 void UPropertyValidatorSubsystem::HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData)
 {
-	if (!UPropertyValidationSettings::Get()->bAutomaticallyValidateBlueprintComponents)
+	if (!UPropertyValidationSettings::Get()->bAddMetaToNewBlueprintComponents)
 	{
 		// component automatic validation is disabled
 		return;

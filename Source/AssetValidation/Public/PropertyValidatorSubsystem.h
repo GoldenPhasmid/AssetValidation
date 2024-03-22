@@ -23,7 +23,8 @@ class ASSETVALIDATION_API UPropertyValidatorSubsystem: public UEditorSubsystem
 
 	friend class FPropertyValidationContext;
 public:
-	
+
+	static UPropertyValidatorSubsystem* Get();
 	/** @return true if property is a container property (array, set or map) */
 	static bool IsContainerProperty(const FProperty* Property);
 
@@ -79,7 +80,7 @@ public:
 	bool CanValidatePackage(const UPackage* Package) const;
 
 	/** @return whether subsystem can validate following property type */
-	bool HasValidatorForPropertyValue(const FProperty* PropertyType) const;
+	bool HasValidatorForPropertyType(const FProperty* PropertyType) const;
 
 	/** @return whether property can be ever validated based on its property flags */
 	bool CanEverValidateProperty(const FProperty* Property) const;
