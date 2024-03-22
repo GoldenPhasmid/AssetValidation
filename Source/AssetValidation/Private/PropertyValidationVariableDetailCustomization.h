@@ -62,7 +62,7 @@ private:
 	void SetFailureMessage(const FText& NewText, ETextCommit::Type CommitType);
 
 	bool HasMetaData(const FName& MetaName) const;
-	void SetMetaData(const FName& MetaName, bool bEnabled);
+	void SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue = {});
 private:
 	/** blueprint editor customization is called for */
 	TWeakPtr<IBlueprintEditor> BlueprintEditor;

@@ -11,6 +11,7 @@ class FFieldClass;
 class UPropertyValidatorBase;
 class FPropertyValidationContext;
 struct FPropertyValidationResult;
+struct FSubobjectData;
 
 /**
  *
@@ -121,16 +122,30 @@ protected:
 	/** @return container  validator for a given property type */
 	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
 
+	void HandleObjectModified(UObject* ModifiedObject) const;
+	void HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData);
+	void HandleBlueprintVariabledAdded();
+	
 	UPROPERTY(Config)
 	TArray<FString> PackagesToValidate;
 
 	UPROPERTY(Config)
 	bool bSkipBlueprintGeneratedClasses = false;
-	
+
+	UPROPERTY(Config)
+	bool bAutomaticallyValidateBlueprintComponents = true;
+
+	UPROPERTY(Config)
+	bool bAutomaticallyValidateBlueprintVariables = true;
+
+	/** property validators mapped by their respective use */
 	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;
 	TMap<FFieldClass*, UPropertyValidatorBase*> PropertyValidators;
 	TMap<FString, UPropertyValidatorBase*> StructValidators;
 
+	/** List of all active validators */
 	UPROPERTY(Transient)
 	TArray<UPropertyValidatorBase*> AllValidators;
+	/** */
+	FDelegateHandle VariableCustomizationHandle;
 };

@@ -1,6 +1,11 @@
 #include "PropertyValidatorSubsystem.h"
 
+#include "BlueprintEditorModule.h"
+#include "PropertyValidationVariableDetailCustomization.h"
+#include "SubobjectDataSubsystem.h"
 #include "ContainerValidators/PropertyContainerValidator.h"
+#include "Engine/SCS_Node.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
 #include "PropertyValidators/StructValidators.h"
@@ -30,6 +35,7 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 {
 	Super::Initialize(Collection);
 
+	// cache property validator classes
 	TArray<UClass*> ValidatorClasses;
 	GetDerivedClasses(UPropertyValidatorBase::StaticClass(), ValidatorClasses, true);
 
@@ -53,11 +59,36 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 			AllValidators.Add(Validator);
 		}
 	}
+
+	// Register bp variable customization
+	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
+	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationVariableDetailCustomization::MakeInstance));
+
+	USubobjectDataSubsystem* SubobjectSubsystem = GEngine->GetEngineSubsystem<USubobjectDataSubsystem>();
+	SubobjectSubsystem->OnNewSubobjectAdded().AddUObject(this, &ThisClass::HandleBlueprintComponentAdded);
+}
+
+template <typename ...Types>
+void LazyEmpty(Types&&... Vals)
+{
+	(Vals.Empty(), ...);
 }
 
 void UPropertyValidatorSubsystem::Deinitialize()
 {
-	PropertyValidators.Empty();
+	LazyEmpty(PropertyValidators, ContainerValidators, StructValidators, AllValidators);
+	
+	// Unregister bp variable customization
+	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
+	BlueprintEditorModule.UnregisterVariableCustomization(FProperty::StaticClass(), VariableCustomizationHandle);
+
+	if (!IsEngineExitRequested())
+	{
+		if (USubobjectDataSubsystem* SubobjectSubsystem = GEngine->GetEngineSubsystem<USubobjectDataSubsystem>())
+		{
+			SubobjectSubsystem->OnNewSubobjectAdded().RemoveAll(this);
+		}
+	}
 	
 	Super::Deinitialize();
 }
@@ -361,5 +392,48 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidato
 
 	return nullptr;
 }
+
+void UPropertyValidatorSubsystem::HandleObjectModified(UObject* ModifiedObject) const
+{
+	if (const USCS_Node* SCSNode = Cast<USCS_Node>(ModifiedObject))
+	{
+		if (UBlueprintGeneratedClass* BlueprintClass = SCSNode->GetTypedOuter<UBlueprintGeneratedClass>())
+		{
+			if (UBlueprint* Blueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy))
+			{
+
+			}
+		}
+	}
+}
+
+void UPropertyValidatorSubsystem::HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData)
+{
+	if (!bAutomaticallyValidateBlueprintComponents)
+	{
+		// component automatic validation is disabled
+		return;
+	}
+
+	if (NewSubobjectData.IsComponent() && !NewSubobjectData.IsInheritedComponent())
+	{
+		if (UBlueprint* Blueprint = NewSubobjectData.GetBlueprint())
+		{
+			const FName VariableName = NewSubobjectData.GetVariableName();
+
+			const FString ComponentNotValid = FString::Printf(TEXT("Corrupted component property of name %s"), *VariableName.ToString());
+			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint, VariableName, nullptr, UE::AssetValidation::Validate, {});
+			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint, VariableName, nullptr, UE::AssetValidation::ValidateRecursive, {});
+			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint, VariableName, nullptr, UE::AssetValidation::FailureMessage, ComponentNotValid);
+
+			if (const UClass* SkeletonClass = Blueprint->SkeletonGeneratedClass)
+			{
+				const FProperty* ComponentProperty = FindFProperty<FProperty>(SkeletonClass, VariableName);
+				check(ComponentProperty);
+			}
+		}
+	}
+}
+
 
 

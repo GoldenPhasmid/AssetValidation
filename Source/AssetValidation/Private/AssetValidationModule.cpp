@@ -35,8 +35,6 @@ private:
 	static void ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings);
 	static bool HasNoPlayWorld();
 	void RegisterMenus();
-
-	FDelegateHandle VariableCustomizationHandle;
 };
 
 void FAssetValidationModule::StartupModule()
@@ -47,11 +45,7 @@ void FAssetValidationModule::StartupModule()
 	{
 		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FAssetValidationModule::RegisterMenus));
 	}
-
-	// Register Blueprint editor variable customization
-	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
-	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationVariableDetailCustomization::MakeInstance));
-
+	
 	ISourceControlModule::Get().RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&FAssetValidationModule::ValidateChangelistPreSubmit));
 }
 
@@ -110,9 +104,6 @@ void FAssetValidationModule::ShutdownModule()
 	UToolMenus::UnregisterOwner(this);
 
 	FAssetValidationStyle::Shutdown();
-
-	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
-	BlueprintEditorModule.UnregisterVariableCustomization(FProperty::StaticClass(), VariableCustomizationHandle);
 	
 	ISourceControlModule::Get().UnregisterPreSubmitDataValidation();
 }

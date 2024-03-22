@@ -5,6 +5,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
@@ -49,7 +50,8 @@ void FPropertyValidationVariableDetailCustomization::CustomizeDetails(IDetailLay
 	{
 		PropertyBlueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy);
 	}
-	
+
+	CachedVariableName = CachedProperty->GetFName();
 	CachedValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 
 	const FSlateFontInfo DetailFont = IDetailLayoutBuilder::GetDetailFont();
@@ -135,7 +137,7 @@ void FPropertyValidationVariableDetailCustomization::CustomizeDetails(IDetailLay
 	[
 		SNew(STextBlock)
 		.Text(LOCTEXT("FailureMessage", "Validation Failed Message"))
-		.ToolTipText(LOCTEXT("FailureMessageToolTip", "Override message that is being displayed if validation for this properties has failed. For example: \'always set storage type for storage component\' instead of \'object property not set\'"))
+		.ToolTipText(LOCTEXT("FailureMessageToolTip", "Message that is being displayed if validation for this property value has failed, instead of default one.\r\nFor example: \'always set storage type for storage component\' instead of \'object property not set\'"))
 		.Font(DetailFont)
 	]
 	.ValueContent()
@@ -173,25 +175,29 @@ bool FPropertyValidationVariableDetailCustomization::IsVariableInheritedByBluepr
 
 bool FPropertyValidationVariableDetailCustomization::HasMetaData(const FName& MetaName) const
 {
-	if (const FProperty* Property = CachedProperty.Get())
+	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
-		return Property->HasMetaData(MetaName);
+		FString OutValue{};
+		if (FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint.Get(), CachedVariableName, nullptr, MetaName, OutValue))
+		{
+			return true;
+		}
 	}
 
 	return false;
 }
 
-void FPropertyValidationVariableDetailCustomization::SetMetaData(const FName& MetaName, bool bEnabled)
+void FPropertyValidationVariableDetailCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
 {
-	if (FProperty* Property = CachedProperty.Get())
+	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
 		if (bEnabled)
 		{
-			Property->SetMetaData(MetaName, {});
+			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint.Get(), CachedVariableName, nullptr, MetaName, MetaValue);
 		}
 		else
 		{
-			Property->RemoveMetaData(MetaName);
+			FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint.Get(), CachedVariableName, nullptr, MetaName);
 		}
 	}
 }
@@ -277,27 +283,15 @@ bool FPropertyValidationVariableDetailCustomization::IsFailureMessageEnabled() c
 
 FText FPropertyValidationVariableDetailCustomization::GetFailureMessage() const
 {
-	if (const FProperty* Property = CachedProperty.Get())
-	{
-		return FText::FromString(Property->GetMetaData(UE::AssetValidation::FailureMessage));
-	}
+	FString Value{};
+	FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint.Get(), CachedVariableName, nullptr, UE::AssetValidation::FailureMessage, Value);
 
-	return FText::GetEmpty();
+	return FText::FromString(Value);
 }
 
 void FPropertyValidationVariableDetailCustomization::SetFailureMessage(const FText& NewText, ETextCommit::Type CommitType)
 {
-	if (FProperty* Property = CachedProperty.Get())
-	{
-		if (NewText.IsEmpty())
-		{
-			Property->RemoveMetaData(UE::AssetValidation::FailureMessage);
-		}
-		else
-		{
-			Property->SetMetaData(UE::AssetValidation::FailureMessage, *NewText.ToString());
-		}
-	}
+	SetMetaData(UE::AssetValidation::FailureMessage, !NewText.IsEmpty(), NewText.ToString());
 }
 
 EVisibility FPropertyValidationVariableDetailCustomization::GetValidateRecursiveVisibility() const

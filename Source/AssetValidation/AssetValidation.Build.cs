@@ -36,6 +36,7 @@ public class AssetValidation : ModuleRules
 				"SourceControl",
 				"DeveloperSettings",
 				"Kismet",
+				"SubobjectDataInterface",
 			}
 		);
 	}
