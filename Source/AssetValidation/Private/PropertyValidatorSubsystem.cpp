@@ -1,6 +1,7 @@
 #include "PropertyValidatorSubsystem.h"
 
 #include "BlueprintEditorModule.h"
+#include "PropertyValidationSettings.h"
 #include "PropertyValidationVariableDetailCustomization.h"
 #include "SubobjectDataSubsystem.h"
 #include "ContainerValidators/PropertyContainerValidator.h"
@@ -201,11 +202,8 @@ bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) co
 		return true;
 	}
 #endif
-	
-	return PackagesToValidate.ContainsByPredicate([PackageName](const FString& ModulePath)
-	{
-		return PackageName.StartsWith(ModulePath);
-	});
+
+	return UPropertyValidationSettings::CanValidatePackage(PackageName);
 }
 
 bool UPropertyValidatorSubsystem::HasValidatorForPropertyValue(const FProperty* PropertyType) const
@@ -239,7 +237,7 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 	
 	while (Struct && (bIsStruct || CanValidatePackage(Package)))
 	{
-		if (bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Package))
+		if (UPropertyValidationSettings::Get()->bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Package))
 		{
 			Struct = Struct->GetSuperStruct();
 			continue;
@@ -409,7 +407,7 @@ void UPropertyValidatorSubsystem::HandleObjectModified(UObject* ModifiedObject) 
 
 void UPropertyValidatorSubsystem::HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData)
 {
-	if (!bAutomaticallyValidateBlueprintComponents)
+	if (!UPropertyValidationSettings::Get()->bAutomaticallyValidateBlueprintComponents)
 	{
 		// component automatic validation is disabled
 		return;

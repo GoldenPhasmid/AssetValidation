@@ -16,7 +16,7 @@ struct FSubobjectData;
 /**
  *
  */
-UCLASS(Config = Editor)
+UCLASS()
 class ASSETVALIDATION_API UPropertyValidatorSubsystem: public UEditorSubsystem
 {
 	GENERATED_BODY()
@@ -124,19 +124,6 @@ protected:
 
 	void HandleObjectModified(UObject* ModifiedObject) const;
 	void HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData);
-	void HandleBlueprintVariabledAdded();
-	
-	UPROPERTY(Config)
-	TArray<FString> PackagesToValidate;
-
-	UPROPERTY(Config)
-	bool bSkipBlueprintGeneratedClasses = false;
-
-	UPROPERTY(Config)
-	bool bAutomaticallyValidateBlueprintComponents = true;
-
-	UPROPERTY(Config)
-	bool bAutomaticallyValidateBlueprintVariables = true;
 
 	/** property validators mapped by their respective use */
 	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;
