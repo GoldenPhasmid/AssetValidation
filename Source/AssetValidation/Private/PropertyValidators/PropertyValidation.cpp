@@ -1,8 +1,139 @@
 #include "PropertyValidators/PropertyValidation.h"
 
+#include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
+
+bool UE::AssetValidation::IsContainerProperty(const FProperty* Property)
+{
+	return Property != nullptr && (Property->IsA<FArrayProperty>() || Property->IsA<FMapProperty>() || Property->IsA<FSetProperty>());
+}
+
+template <typename TPropPred>
+bool ApplyToNonContainerProperty(const FProperty* Property, TPropPred&& Func)
+{
+	// if property is a container property, predicate is applied to its inner property/properties
+	if (const FArrayProperty* ArrayProperty = CastField<FArrayProperty>(Property))
+	{
+		return Func(ArrayProperty->Inner);
+	}
+	if (const FSetProperty* SetProperty = CastField<FSetProperty>(Property))
+	{
+		return Func(SetProperty->ElementProp);
+	}
+	if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
+	{
+		return Func(MapProperty->KeyProp) && Func(MapProperty->ValueProp);
+	}
+
+	return Func(Property);
+}
+
+bool UE::AssetValidation::CanApplyMeta_Validate(const FProperty* Property)
+{
+	// check if validator exists for a property, unwrapping container property types
+	return ApplyToNonContainerProperty(Property, [](const FProperty* Property)
+	{
+		if (const UPropertyValidatorSubsystem* ValidatorSubsystem = UPropertyValidatorSubsystem::Get())
+		{
+			return ValidatorSubsystem->HasValidatorForPropertyType(Property);
+		}
+		
+		return false;
+	});
+}
+
+bool UE::AssetValidation::CanApplyMeta_ValidateRecursive(const FProperty* Property)
+{
+	// check if property is an object property (or struct property without auto validation), unwrapping container property types
+	return ApplyToNonContainerProperty(Property, [](const FProperty* Property)
+	{
+		// property is an object property 
+		return Property->IsA<FObjectPropertyBase>() || (!UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties && Property->IsA<FStructProperty>());
+	});
+}
+
+bool UE::AssetValidation::CanApplyMeta_ValidateKey(const FProperty* Property)
+{
+	// "ValidateKey" can be set for map properties if key property has validator
+	if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
+	{
+		if (const UPropertyValidatorSubsystem* ValidatorSubsystem = UPropertyValidatorSubsystem::Get())
+		{
+			return ValidatorSubsystem->HasValidatorForPropertyType(MapProperty->KeyProp);
+		}
+	}
+
+	return false;
+}
+
+bool UE::AssetValidation::CanApplyMeta_ValidateValue(const FProperty* Property)
+{
+	// "ValidateValue" can be set for map properties if value property has validator
+	if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
+	{
+		if (const UPropertyValidatorSubsystem* ValidatorSubsystem = UPropertyValidatorSubsystem::Get())
+		{
+			return ValidatorSubsystem->HasValidatorForPropertyType(MapProperty->ValueProp);
+		}
+	}
+
+	return false;
+}
+
+bool UE::AssetValidation::CanApplyMeta(const FProperty* Property, const FName& MetaName)
+{
+	// ugh, it should have been a switch statement
+	if (MetaName == UE::AssetValidation::Validate)
+	{
+		return CanApplyMeta_Validate(Property);
+	}
+	else if (MetaName == UE::AssetValidation::ValidateRecursive)
+	{
+		return CanApplyMeta_ValidateRecursive(Property);
+	}
+	else if (MetaName == UE::AssetValidation::ValidateKey)
+	{
+		return CanApplyMeta_ValidateKey(Property);
+	}
+	else if (MetaName == UE::AssetValidation::ValidateValue)
+	{
+		return CanApplyMeta_ValidateValue(Property);
+	}
+	else if (MetaName == UE::AssetValidation::FailureMessage)
+	{
+		return true;
+	}
+	else
+	{
+		checkNoEntry();
+	}
+
+	return false;
+}
+
+bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)
+{
+	FString OutValue{};
+	const bool bHasMetaData = FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint, VarName, nullptr, MetaName, OutValue);
+
+	if (CanApplyMeta(Property, MetaName))
+	{
+		if ((bAddIfPossible && !bHasMetaData) || bHasMetaData)
+		{
+			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint, VarName, nullptr, MetaName, {});
+		}
+		return true;
+	}
+	else if (bHasMetaData)
+	{
+		FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint, VarName, nullptr, MetaName);
+	}
+
+	return false;
+}
 
 FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() const
 {
@@ -30,7 +161,7 @@ FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() con
 void FPropertyValidationContext::PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage)
 {
 	FProperty* OwnerProperty = Property->GetOwner<FProperty>();
-	const bool bContainerProperty = UPropertyValidatorSubsystem::IsContainerProperty(OwnerProperty);
+	const bool bContainerProperty = UE::AssetValidation::IsContainerProperty(OwnerProperty);
 
 	FIssue Issue;
 	Issue.IssueProperty = bContainerProperty ? OwnerProperty : Property;

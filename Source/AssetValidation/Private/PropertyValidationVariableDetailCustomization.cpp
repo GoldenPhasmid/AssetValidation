@@ -209,31 +209,9 @@ bool FPropertyValidationVariableDetailCustomization::IsMetaEditingEnabled() cons
 
 EVisibility FPropertyValidationVariableDetailCustomization::GetValidateVisibility() const
 {
-	if (CachedValidationSubsystem.IsValid())
+	if (const FProperty* Property = CachedProperty.Get())
 	{
-		if (const FProperty* Property = CachedProperty.Get())
-		{
-			auto GetVisibility = [Subsystem=CachedValidationSubsystem.Get()](const FProperty* InProperty)
-			{
-				return Subsystem->HasValidatorForPropertyType(InProperty) ? EVisibility::Visible : EVisibility::Collapsed;	
-			};
-			
-			if (Property->IsA<FMapProperty>())
-			{
-				// for map properties show ValidateKey/ValidateValue check boxes instead
-				return EVisibility::Collapsed;
-			}
-			if (const FArrayProperty* ArrayProperty = CastField<FArrayProperty>(Property))
-			{
-				return GetVisibility(ArrayProperty->Inner);
-			}
-			if (const FSetProperty* SetProperty = CastField<FSetProperty>(Property))
-			{
-				return GetVisibility(SetProperty->ElementProp);
-			}
-			
-			return GetVisibility(Property);
-		}
+		return UE::AssetValidation::CanApplyMeta_Validate(Property) ? EVisibility::Visible : EVisibility::Collapsed;
 	}
 	
 	return EVisibility::Collapsed;
@@ -311,40 +289,8 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateRecursive
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
-		auto GetVisibility = [](const FProperty* Property)
-		{
-			return Property->IsA<FObjectPropertyBase>() ? EVisibility::Visible : EVisibility::Collapsed;	
-		};
-		
-		if (GetVisibility(Property) == EVisibility::Visible)
-		{
-			// property is an object property
-			return EVisibility::Visible; 
-		}
-		if (const FArrayProperty* ArrayProperty = CastField<FArrayProperty>(Property))
-		{
-			// property is an array property of objects
-			return GetVisibility(ArrayProperty->Inner);
-		}
-		if (const FSetProperty* SetProperty = CastField<FSetProperty>(Property))
-		{
-			// property is a set property of objects
-			return GetVisibility(SetProperty->ElementProp);
-		}
-		if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
-		{
-			// property is a map property with either key or value being an object
-			if (GetVisibility(MapProperty->KeyProp) == EVisibility::Visible)
-			{
-				return EVisibility::Visible;
-			}
-			if (GetVisibility(MapProperty->ValueProp) == EVisibility::Visible)
-			{
-				return EVisibility::Visible;
-			}
-
-			return EVisibility::Collapsed;
-		}
+		const bool bCanApply = UE::AssetValidation::CanApplyMeta_ValidateRecursive(Property);
+		return bCanApply ? EVisibility::Visible : EVisibility::Collapsed;
 	}
 
 	return EVisibility::Collapsed;
@@ -354,10 +300,7 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateKeyVisibi
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
-		if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
-		{
-			return CachedValidationSubsystem->HasValidatorForPropertyType(MapProperty->KeyProp) ? EVisibility::Visible : EVisibility::Collapsed;
-		}
+		return UE::AssetValidation::CanApplyMeta_ValidateKey(Property) ? EVisibility::Visible : EVisibility::Collapsed;
 	}
 
 	return EVisibility::Collapsed;
@@ -367,10 +310,7 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateValueVisi
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
-		if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
-		{
-			return CachedValidationSubsystem->HasValidatorForPropertyType(MapProperty->ValueProp) ? EVisibility::Visible : EVisibility::Collapsed;
-		}
+		return UE::AssetValidation::CanApplyMeta_ValidateValue(Property) ? EVisibility::Visible : EVisibility::Collapsed;
 	}
 	
 	return EVisibility::Collapsed;

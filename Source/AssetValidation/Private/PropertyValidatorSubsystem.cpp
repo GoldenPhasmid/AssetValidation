@@ -5,7 +5,6 @@
 #include "PropertyValidationVariableDetailCustomization.h"
 #include "SubobjectDataSubsystem.h"
 #include "ContainerValidators/PropertyContainerValidator.h"
-#include "Engine/SCS_Node.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
@@ -14,11 +13,6 @@
 UPropertyValidatorSubsystem* UPropertyValidatorSubsystem::Get()
 {
 	return GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-}
-
-bool UPropertyValidatorSubsystem::IsContainerProperty(const FProperty* Property)
-{
-	return Property != nullptr && (Property->IsA(FArrayProperty::StaticClass()) || Property->IsA(FMapProperty::StaticClass()) || Property->IsA(FSetProperty::StaticClass()));
 }
 
 bool UPropertyValidatorSubsystem::ShouldCreateSubsystem(UObject* Outer) const
@@ -63,6 +57,8 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
 	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationVariableDetailCustomization::MakeInstance));
 
+	FCoreUObjectDelegates::OnObjectModified.AddUObject(this, &ThisClass::PreBlueprintChange);
+	
 	USubobjectDataSubsystem* SubobjectSubsystem = GEngine->GetEngineSubsystem<USubobjectDataSubsystem>();
 	SubobjectSubsystem->OnNewSubobjectAdded().AddUObject(this, &ThisClass::HandleBlueprintComponentAdded);
 }
@@ -212,7 +208,7 @@ bool UPropertyValidatorSubsystem::HasValidatorForPropertyType(const FProperty* P
 		return true;
 	}
 	
-	if (!IsContainerProperty(PropertyType))
+	if (!UE::AssetValidation::IsContainerProperty(PropertyType))
 	{
 		// if we failed to find a property validator for a given property type, it is probably a struct and we can't validate the value.
 		// Validate means "validate container data" for other "containers", while for "object" and "struct" container validate means the value itself
@@ -389,6 +385,105 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidato
 	return nullptr;
 }
 
+void UPropertyValidatorSubsystem::PreBlueprintChange(UObject* ModifiedObject)
+{
+	if (UBlueprint* Blueprint = Cast<UBlueprint>(ModifiedObject))
+	{
+		if (!CachedBlueprints.Contains(Blueprint))
+		{
+			FBlueprintVariableData BlueprintData{Blueprint};
+			BlueprintData.OnChangedHandle = Blueprint->OnChanged().AddUObject(this, &ThisClass::PostBlueprintChange);
+			CachedBlueprints.Add(MoveTemp(BlueprintData));
+		}
+	}
+}
+
+void UPropertyValidatorSubsystem::PostBlueprintChange(UBlueprint* Blueprint)
+{
+	const int32 Index = CachedBlueprints.IndexOfByKey(Blueprint);
+	check(Index != INDEX_NONE);
+
+	FBlueprintVariableData OldData = CachedBlueprints[Index];
+	// remove cached data
+	CachedBlueprints.RemoveAt(Index);
+	Blueprint->OnChanged().Remove(OldData.OnChangedHandle);
+	
+	static bool bUpdatingVariables = false;
+	TGuardValue UpdateVariablesGuard{bUpdatingVariables, true};
+
+	TMap<FGuid, int32> NewVariables;
+	for (int32 VarIndex = 0; VarIndex < Blueprint->NewVariables.Num(); ++VarIndex)
+	{
+		NewVariables.Add(Blueprint->NewVariables[VarIndex].VarGuid, VarIndex);
+	}
+
+	TMap<FGuid, int32> OldVariables;
+	for (int32 VarIndex = 0; VarIndex < OldData.Variables.Num(); ++VarIndex)
+	{
+		OldVariables.Add(OldData.Variables[VarIndex].VarGuid, VarIndex);
+	}
+
+	for (const FBPVariableDescription& OldVariable: OldData.Variables)
+	{
+		if (!NewVariables.Contains(OldVariable.VarGuid))
+		{
+			HandleVariableRemoved(Blueprint, OldVariable.VarName);
+		}
+	}
+
+	for (const FBPVariableDescription& NewVariable: Blueprint->NewVariables)
+	{
+		if (!OldVariables.Contains(NewVariable.VarGuid))
+		{
+			HandleVariableAdded(Blueprint, NewVariable.VarName);
+			continue;
+		}
+
+		const int32 OldVarIndex = OldVariables.FindChecked(NewVariable.VarGuid);
+		const FBPVariableDescription& OldVariable = OldData.Variables[OldVarIndex];
+		if (OldVariable.VarName != NewVariable.VarName)
+		{
+			HandleVariableRenamed(Blueprint, OldVariable.VarName, NewVariable.VarName);
+		}
+		if (OldVariable.VarType != NewVariable.VarType)
+		{
+			HandleVariableTypeChanged(Blueprint, NewVariable.VarName, OldVariable.VarType, NewVariable.VarType);
+		}
+	}
+}
+
+void UPropertyValidatorSubsystem::HandleVariableAdded(UBlueprint* Blueprint, const FName& VarName)
+{
+	if (!UPropertyValidationSettings::Get()->bAddMetaToNewBlueprintVariables)
+	{
+		return;
+	}
+
+	UpdateBlueprintVariableMetaData(Blueprint, VarName, true);
+}
+
+void UPropertyValidatorSubsystem::HandleVariableTypeChanged(UBlueprint* Blueprint, const FName& VarName, FEdGraphPinType OldPinType, FEdGraphPinType NewPinType)
+{
+	UpdateBlueprintVariableMetaData(Blueprint, VarName, false);
+}
+
+void UPropertyValidatorSubsystem::UpdateBlueprintVariableMetaData(UBlueprint* Blueprint, const FName& VarName, bool bAddIfPossible)
+{
+	const FProperty* VarProperty = FindFProperty<FProperty>(Blueprint->SkeletonGeneratedClass, VarName);
+	check(VarProperty);
+
+	using namespace UE::AssetValidation;
+	bool bHasFailureMessage = UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, Validate, bAddIfPossible);
+	bHasFailureMessage |= UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateKey, bAddIfPossible);
+	bHasFailureMessage |= UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateValue, bAddIfPossible);
+	if (bHasFailureMessage)
+	{
+		UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, FailureMessage, bAddIfPossible);
+	}
+	UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateRecursive, bAddIfPossible);
+}
+
+#if 0
 void UPropertyValidatorSubsystem::HandleObjectModified(UObject* ModifiedObject) const
 {
 	if (const USCS_Node* SCSNode = Cast<USCS_Node>(ModifiedObject))
@@ -397,11 +492,12 @@ void UPropertyValidatorSubsystem::HandleObjectModified(UObject* ModifiedObject) 
 		{
 			if (UBlueprint* Blueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy))
 			{
-
+				
 			}
 		}
 	}
 }
+#endif
 
 void UPropertyValidatorSubsystem::HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData)
 {

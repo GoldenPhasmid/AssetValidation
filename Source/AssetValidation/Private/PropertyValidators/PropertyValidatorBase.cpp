@@ -19,7 +19,7 @@ bool UPropertyValidatorBase::CanValidateProperty(const FProperty* Property) cons
 		}
 
 		if (const FProperty* OwnerProperty = Property->GetOwner<FProperty>();
-			OwnerProperty && UPropertyValidatorSubsystem::IsContainerProperty(OwnerProperty) && OwnerProperty->HasMetaData(UE::AssetValidation::Validate))
+			OwnerProperty && UE::AssetValidation::IsContainerProperty(OwnerProperty) && OwnerProperty->HasMetaData(UE::AssetValidation::Validate))
 		{
 			return true;
 		}

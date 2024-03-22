@@ -13,6 +13,23 @@ class FPropertyValidationContext;
 struct FPropertyValidationResult;
 struct FSubobjectData;
 
+struct FBlueprintVariableData
+{
+	FBlueprintVariableData(UBlueprint* InBlueprint)
+		: Blueprint(InBlueprint)
+		, Variables(InBlueprint->NewVariables)
+	{}
+
+	FORCEINLINE bool operator==(UBlueprint* OtherBlueprint) const
+	{
+		return Blueprint.Get() == OtherBlueprint;
+	}
+	
+	TWeakObjectPtr<UBlueprint> Blueprint;
+	TArray<FBPVariableDescription> Variables;
+	FDelegateHandle OnChangedHandle;
+};
+
 /**
  *
  */
@@ -25,8 +42,6 @@ class ASSETVALIDATION_API UPropertyValidatorSubsystem: public UEditorSubsystem
 public:
 
 	static UPropertyValidatorSubsystem* Get();
-	/** @return true if property is a container property (array, set or map) */
-	static bool IsContainerProperty(const FProperty* Property);
 
 	//~Begin USubsystem interface
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
@@ -123,8 +138,20 @@ protected:
 	/** @return container  validator for a given property type */
 	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
 
-	void HandleObjectModified(UObject* ModifiedObject) const;
+	void PreBlueprintChange(UObject* ModifiedObject);
+	void PostBlueprintChange(UBlueprint* Blueprint);
+
+	void HandleVariableAdded(UBlueprint* Blueprint, const FName& VarName);
+	void HandleVariableRemoved(UBlueprint* Blueprint, const FName& VariableName) {};
+	void HandleVariableRenamed(UBlueprint* Blueprint, const FName& OldName, const FName& NewName) {};
+	void HandleVariableTypeChanged(UBlueprint* Blueprint, const FName& VarName, FEdGraphPinType OldPinType, FEdGraphPinType NewPinType);
 	void HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData);
+
+	/** Update variable meta data based on its property type and already placed metas */
+	void UpdateBlueprintVariableMetaData(UBlueprint* Blueprint, const FName& VarName, bool bAddIfPossible);
+
+	/** Cached blueprint data between PreBlueprintChange and PostBlueprintChange */
+	TArray<FBlueprintVariableData> CachedBlueprints;
 
 	/** property validators mapped by their respective use */
 	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;

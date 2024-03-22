@@ -4,10 +4,8 @@
 
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
-#include "BlueprintEditorModule.h"
 #include "EditorValidatorSubsystem.h"
 #include "ISourceControlModule.h"
-#include "PropertyValidationVariableDetailCustomization.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
@@ -92,6 +90,17 @@ void FAssetValidationModule::RegisterMenus()
 		FSlateIcon(FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon"),
 		FUIAction(FExecuteAction::CreateStatic(&FAssetValidationModule::CheckProjectSettings))
 	));
+
+#if 0
+	UToolMenu* BlueprintMenu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
+	BlueprintMenu->AddMenuEntry("DataValidation", FToolMenuEntry::InitMenuEntry(
+		"BlueprintMenuTest",
+		LOCTEXT("BlueprintMenuTest", "Menu Test"),
+		FText::GetEmpty(),
+		FSlateIcon{},
+		FToolUIActionChoice{}
+	));
+#endif
 }
 
 

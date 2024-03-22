@@ -4,9 +4,10 @@
 #include "Templates/NonNullPointer.h"
 #include "UObject/UObjectGlobals.h"
 
-class UPropertyValidatorSubsystem;
-class FPropertyValidationContext;
+
 struct FPropertyValidationResult;
+class FPropertyValidationContext;
+class UPropertyValidatorSubsystem;
 
 namespace UE::AssetValidation
 {
@@ -15,6 +16,30 @@ namespace UE::AssetValidation
 	static const FName ValidateValue("ValidateValue");
 	static const FName ValidateRecursive("ValidateRecursive");
 	static const FName FailureMessage("FailureMessage");
+
+	/** @return true if property is a container property (array, set or map) */
+	bool IsContainerProperty(const FProperty* Property);
+
+	bool CanApplyMeta_Validate(const FProperty* Property);
+
+	bool CanApplyMeta_ValidateRecursive(const FProperty* Property);
+
+	bool CanApplyMeta_ValidateKey(const FProperty* Property);
+
+	bool CanApplyMeta_ValidateValue(const FProperty* Property);
+
+	bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
+
+	/**
+	 * Update single meta data key represented by @MetaName on variable defined by @Property
+	 * @param Blueprint blueprint that associates with the variable
+	 * @param Property variable property
+	 * @param VarName variable name
+	 * @param MetaName meta data key
+	 * @param bAddIfPossible if set to true, update will rely only on property data. Otherwise meta data should be already present to stay
+	 * @return whether meta data is present on property
+	 */
+	bool UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible);
 }
 
 
