@@ -10,25 +10,9 @@
 class FFieldClass;
 class UPropertyValidatorBase;
 class FPropertyValidationContext;
+class UAssetValidationEditorExtensionManager;
 struct FPropertyValidationResult;
 struct FSubobjectData;
-
-struct FBlueprintVariableData
-{
-	FBlueprintVariableData(UBlueprint* InBlueprint)
-		: Blueprint(InBlueprint)
-		, Variables(InBlueprint->NewVariables)
-	{}
-
-	FORCEINLINE bool operator==(UBlueprint* OtherBlueprint) const
-	{
-		return Blueprint.Get() == OtherBlueprint;
-	}
-	
-	TWeakObjectPtr<UBlueprint> Blueprint;
-	TArray<FBPVariableDescription> Variables;
-	FDelegateHandle OnChangedHandle;
-};
 
 /**
  *
@@ -137,21 +121,7 @@ protected:
 	const UPropertyValidatorBase* FindPropertyValidator(const FProperty* PropertyType) const;
 	/** @return container  validator for a given property type */
 	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
-
-	void PreBlueprintChange(UObject* ModifiedObject);
-	void PostBlueprintChange(UBlueprint* Blueprint);
-
-	void HandleVariableAdded(UBlueprint* Blueprint, const FName& VarName);
-	void HandleVariableRemoved(UBlueprint* Blueprint, const FName& VariableName) {};
-	void HandleVariableRenamed(UBlueprint* Blueprint, const FName& OldName, const FName& NewName) {};
-	void HandleVariableTypeChanged(UBlueprint* Blueprint, const FName& VarName, FEdGraphPinType OldPinType, FEdGraphPinType NewPinType);
-	void HandleBlueprintComponentAdded(const FSubobjectData& NewSubobjectData);
-
-	/** Update variable meta data based on its property type and already placed metas */
-	void UpdateBlueprintVariableMetaData(UBlueprint* Blueprint, const FName& VarName, bool bAddIfPossible);
-
-	/** Cached blueprint data between PreBlueprintChange and PostBlueprintChange */
-	TArray<FBlueprintVariableData> CachedBlueprints;
+	
 
 	/** property validators mapped by their respective use */
 	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;
@@ -161,6 +131,8 @@ protected:
 	/** List of all active validators */
 	UPROPERTY(Transient)
 	TArray<UPropertyValidatorBase*> AllValidators;
-	/** */
-	FDelegateHandle VariableCustomizationHandle;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAssetValidationEditorExtensionManager> ExtensionManager;
+
 };
