@@ -10,7 +10,7 @@
 class FFieldClass;
 class UPropertyValidatorBase;
 class FPropertyValidationContext;
-class UAssetValidationEditorExtensionManager;
+class UValidationEditorExtensionManager;
 struct FPropertyValidationResult;
 struct FSubobjectData;
 
@@ -133,6 +133,5 @@ protected:
 	TArray<UPropertyValidatorBase*> AllValidators;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UAssetValidationEditorExtensionManager> ExtensionManager;
-
+	TObjectPtr<UValidationEditorExtensionManager> ExtensionManager;
 };

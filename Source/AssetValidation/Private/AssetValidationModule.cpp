@@ -9,6 +9,8 @@
 #include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
+#include "Editor/EnginePropertyDescriptionCustomization.h"
+#include "Editor/PropertyValidationSettingsDetails.h"
 #include "Misc/ScopedSlowTask.h"
 
 DEFINE_LOG_CATEGORY(LogAssetValidation);
@@ -45,6 +47,10 @@ void FAssetValidationModule::StartupModule()
 	}
 	
 	ISourceControlModule::Get().RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&FAssetValidationModule::ValidateChangelistPreSubmit));
+
+	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	PropertyEditor.RegisterCustomClassLayout("PropertyValidationSettings", FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
+	PropertyEditor.RegisterCustomPropertyTypeLayout("EnginePropertyDescription", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FEnginePropertyDescriptionCustomization::MakeInstance));
 }
 
 void FAssetValidationModule::RegisterMenus()

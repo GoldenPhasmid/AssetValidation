@@ -44,7 +44,7 @@ public:
 private:
 	
 	static const FName ValidationTabId;
-	TSharedRef<SDockTab> SpawnValidationTab(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnValidationTab(const FSpawnTabArgs& Args, UObject* Asset);
 
 	/** Blueprint editor extension callbacks */
 	void RegisterValidationTab(FWorkflowAllowedTabSet& TabFactory, FName ModeName, TSharedPtr<FBlueprintEditor> BlueprintEditor);

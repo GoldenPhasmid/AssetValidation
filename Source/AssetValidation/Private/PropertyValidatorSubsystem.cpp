@@ -52,7 +52,7 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		}
 	}
 
-	ExtensionManager = NewObject<UAssetValidationEditorExtensionManager>(this);
+	ExtensionManager = NewObject<UValidationEditorExtensionManager>(this);
 	ExtensionManager->Initialize();
 }
 

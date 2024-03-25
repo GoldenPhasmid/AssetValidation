@@ -161,8 +161,17 @@ void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBluepri
 }
 
 
-TSharedRef<SDockTab> UValidationEditorExtensionManager::SpawnValidationTab(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> UValidationEditorExtensionManager::SpawnValidationTab(const FSpawnTabArgs& Args, UObject* Asset)
 {
+	UUserDefinedStruct* EditedStruct = CastChecked<UUserDefinedStruct>(Asset);
+
+	FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	FDetailsViewArgs DetailsViewArgs;
+	DetailsViewArgs.bAllowSearch = false;
+	DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
+	DetailsViewArgs.bHideSelectionTip = true;
+	DetailsViewArgs.bShowOptions = false;
+	
 	// @todo: implement
 	return SNew(SDockTab);
 }
@@ -184,7 +193,7 @@ void UValidationEditorExtensionManager::HandleAssetEditorPreConstruction(const T
 		return;
 	}
 	
-	const UObject* Asset = Assets[0];
+	UObject* Asset = Assets[0];
 	if (!Asset->IsA<UUserDefinedStruct>())
 	{
 		return;
@@ -194,7 +203,7 @@ void UValidationEditorExtensionManager::HandleAssetEditorPreConstruction(const T
 	if (TSharedPtr<FTabManager> TabManager = AssetToolkit->GetTabManager(); TabManager.IsValid())
 	{
 		TabManager->UnregisterTabSpawner(ValidationTabId);
-		FTabSpawnerEntry& TabSpawner = TabManager->RegisterTabSpawner(ValidationTabId, FOnSpawnTab::CreateUObject(this, &ThisClass::SpawnValidationTab));
+		FTabSpawnerEntry& TabSpawner = TabManager->RegisterTabSpawner(ValidationTabId, FOnSpawnTab::CreateUObject(this, &ThisClass::SpawnValidationTab, Asset));
 		TabSpawner.SetDisplayName(NSLOCTEXT("AssetValidation", "ValidationTabLabel", "Validation"));
 		TabSpawner.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon"));
 
