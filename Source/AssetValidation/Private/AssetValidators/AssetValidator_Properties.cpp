@@ -1,7 +1,8 @@
 #include "AssetValidators/AssetValidator_Properties.h"
 
 #include "PropertyValidatorSubsystem.h"
-#include "PropertyValidators/PropertyValidation.h"
+#include "Engine/UserDefinedEnum.h"
+#include "Engine/UserDefinedStruct.h"
 
 EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
 {
@@ -10,6 +11,13 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 
 	UClass* Class = InAsset->GetClass();
 	UObject* Object = InAsset;
+	
+	if (Object->IsA<UUserDefinedStruct>() || Object->IsA<UUserDefinedEnum>())
+	{
+		// ignore user defined struct and enum blueprints
+		return EDataValidationResult::Valid;
+	}
+	
 	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		Class = Blueprint->GeneratedClass;
