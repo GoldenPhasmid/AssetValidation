@@ -53,6 +53,18 @@ public:
 };
 
 UCLASS()
+class ASSETVALIDATION_API UStructValidator_GameplayTagQuery: public UStructValidator
+{
+	GENERATED_BODY()
+public:
+	UStructValidator_GameplayTagQuery();
+
+	//~Begin PropertyValidatorBase
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	//~End PropertyValidatorBase
+};
+
+UCLASS()
 class UStructValidator_GameplayAttribute: public UStructValidator
 {
 	GENERATED_BODY()
@@ -106,6 +118,18 @@ class ASSETVALIDATION_API UStructValidator_PrimaryAssetId: public UStructValidat
 	GENERATED_BODY()
 public:
 	UStructValidator_PrimaryAssetId();
+
+	//~Begin PropertyValidatorBase
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	//~End PropertyValidatorBase
+};
+
+UCLASS()
+class ASSETVALIDATION_API UStructValidator_Key: public UStructValidator
+{
+	GENERATED_BODY()
+public:
+	UStructValidator_Key();
 
 	//~Begin PropertyValidatorBase
 	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
