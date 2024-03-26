@@ -10,6 +10,38 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
+bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
+{
+	if (Customization.IsValid())
+	{
+		if (const FProperty* Property = Customization.Pin()->CachedProperty.Get())
+		{
+			return UE::AssetValidation::CanApplyMeta(Property, MetaKey);
+		}
+	}
+	
+	return false;
+}
+
+bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
+{
+	return Customization.IsValid() && Customization.Pin()->IsVariableInBlueprint();
+}
+
+bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
+{
+	return Customization.IsValid() && Customization.Pin()->GetMetaData(MetaKey, OutValue);
+}
+
+void FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
+{
+	if (Customization.IsValid())
+	{
+		Customization.Pin()->SetMetaData(MetaKey, NewMetaState, MetaValue);
+	}
+	
+}
+
 TSharedPtr<IDetailCustomization> FPropertyValidationVariableDetailCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
 {
 	if (const TArray<UObject*>* Objects = InBlueprintEditor.IsValid() ? InBlueprintEditor->GetObjectsCurrentlyBeingEdited() : nullptr;
@@ -53,9 +85,16 @@ void FPropertyValidationVariableDetailCustomization::CustomizeDetails(IDetailLay
 
 	CachedVariableName = CachedProperty->GetFName();
 	CachedValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-
-	const FSlateFontInfo DetailFont = IDetailLayoutBuilder::GetDetailFont();
+	
 	IDetailCategoryBuilder& Category = DetailLayout.EditCategory("Validation", LOCTEXT("ValidationDetailsCategory", "Validation"), ECategoryPriority::Default).InitiallyCollapsed(false);
+#if 1
+	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
+	{
+		return Category.AddCustomRow(SearchString).ShouldAutoExpand(true);
+	});	
+#else
+	const FSlateFontInfo DetailFont = IDetailLayoutBuilder::GetDetailFont();
 	
 	// create Validate checkbox
 	Category.AddCustomRow(LOCTEXT("ValidateRowName", "Validate"))
@@ -151,6 +190,7 @@ void FPropertyValidationVariableDetailCustomization::CustomizeDetails(IDetailLay
 		.OnTextCommitted(this, &ThisClass::SetFailureMessage)
 		.Font(DetailFont)
 	];
+#endif
 }
 
 bool FPropertyValidationVariableDetailCustomization::IsVariableInBlueprint() const
@@ -175,9 +215,15 @@ bool FPropertyValidationVariableDetailCustomization::IsVariableInheritedByBluepr
 
 bool FPropertyValidationVariableDetailCustomization::HasMetaData(const FName& MetaName) const
 {
+	FString MetaValue{};
+	return GetMetaData(MetaName, MetaValue);
+}
+
+
+bool FPropertyValidationVariableDetailCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
+{
 	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
-		FString OutValue{};
 		if (FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint.Get(), CachedVariableName, nullptr, MetaName, OutValue))
 		{
 			return true;

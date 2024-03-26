@@ -2,6 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
+#include "Editor/CustomizationTarget.h"
+#include "PropertyValidators/PropertyValidation.h"
+
+namespace UE::AssetValidation
+{
+	class ICustomizationTarget;
+}
 
 class FProperty;
 class IBlueprintEditor;
@@ -19,11 +26,27 @@ public:
 		: BlueprintEditor(InBlueprintEditor)
 		, Blueprint(InBlueprint)
 	{}
-
+	
 	// IDetailCustomization interface
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
 
 private:
+
+	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
+	{
+	public:
+		FCustomizationTarget(FPropertyValidationVariableDetailCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FPropertyValidationVariableDetailCustomization>(InCustomization.AsWeak()))
+		{}
+		//~Begin ICustomizationTarget interface
+		virtual bool HandleIsMetaVisible(const FName& MetaKey) const override;
+		virtual bool HandleIsMetaEditable(FName MetaKey) const override;
+		virtual bool HandleGetMetaState(const FName& MetaKey, FString& OutValue) const override;
+		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
+		//~End ICustomizationTarget interface
+
+		TWeakPtr<FPropertyValidationVariableDetailCustomization> Customization;
+	};
 
 	/**
 	 * @return true if the displayed property is owned by the current Blueprint (and not parent or a local variable)
@@ -62,8 +85,13 @@ private:
 	void SetFailureMessage(const FText& NewText, ETextCommit::Type CommitType);
 
 	bool HasMetaData(const FName& MetaName) const;
+	bool GetMetaData(const FName& MetaName, FString& OutValue) const;
 	void SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue = {});
 private:
+
+	/** Customization target */
+	TSharedPtr<FCustomizationTarget> CustomizationTarget;
+
 	/** blueprint editor customization is called for */
 	TWeakPtr<IBlueprintEditor> BlueprintEditor;
 	

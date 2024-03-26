@@ -104,7 +104,7 @@ bool UE::AssetValidation::CanApplyMeta(const FProperty* Property, const FName& M
 	}
 	else if (MetaName == UE::AssetValidation::FailureMessage)
 	{
-		return true;
+		return CanApplyMeta_Validate(Property) || CanApplyMeta_ValidateKey(Property) || CanApplyMeta_ValidateValue(Property);
 	}
 	else
 	{

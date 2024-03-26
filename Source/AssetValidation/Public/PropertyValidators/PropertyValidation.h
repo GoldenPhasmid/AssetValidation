@@ -20,17 +20,18 @@ namespace UE::AssetValidation
 
 namespace UE::AssetValidation
 {
-	/** @return true if property is a container property (array, set or map) */
-	bool IsContainerProperty(const FProperty* Property);
-
+	/** @return true if "Validate" meta can be applied to given property */
 	bool CanApplyMeta_Validate(const FProperty* Property);
-
+	/** @return true if "ValidateRecursive" meta can be applied to given property */
 	bool CanApplyMeta_ValidateRecursive(const FProperty* Property);
-
+	/** @return true if "ValidateKey" meta can be applied to given property */
 	bool CanApplyMeta_ValidateKey(const FProperty* Property);
-
+	/** @return true if "ValidateValue" meta can be applied to given property */
 	bool CanApplyMeta_ValidateValue(const FProperty* Property);
-
+	/**
+	 * @return true if @MetaName can be applied to @Property type
+	 * Includes unwrapping container properties to check whether underlying type can be validated at all
+	 */
 	bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
 
 	/**
@@ -43,9 +44,15 @@ namespace UE::AssetValidation
 	 * @return whether meta data is present on property
 	 */
 	bool UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible);
+
+	/** @return true if property is a container property (array, set or map) */
+	bool IsContainerProperty(const FProperty* Property);
+
 }
 
-
+/**
+ * Property Validation Context
+ */
 class FPropertyValidationContext: public FNoncopyable
 {
 public:

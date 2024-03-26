@@ -9,9 +9,40 @@ struct FEngineVariableDescription
 {
 	GENERATED_BODY()
 	
+	FEngineVariableDescription() = default;
+	FEngineVariableDescription(UStruct* InStruct, const TFieldPath<FProperty>& InPropertyPath)
+		: Struct(InStruct)
+		, PropertyPath(InPropertyPath)
+	{}
+
+	FORCEINLINE bool IsValid() const
+	{
+		return Struct != nullptr && GetProperty() != nullptr;
+	}
+	
 	FORCEINLINE FProperty* GetProperty() const
 	{
 		return PropertyPath.Get(Struct);
+	}
+
+	FORCEINLINE bool HasMetaData(const FName& Key) const
+	{
+		return MetaDataMap.Find(Key) != nullptr;
+	}
+
+	FORCEINLINE FString GetMetaData(const FName& Key) const
+	{
+		if (const FString* Str = MetaDataMap.Find(Key))
+		{
+			return *Str;
+		}
+
+		return FString{};
+	}
+
+	FORCEINLINE void SetMetaData(const FName& Key, const FString& Value)
+	{
+		MetaDataMap.Add(Key, Value);
 	}
 
 	UPROPERTY(EditAnywhere)
