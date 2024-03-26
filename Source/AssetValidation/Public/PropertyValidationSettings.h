@@ -5,12 +5,12 @@
 #include "PropertyValidationSettings.generated.h"
 
 USTRUCT()
-struct FEngineVariableDescription
+struct FPropertyExternalValidationData
 {
 	GENERATED_BODY()
 	
-	FEngineVariableDescription() = default;
-	FEngineVariableDescription(UStruct* InStruct, const TFieldPath<FProperty>& InPropertyPath)
+	FPropertyExternalValidationData() = default;
+	FPropertyExternalValidationData(UStruct* InStruct, const TFieldPath<FProperty>& InPropertyPath)
 		: Struct(InStruct)
 		, PropertyPath(InPropertyPath)
 	{}
@@ -56,19 +56,24 @@ struct FEngineVariableDescription
 };
 
 USTRUCT()
-struct FEngineClassDescription
+struct FClassExternalValidationData
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
-	TSubclassOf<UObject> EngineClass;
+	TSubclassOf<UObject> Class;
 
 	UPROPERTY(EditAnywhere)
-	TArray<FEngineVariableDescription> Properties;
+	TArray<FPropertyExternalValidationData> Properties;
 };
 
+FORCEINLINE bool operator==(const FClassExternalValidationData& ClassData, UClass* Class)
+{
+	return ClassData.Class == Class;
+}
+
 USTRUCT()
-struct FEngineStructDescription
+struct FStructExternalValidationData
 {
 	GENERATED_BODY()
 
@@ -76,7 +81,17 @@ struct FEngineStructDescription
 	TObjectPtr<UScriptStruct> StructClass;
 
 	UPROPERTY(EditAnywhere)
-	TArray<FEngineVariableDescription> Properties;
+	TArray<FPropertyExternalValidationData> Properties;
+};
+
+FORCEINLINE bool operator==(const FStructExternalValidationData& StructData, UScriptStruct* ScriptStruct)
+{
+	return StructData.StructClass == ScriptStruct;
+}
+
+class FExternalValidationData: public TArray<FPropertyExternalValidationData>
+{
+	
 };
 
 UCLASS(Config = Editor, DefaultConfig, DisplayName = "Property Validation")
@@ -90,12 +105,15 @@ public:
 		return GetDefault<UPropertyValidationSettings>();
 	}
 
-	static bool CanValidatePackage(const FString& PackageName);
-
+	static const TArray<FPropertyExternalValidationData>& GetExternalValidationData(const UStruct* Struct);
+	
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
-	TArray<FString> PackagesToValidate;
+	TArray<FString> PackagesToIgnore;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
+	TArray<FString> PackagesToIterate;
 
 	/**
 	 * if set to true, allows unwrapping and iterating over struct inner properties without "ValidateRecursive" meta specifier
@@ -129,17 +147,16 @@ public:
 	bool bAddMetaToNewBlueprintVariables = true;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TFieldPath<FProperty> PropertyPath;
+	TArray<FClassExternalValidationData> ExternalClasses;
 
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	TArray<FStructExternalValidationData> ExternalStructs;
+	
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TSubclassOf<UObject> ObjectClass;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TSubclassOf<UObject> CustomizedObjectClass;
 
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TArray<FEngineClassDescription> EngineClasses;
 
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TArray<FEngineStructDescription> EngineStructs;
 };

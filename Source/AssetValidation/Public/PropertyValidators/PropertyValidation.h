@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PropertyValidatorSubsystem.h"
 #include "Templates/NonNullPointer.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -11,6 +12,8 @@ class UPropertyValidatorSubsystem;
 
 namespace UE::AssetValidation
 {
+	class FMetaDataSource;
+	
 	static const FName Validate("Validate");
 	static const FName ValidateKey("ValidateKey");
 	static const FName ValidateValue("ValidateValue");
@@ -47,7 +50,9 @@ namespace UE::AssetValidation
 
 	/** @return true if property is a container property (array, set or map) */
 	bool IsContainerProperty(const FProperty* Property);
-
+	
+	/** @return whether package is a blueprint package */
+	bool IsBlueprintGeneratedPackage(const FString& PackageName);
 }
 
 /**
@@ -91,9 +96,9 @@ public:
 	/** Route property container validation request to validator subsystem */
 	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct);
 	/** Route property validation request to validator subsystem */
-	void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property);
+	void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData);
 	/** Route property value validation request to validator subsystem */
-	void IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty);
+	void IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData);
 
 	FORCEINLINE const UObject* GetSourceObject() const
 	{

@@ -2,10 +2,15 @@
 
 #include "PropertyValidationSettings.h"
 #include "ContainerValidators/PropertyContainerValidator.h"
+#include "Editor/MetaDataContainer.h"
 #include "Editor/ValidationEditorExtensionManager.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
 #include "PropertyValidators/StructValidators.h"
+
+#ifndef WITH_ASSET_VALIDATION_TESTS
+#define WITH_ASSET_VALIDATION_TESTS 1
+#endif
 
 UPropertyValidatorSubsystem* UPropertyValidatorSubsystem::Get()
 {
@@ -128,12 +133,13 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(co
 	
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, Object);
-	if (!CanValidatePackage(Object->GetPackage()))
+	if (ShouldIgnorePackage(Object->GetPackage()))
 	{
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
-	
-	ValidatePropertyWithContext(reinterpret_cast<const uint8*>(Object), Property, ValidationContext);
+
+	TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>(Property);
+	ValidatePropertyWithContext(reinterpret_cast<const uint8*>(Object), Property, *MetaData, ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
@@ -148,25 +154,46 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStructProperty(co
 
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, OwningObject);
-	if (!CanValidatePackage(OwningObject->GetPackage()))
+	if (ShouldIgnorePackage(OwningObject->GetPackage()))
 	{
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
-	ValidatePropertyWithContext(StructData, Property, ValidationContext);
+	TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>(Property);
+	ValidatePropertyWithContext(StructData, Property, *MetaData, ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
 
-bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) const
+bool UPropertyValidatorSubsystem::ShouldIgnorePackage(const UPackage* Package) const
 {
-	if (IsBlueprintGenerated(Package))
-	{
-		return true;
-	}
-	
 	const FString PackageName = Package->GetName();
 
+	// allow validation for project package
+	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
+	if (PackageName.StartsWith(ProjectPackage))
+	{
+		return false;
+	}
+	
+#if WITH_ASSET_VALIDATION_TESTS
+	if (PackageName.StartsWith("/Script/AssetValidation"))
+	{
+		return false;
+	}
+#endif
+
+	auto Settings = UPropertyValidationSettings::Get();
+	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
+	return Settings->PackagesToIgnore.ContainsByPredicate([PackageName](const FString& ModulePath)
+	{
+		return PackageName.StartsWith(ModulePath);
+	});
+}
+
+bool UPropertyValidatorSubsystem::ShouldIteratePackageProperties(const UPackage* Package) const
+{
+	const FString PackageName = Package->GetName();
 	// allow validation for project package
 	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
 	if (PackageName.StartsWith(ProjectPackage))
@@ -174,14 +201,24 @@ bool UPropertyValidatorSubsystem::CanValidatePackage(const UPackage* Package) co
 		return true;
 	}
 	
-#if WITH_EDITOR
+#if WITH_ASSET_VALIDATION_TESTS
 	if (PackageName.StartsWith("/Script/AssetValidation"))
 	{
 		return true;
 	}
 #endif
+	
+	auto Settings = UPropertyValidationSettings::Get();
+	return Settings->PackagesToIterate.ContainsByPredicate([PackageName](const FString& ModulePath)
+	{
+		return PackageName.StartsWith(ModulePath);
+	});
+}
 
-	return UPropertyValidationSettings::CanValidatePackage(PackageName);
+bool UPropertyValidatorSubsystem::ShouldSkipPackage(const UPackage* Package) const
+{
+	auto Settings = UPropertyValidationSettings::Get();
+	return Settings->bSkipBlueprintGeneratedClasses && UE::AssetValidation::IsBlueprintGeneratedPackage(Package->GetName());
 }
 
 bool UPropertyValidatorSubsystem::HasValidatorForPropertyType(const FProperty* PropertyType) const
@@ -213,25 +250,37 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 	const bool bIsStruct = Cast<UScriptStruct>(Struct) != nullptr;
 	const UPackage* Package = Struct->GetPackage();
 	
-	while (Struct && (bIsStruct || CanValidatePackage(Package)))
+	while (Struct && (bIsStruct || !ShouldIgnorePackage(Package)))
 	{
-		if (UPropertyValidationSettings::Get()->bSkipBlueprintGeneratedClasses && IsBlueprintGenerated(Package))
+		if (ShouldSkipPackage(Package))
 		{
 			Struct = Struct->GetSuperStruct();
 			continue;
 		}
 
-		// EFieldIterationFlags::None because we look only at Struct type properties
-		for (const FProperty* Property: TFieldRange<FProperty>(Struct, EFieldIterationFlags::None))
+		TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>();
+		if (ShouldIteratePackageProperties(Package))
 		{
-			ValidatePropertyWithContext(ContainerMemory, Property, ValidationContext);
+			
+			// EFieldIterationFlags::None because we look only at Struct type properties
+			for (FProperty* Property: TFieldRange<FProperty>(Struct, EFieldIterationFlags::None))
+			{
+				MetaData->SetProperty(Property);
+				ValidatePropertyWithContext(ContainerMemory, Property, *MetaData, ValidationContext);
+			}
+		}
+		
+		for (const FPropertyExternalValidationData& ExternalData: UPropertyValidationSettings::GetExternalValidationData(Struct))
+		{
+			MetaData->SetExternalData(ExternalData);
+			ValidatePropertyWithContext(ContainerMemory, ExternalData.GetProperty(), *MetaData, ValidationContext);
 		}
 		
 		Struct = Struct->GetSuperStruct();
 	}
 }
 
-void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	// check whether we should validate property at all
 	if (!ShouldValidateProperty(Property, ValidationContext))
@@ -259,24 +308,24 @@ void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const 
 	}
 }
 
-void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const
+void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	// do not check for property flags for ParentProperty or ValueProperty.
 	// ParentProperty has already been checked and ValueProperty is set by container so it doesn't have metas or required property flags
 
-	if (auto Validator = FindPropertyValidator(ValueProperty))
+	if (auto Validator = FindPropertyValidator(Property))
 	{
-		if (Validator->CanValidateProperty(ValueProperty))
+		if (Validator->CanValidateProperty(Property))
 		{
-			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
 		}
 	}
 
-	if (auto Validator = FindContainerValidator(ValueProperty))
+	if (auto Validator = FindContainerValidator(Property))
 	{
-		if (Validator->CanValidateProperty(ValueProperty))
+		if (Validator->CanValidateProperty(Property))
 		{
-			Validator->ValidateProperty(PropertyMemory, ValueProperty, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
 		}
 	}
 }
@@ -336,12 +385,6 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 	return false;
 }
 
-bool UPropertyValidatorSubsystem::IsBlueprintGenerated(const UPackage* Package) const
-{
-	const FString PackageName = Package->GetName();
-	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
-	return PackageName.StartsWith(TEXT("/Game/")) || !PackageName.StartsWith(TEXT("/Script"));
-}
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator(const FProperty* PropertyType) const
 {
@@ -393,5 +436,4 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidato
 	return nullptr;
 }
 
-
-
+#undef WITH_ASSET_VALIDATION_TESTS

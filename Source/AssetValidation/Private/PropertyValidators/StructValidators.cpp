@@ -80,7 +80,7 @@ void UStructValidator_GameplayTagQuery::ValidateProperty(TNonNullPtr<const uint8
 	const FGameplayTagQuery* TagQuery = ConvertStructMemory<FGameplayTagQuery>(PropertyMemory);
 	check(TagQuery);
 
-	for (const FGameplayTag& GameplayTag: *TagQuery)
+	for (const FGameplayTag& GameplayTag: TagQuery->GetGameplayTagArray())
 	{
 		ValidateGameplayTag(GameplayTag, Property, ValidationContext);
 	}

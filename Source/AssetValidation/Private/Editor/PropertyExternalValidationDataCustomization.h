@@ -3,12 +3,12 @@
 #include "CoreMinimal.h"
 #include "Editor/CustomizationTarget.h"
 
-struct FEngineVariableDescription;
+struct FPropertyExternalValidationData;
 class SPropertySelector;
 
-class FEngineVariableDescCustomization: public IPropertyTypeCustomization
+class FPropertyExternalValidationDataCustomization: public IPropertyTypeCustomization
 {
-	using ThisClass = FEngineVariableDescCustomization;
+	using ThisClass = FPropertyExternalValidationDataCustomization;
 public:
 	static TSharedRef<IPropertyTypeCustomization> MakeInstance()
 	{
@@ -17,15 +17,15 @@ public:
 	
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
 	virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
-	virtual ~FEngineVariableDescCustomization() override;
+	virtual ~FPropertyExternalValidationDataCustomization() override;
 
 private:
 
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FEngineVariableDescCustomization& InCustomization)
-			: Customization(StaticCastWeakPtr<FEngineVariableDescCustomization>(InCustomization.AsWeak()))
+		FCustomizationTarget(FPropertyExternalValidationDataCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FPropertyExternalValidationDataCustomization>(InCustomization.AsWeak()))
 		{}
 		
 		//~Begin ICustomizationTarget interface
@@ -35,7 +35,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 
-		TWeakPtr<FEngineVariableDescCustomization> Customization;
+		TWeakPtr<FPropertyExternalValidationDataCustomization> Customization;
 	};
 	
 	void HandlePropertyChanged(TFieldPath<FProperty> NewPath);
@@ -47,7 +47,7 @@ private:
 	/** @return struct that owns the property from customized struct */
 	UStruct* GetOwningStruct() const;
 
-	FEngineVariableDescription& GetPropertyDescription() const;
+	FPropertyExternalValidationData& GetPropertyDescription() const;
 
 	/** */
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;

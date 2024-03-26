@@ -2,10 +2,17 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
+#include "Editor/PropertyValidationVariableDetailCustomization.h"
 #include "PropertyValidators/PropertyValidationResult.h"
 #include "Templates/NonNullPointer.h"
 
 #include "PropertyValidatorSubsystem.generated.h"
+
+namespace UE::AssetValidation
+{
+	class FMetaDataSource;
+}
+using FMetaDataSource = UE::AssetValidation::FMetaDataSource;
 
 class FFieldClass;
 class UPropertyValidatorBase;
@@ -76,7 +83,13 @@ public:
 	}
 
 	/** @return whether validator subsystem can run validators on a given object */
-	bool CanValidatePackage(const UPackage* Package) const;
+	bool ShouldIgnorePackage(const UPackage* Package) const;
+	
+	/** @return whether package should be skipped during validation */
+	bool ShouldSkipPackage(const UPackage* Package) const;
+
+	/** @return whether validator subsystem should analyze all package's properties */
+	bool ShouldIteratePackageProperties(const UPackage* Package) const;
 
 	/** @return whether subsystem can validate following property type */
 	bool HasValidatorForPropertyType(const FProperty* PropertyType) const;
@@ -90,6 +103,7 @@ protected:
 	 * @brief validate all properties in @Container
 	 * @param ContainerMemory container to get data from
 	 * @param Struct struct to retrieve
+	 * @param MetaData
 	 * @param ValidationContext provided validation context
 	 */
 	virtual void ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
@@ -98,31 +112,28 @@ protected:
 	 * @brief validate @Property in @Container
 	 * @param ContainerMemory container to get data from
 	 * @param Property property to validate
+	 * @param MetaData
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
+	virtual void ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const;
 	
 	/**
 	 * @brief validate given property value
 	 * @param PropertyMemory property value
-	 * @param ParentProperty parent property, typically a container property where property value is stored
-	 * @param ValueProperty value property 
+	 * @param Property property to validate
+	 * @param MetaData
 	 * @param ValidationContext provided validation context
 	 */
-	virtual void ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty, FPropertyValidationContext& ValidationContext) const;
+	virtual void ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const;
 	
 	/** @return whether property should be validated for given @ValidationContext */
 	bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
-
-	/** @return whether package is a blueprint generated class */
-	bool IsBlueprintGenerated(const UPackage* Package) const;
 
 	/** @return property validator for a given property type */
 	const UPropertyValidatorBase* FindPropertyValidator(const FProperty* PropertyType) const;
 	/** @return container  validator for a given property type */
 	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
 	
-
 	/** property validators mapped by their respective use */
 	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;
 	TMap<FFieldClass*, UPropertyValidatorBase*> PropertyValidators;

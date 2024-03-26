@@ -1,30 +1,43 @@
 #include "PropertyValidationSettings.h"
 
-bool UPropertyValidationSettings::CanValidatePackage(const FString& PackageName)
-{
-	return Get()->PackagesToValidate.ContainsByPredicate([PackageName](const FString& ModulePath)
-	{
-		return PackageName.StartsWith(ModulePath);
-	});
-}
-
 void UPropertyValidationSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	
-	for (FEngineClassDescription& ClassDesc: EngineClasses)
+	for (FClassExternalValidationData& ClassDesc: ExternalClasses)
 	{
-		for (FEngineVariableDescription& PropertyDesc: ClassDesc.Properties)
+		for (FPropertyExternalValidationData& PropertyData: ClassDesc.Properties)
 		{
-			PropertyDesc.Struct = ClassDesc.EngineClass.Get();
+			PropertyData.Struct = ClassDesc.Class.Get();
 		}
 	}
 
-	for (FEngineStructDescription& StructDesc: EngineStructs)
+	for (FStructExternalValidationData& StructDesc: ExternalStructs)
 	{
-		for (FEngineVariableDescription& PropertyDesc: StructDesc.Properties)
+		for (FPropertyExternalValidationData& PropertyData: StructDesc.Properties)
 		{
-			PropertyDesc.Struct = StructDesc.StructClass;
+			PropertyData.Struct = StructDesc.StructClass;
 		}
 	}
+}
+
+const TArray<FPropertyExternalValidationData>& UPropertyValidationSettings::GetExternalValidationData(const UStruct* Struct)
+{
+	const auto Settings = Get();
+	if (const UClass* Class = Cast<UClass>(Struct))
+	{
+		if (const FClassExternalValidationData* Entry = Settings->ExternalClasses.FindByKey(Class))
+		{
+			return Entry->Properties;
+		}
+	}
+	else if (const UScriptStruct* ScriptStruct = Cast<UScriptStruct>(Struct))
+	{
+		if (const FStructExternalValidationData* Entry = Settings->ExternalStructs.FindByKey(ScriptStruct))
+		{
+			return Entry->Properties;
+		}
+	}
+
+	return {};
 }

@@ -2,6 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
@@ -9,6 +10,12 @@
 bool UE::AssetValidation::IsContainerProperty(const FProperty* Property)
 {
 	return Property != nullptr && (Property->IsA<FArrayProperty>() || Property->IsA<FMapProperty>() || Property->IsA<FSetProperty>());
+}
+
+bool UE::AssetValidation::IsBlueprintGeneratedPackage(const FString& PackageName)
+{
+	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
+	return PackageName.StartsWith(TEXT("/Game/")) || !PackageName.StartsWith(TEXT("/Script"));
 }
 
 template <typename TPropPred>
@@ -191,14 +198,14 @@ void FPropertyValidationContext::IsPropertyContainerValid(TNonNullPtr<const uint
 	Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);
 }
 
-void FPropertyValidationContext::IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property)
+void FPropertyValidationContext::IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData)
 {
-	Subsystem->ValidatePropertyWithContext(ContainerMemory, Property, *this);
+	Subsystem->ValidatePropertyWithContext(ContainerMemory, Property, MetaData, *this);
 }
 
-void FPropertyValidationContext::IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* ParentProperty, const FProperty* ValueProperty)
+void FPropertyValidationContext::IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData)
 {
-	Subsystem->ValidatePropertyValueWithContext(PropertyMemory, ParentProperty, ValueProperty, *this);
+	Subsystem->ValidatePropertyValueWithContext(PropertyMemory, Property, MetaData, *this);
 }
 
 FText FPropertyValidationContext::MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const

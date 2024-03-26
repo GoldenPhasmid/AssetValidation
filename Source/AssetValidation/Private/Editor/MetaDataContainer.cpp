@@ -2,7 +2,50 @@
 
 namespace UE::AssetValidation
 {
+bool FMetaDataSource::HasMetaData(const FName& Key) const
+{
+	if (auto PropertyPtr = Variant.TryGet<FProperty*>())
+	{
+		return (*PropertyPtr)->HasMetaData(Key);
+	}
+	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	{
+		return ExternalData->HasMetaData(Key);
+	}
+
+	checkNoEntry();
+	return false;
+}
+
+FString FMetaDataSource::GetMetaData(const FName& Key) const
+{
+	if (auto PropertyPtr = Variant.TryGet<FProperty*>())
+	{
+		return (*PropertyPtr)->GetMetaData(Key);
+	}
+	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	{
+		return ExternalData->GetMetaData(Key);
+	}
+
+	checkNoEntry();
+	return {};
+}
+
+void FMetaDataSource::SetMetaData(const FName& Key, const FString& Value)
+{
+	if (auto PropertyPtr = Variant.TryGet<FProperty*>())
+	{
+		return (*PropertyPtr)->SetMetaData(Key, *Value);
+	}
+	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	{
+		return ExternalData->SetMetaData(Key, Value);
+	}
 	
+	checkNoEntry();
+}
+
 bool FPropertyMetaDataContainer::HasMetaData(const FName& Key) const
 {
 	check(Property);
@@ -21,22 +64,22 @@ void FPropertyMetaDataContainer::SetMetaData(const FName& Key, const FString& Va
 	return Property->SetMetaData(Key, *Value);
 }
 
-bool FEngineVariableMetaDataContainer::HasMetaData(const FName& Key) const
+bool FExternalPropertyMetaDataContainer::HasMetaData(const FName& Key) const
 {
-	check(Desc.IsValid());
-	return Desc.HasMetaData(Key);
+	check(PropertyData.IsValid());
+	return PropertyData.HasMetaData(Key);
 }
 
-FString FEngineVariableMetaDataContainer::GetMetaData(const FName& Key) const
+FString FExternalPropertyMetaDataContainer::GetMetaData(const FName& Key) const
 {
-	check(Desc.IsValid());
-	return Desc.GetMetaData(Key);
+	check(PropertyData.IsValid());
+	return PropertyData.GetMetaData(Key);
 }
 
-void FEngineVariableMetaDataContainer::SetMetaData(const FName& Key, const FString& Value)
+void FExternalPropertyMetaDataContainer::SetMetaData(const FName& Key, const FString& Value)
 {
-	check(Desc.IsValid());
-	Desc.SetMetaData(Key, Value);
+	check(PropertyData.IsValid());
+	PropertyData.SetMetaData(Key, Value);
 }
 
 bool FBPVariableMetaDataContainer::HasMetaData(const FName& Key) const
