@@ -357,17 +357,17 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator
 	}
 	else
 	{
-		const FFieldClass* Key = PropertyType->GetClass();
-		while (Key && !Key->HasAnyClassFlags(CLASS_Abstract))
+		const FFieldClass* PropertyClass = PropertyType->GetClass();
+		while (PropertyClass && !PropertyClass->HasAnyClassFlags(CLASS_Abstract))
 		{
-			if (auto ValidatorPtr = PropertyValidators.Find(Key))
+			if (auto ValidatorPtr = PropertyValidators.Find(PropertyClass))
 			{
 				PropertyValidator = *ValidatorPtr;
 				break;
 			}
 			else
 			{
-				Key = Key->GetSuperClass();
+				PropertyClass = PropertyClass->GetSuperClass();
 			}
 		}
 	}
@@ -377,9 +377,17 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidator(const FProperty* PropertyType) const
 {
-	if (auto ValidatorPtr = ContainerValidators.Find(PropertyType->GetClass()))
+	const FFieldClass* PropertyClass = PropertyType->GetClass();
+	while (PropertyClass && !PropertyClass->HasAnyClassFlags(CLASS_Abstract))
 	{
-		return *ValidatorPtr;
+		if (auto ValidatorPtr = ContainerValidators.Find(PropertyClass))
+		{
+			return *ValidatorPtr;
+		}
+		else
+		{
+			PropertyClass = PropertyClass->GetSuperClass();
+		}
 	}
 
 	return nullptr;
