@@ -261,7 +261,6 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 		TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>();
 		if (ShouldIteratePackageProperties(Package))
 		{
-			
 			// EFieldIterationFlags::None because we look only at Struct type properties
 			for (FProperty* Property: TFieldRange<FProperty>(Struct, EFieldIterationFlags::None))
 			{
@@ -292,18 +291,18 @@ void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const 
 	// validate property value
 	if (auto PropertyValidator = FindPropertyValidator(Property))
 	{
-		if (PropertyValidator->CanValidateProperty(Property))
+		if (PropertyValidator->CanValidateProperty(Property, MetaData))
 		{
-			PropertyValidator->ValidateProperty(PropertyMemory, Property, ValidationContext);
+			PropertyValidator->ValidateProperty(PropertyMemory, Property, MetaData, ValidationContext);
 		}
 	}
 
 	// validate property as a container
 	if (auto ContainerValidator = FindContainerValidator(Property))
 	{
-		if (ContainerValidator->CanValidateProperty(Property))
+		if (ContainerValidator->CanValidateProperty(Property, MetaData))
 		{
-			ContainerValidator->ValidateProperty(PropertyMemory, Property, ValidationContext);
+			ContainerValidator->ValidateProperty(PropertyMemory, Property, MetaData, ValidationContext);
 		}
 	}
 }
@@ -315,17 +314,17 @@ void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<c
 
 	if (auto Validator = FindPropertyValidator(Property))
 	{
-		if (Validator->CanValidateProperty(Property))
+		if (Validator->CanValidateProperty(Property, MetaData))
 		{
-			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, Property, MetaData, ValidationContext);
 		}
 	}
 
 	if (auto Validator = FindContainerValidator(Property))
 	{
-		if (Validator->CanValidateProperty(Property))
+		if (Validator->CanValidateProperty(Property, MetaData))
 		{
-			Validator->ValidateProperty(PropertyMemory, Property, ValidationContext);
+			Validator->ValidateProperty(PropertyMemory, Property, MetaData, ValidationContext);
 		}
 	}
 }

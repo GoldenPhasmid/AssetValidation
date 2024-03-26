@@ -45,6 +45,11 @@ struct FPropertyExternalValidationData
 		MetaDataMap.Add(Key, Value);
 	}
 
+	FORCEINLINE void RemoveMetaData(const FName& Key)
+	{
+		MetaDataMap.Remove(Key);
+	}
+
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStruct> Struct = nullptr;
 
@@ -67,7 +72,7 @@ struct FClassExternalValidationData
 	TArray<FPropertyExternalValidationData> Properties;
 };
 
-FORCEINLINE bool operator==(const FClassExternalValidationData& ClassData, UClass* Class)
+FORCEINLINE bool operator==(const FClassExternalValidationData& ClassData, const UClass* Class)
 {
 	return ClassData.Class == Class;
 }
@@ -84,7 +89,7 @@ struct FStructExternalValidationData
 	TArray<FPropertyExternalValidationData> Properties;
 };
 
-FORCEINLINE bool operator==(const FStructExternalValidationData& StructData, UScriptStruct* ScriptStruct)
+FORCEINLINE bool operator==(const FStructExternalValidationData& StructData, const UScriptStruct* ScriptStruct)
 {
 	return StructData.StructClass == ScriptStruct;
 }

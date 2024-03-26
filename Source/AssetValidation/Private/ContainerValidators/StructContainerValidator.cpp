@@ -2,6 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UStructContainerValidator::UStructContainerValidator()
@@ -9,19 +10,19 @@ UStructContainerValidator::UStructContainerValidator()
 	PropertyClass = FStructProperty::StaticClass();
 }
 
-bool UStructContainerValidator::CanValidateProperty(const FProperty* Property) const
+bool UStructContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	if (Super::CanValidateProperty(Property))
+	if (Super::CanValidateProperty(Property, MetaData))
 	{
 		// do not require meta = (Validate) to perform validation for struct properties.
 		// Use Validate meta for structs when you want to validate struct "value", not the underlying struct properties
-		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || Property->HasMetaData(UE::AssetValidation::Validate);
+		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || MetaData.HasMetaData(UE::AssetValidation::Validate);
 	}
 
 	return false;
 }
 
-void UStructContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
 

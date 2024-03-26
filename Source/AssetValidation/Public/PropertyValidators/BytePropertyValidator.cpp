@@ -7,9 +7,9 @@ UBytePropertyValidator::UBytePropertyValidator()
 	PropertyClass = FByteProperty::StaticClass();
 }
 
-bool UBytePropertyValidator::CanValidateProperty(const FProperty* Property) const
+bool UBytePropertyValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	if (Super::CanValidateProperty(Property))
+	if (Super::CanValidateProperty(Property, MetaData))
 	{
 		const FByteProperty* ByteProperty = CastFieldChecked<FByteProperty>(Property);
 		return ByteProperty->IsEnum();
@@ -18,7 +18,7 @@ bool UBytePropertyValidator::CanValidateProperty(const FProperty* Property) cons
 	return false;
 }
 
-void UBytePropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UBytePropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const uint8* ValuePtr = GetPropertyValuePtr<FByteProperty>(PropertyMemory, Property);
 	check(ValuePtr);

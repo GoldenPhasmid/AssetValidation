@@ -7,7 +7,7 @@ UObjectPropertyValidator::UObjectPropertyValidator()
 	PropertyClass = FObjectProperty::StaticClass();
 }
 
-void UObjectPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UObjectPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const TObjectPtr<UObject>* ObjectPtr = GetPropertyValuePtr<FObjectProperty>(PropertyMemory, Property);
 	check(ObjectPtr);

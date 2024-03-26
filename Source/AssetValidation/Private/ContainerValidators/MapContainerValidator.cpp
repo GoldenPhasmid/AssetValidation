@@ -2,6 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UMapContainerValidator::UMapContainerValidator()
@@ -9,13 +10,13 @@ UMapContainerValidator::UMapContainerValidator()
 	PropertyClass = FMapProperty::StaticClass();
 }
 
-bool UMapContainerValidator::CanValidateProperty(const FProperty* Property) const
+bool UMapContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	if (Super::CanValidateProperty(Property))
+	if (Super::CanValidateProperty(Property, MetaData))
 	{
 		const FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
 
-		if (Property->HasMetaData(UE::AssetValidation::Validate) || Property->HasMetaData(UE::AssetValidation::ValidateKey) || Property->HasMetaData(UE::AssetValidation::ValidateValue))
+		if (MetaData.HasMetaData(UE::AssetValidation::Validate) || MetaData.HasMetaData(UE::AssetValidation::ValidateKey) || MetaData.HasMetaData(UE::AssetValidation::ValidateValue))
 		{
 			// any validation meta data: Validate, ValidateKey, ValidateValue
 			return true;
@@ -31,7 +32,7 @@ bool UMapContainerValidator::CanValidateProperty(const FProperty* Property) cons
 	return false;
 }
 
-void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FMapProperty* MapProperty = CastFieldChecked<FMapProperty>(Property);
 	const FScriptMap* Map = MapProperty->GetPropertyValuePtr(PropertyMemory);
@@ -44,16 +45,16 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
 
 	const bool bValidateStructs = UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties;
-	const bool bHasValidateMeta = MapProperty->HasMetaData(UE::AssetValidation::Validate);
-	const bool bCanValidateKey = bHasValidateMeta || (bValidateStructs && KeyProperty->IsA<FStructProperty>()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateKey);
-	const bool bCanValidateValue = bHasValidateMeta || (bValidateStructs && ValueProperty->IsA<FStructProperty>()) || MapProperty->HasMetaData(UE::AssetValidation::ValidateValue);
+	const bool bHasValidateMeta = MetaData.HasMetaData(UE::AssetValidation::Validate);
+	const bool bCanValidateKey = bHasValidateMeta || (bValidateStructs && KeyProperty->IsA<FStructProperty>()) || MetaData.HasMetaData(UE::AssetValidation::ValidateKey);
+	const bool bCanValidateValue = bHasValidateMeta || (bValidateStructs && ValueProperty->IsA<FStructProperty>()) || MetaData.HasMetaData(UE::AssetValidation::ValidateValue);
 
 	// UPropertyValidateBase::CanValidatePropertyValue usually checks for Validate meta on ParentProperty to continue with actual validation
 	// To work with other metas like ValidateKey and ValidateValue (to validate only map key or only map value),
 	// we temporarily add Validate meta specifier, so that checks inside other validators pass
 	if (!bHasValidateMeta)
 	{
-		const_cast<FMapProperty*>(MapProperty)->SetMetaData(UE::AssetValidation::Validate, FString{});
+		MetaData.SetMetaData(UE::AssetValidation::Validate, FString{});
 	}
 	
 	const uint32 Num = Map->GetMaxIndex();
@@ -67,7 +68,7 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 		if (bCanValidateKey)
 		{
 			// validate key property value
-			ValidationContext.IsPropertyValueValid(Data, MapProperty, KeyProperty);
+			ValidationContext.IsPropertyValueValid(Data, KeyProperty, MetaData);
 		}
 
 		// offset to value property
@@ -76,7 +77,7 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 		if (bCanValidateValue)
 		{
 			// validate value property value
-			ValidationContext.IsPropertyValueValid(Data, MapProperty, ValueProperty);
+			ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 		}
 
 		// pop map property prefix
@@ -86,6 +87,6 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	if (!bHasValidateMeta)
 	{
 		// remove Validate meta if it wasn't on map property in a first place
-		const_cast<FMapProperty*>(MapProperty)->RemoveMetaData(UE::AssetValidation::Validate);
+		MetaData.RemoveMetaData(UE::AssetValidation::Validate);
 	}
 }

@@ -7,7 +7,7 @@ UStringPropertyValidator::UStringPropertyValidator()
 	PropertyClass = FStrProperty::StaticClass();
 }
 
-void UStringPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStringPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FString* Str = GetPropertyValuePtr<FStrProperty>(PropertyMemory, Property);
 	check(Str);

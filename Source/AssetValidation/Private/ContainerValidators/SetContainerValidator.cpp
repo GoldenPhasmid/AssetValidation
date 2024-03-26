@@ -2,6 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 USetContainerValidator::USetContainerValidator()
@@ -9,9 +10,9 @@ USetContainerValidator::USetContainerValidator()
 	PropertyClass = FSetProperty::StaticClass();
 }
 
-bool USetContainerValidator::CanValidateProperty(const FProperty* Property) const
+bool USetContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	if (Super::CanValidateProperty(Property))
+	if (Super::CanValidateProperty(Property, MetaData))
 	{
 		// cast checked because Super call checks for property compatibility
 		const FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
@@ -24,7 +25,7 @@ bool USetContainerValidator::CanValidateProperty(const FProperty* Property) cons
 		}
 
 		const UPropertyValidatorSubsystem* ValidatorSubsystem = UPropertyValidatorSubsystem::Get();
-		if (SetProperty->HasMetaData(UE::AssetValidation::Validate) && ValidatorSubsystem->HasValidatorForPropertyType(InnerProperty))
+		if (MetaData.HasMetaData(UE::AssetValidation::Validate) && ValidatorSubsystem->HasValidatorForPropertyType(InnerProperty))
 		{
 			// in general, set contents should be validated if Validate meta is present
 			return true;
@@ -34,7 +35,7 @@ bool USetContainerValidator::CanValidateProperty(const FProperty* Property) cons
 	return false;
 }
 
-void USetContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void USetContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FSetProperty* SetProperty = CastFieldChecked<FSetProperty>(Property);
 	const FScriptSet* Set = SetProperty->GetPropertyValuePtr(PropertyMemory);
@@ -49,7 +50,7 @@ void USetContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 
 		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
 		// validate property value
-		ValidationContext.IsPropertyValueValid(Data, SetProperty, ValueProperty);
+		ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 		ValidationContext.PopPrefix();
 	}
 }

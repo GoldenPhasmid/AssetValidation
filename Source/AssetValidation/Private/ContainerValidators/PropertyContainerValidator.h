@@ -13,5 +13,5 @@ class ASSETVALIDATION_API UPropertyContainerValidator: public UPropertyValidator
 	GENERATED_BODY()
 public:
 
-	virtual bool CanValidateProperty(const FProperty* Property) const override;
+	virtual bool CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const override;
 };

@@ -42,7 +42,19 @@ void FMetaDataSource::SetMetaData(const FName& Key, const FString& Value)
 	{
 		return ExternalData->SetMetaData(Key, Value);
 	}
-	
+	checkNoEntry();
+}
+
+void FMetaDataSource::RemoveMetaData(const FName& Key)
+{
+	if (auto PropertyPtr = Variant.TryGet<FProperty*>())
+	{
+		return (*PropertyPtr)->RemoveMetaData(Key);
+	}
+	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	{
+		return ExternalData->RemoveMetaData(Key);
+	}
 	checkNoEntry();
 }
 

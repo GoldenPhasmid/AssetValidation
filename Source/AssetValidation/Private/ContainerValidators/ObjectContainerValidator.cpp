@@ -1,6 +1,7 @@
 #include "ObjectContainerValidator.h"
 
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UObjectContainerValidator::UObjectContainerValidator()
@@ -8,12 +9,13 @@ UObjectContainerValidator::UObjectContainerValidator()
 	PropertyClass = FObjectPropertyBase::StaticClass();
 }
 
-bool UObjectContainerValidator::CanValidateProperty(const FProperty* Property) const
+bool UObjectContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	return Super::CanValidateProperty(Property) && Property->HasMetaData(UE::AssetValidation::ValidateRecursive);
+	// @todo: validate only object and soft object properties
+	return Super::CanValidateProperty(Property, MetaData) && MetaData.HasMetaData(UE::AssetValidation::ValidateRecursive);
 }
 
-void UObjectContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UObjectContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FObjectPropertyBase* ObjectProperty = CastFieldChecked<FObjectPropertyBase>(Property);
 

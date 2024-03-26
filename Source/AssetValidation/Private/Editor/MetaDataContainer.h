@@ -36,6 +36,7 @@ public:
 	bool HasMetaData(const FName& Key) const;
 	FString GetMetaData(const FName& Key) const;
 	void SetMetaData(const FName& Key, const FString& Value);
+	void RemoveMetaData(const FName& Key);
 
 private:
 	TVariant<FProperty*, FPropertyExternalValidationData> Variant;

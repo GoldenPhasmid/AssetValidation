@@ -2,6 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UArrayContainerValidator::UArrayContainerValidator()
@@ -9,9 +10,9 @@ UArrayContainerValidator::UArrayContainerValidator()
 	PropertyClass = FArrayProperty::StaticClass();
 }
 
-bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property) const
+bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	if (Super::CanValidateProperty(Property))
+	if (Super::CanValidateProperty(Property, MetaData))
 	{
 		// cast checked because Super call checks for property compatibility
 		const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
@@ -24,7 +25,7 @@ bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property) co
 		}
 
 		const UPropertyValidatorSubsystem* ValidatorSubsystem = UPropertyValidatorSubsystem::Get();
-		if (Property->HasMetaData(UE::AssetValidation::Validate) && ValidatorSubsystem->HasValidatorForPropertyType(InnerProperty))
+		if (MetaData.HasMetaData(UE::AssetValidation::Validate) && ValidatorSubsystem->HasValidatorForPropertyType(InnerProperty))
 		{
 			// in general, array contents should be validated if Validate meta is present
 			return true;
@@ -34,7 +35,7 @@ bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property) co
 	return false;
 }
 
-void UArrayContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UArrayContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 	const FProperty* ValueProperty = ArrayProperty->Inner;
@@ -49,7 +50,7 @@ void UArrayContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Propert
 	{
 		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
 		// validate property value
-		ValidationContext.IsPropertyValueValid(Data, ArrayProperty, ValueProperty);
+		ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 		ValidationContext.PopPrefix();
 
 		Data += Stride;

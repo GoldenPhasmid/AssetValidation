@@ -7,7 +7,7 @@ UNamePropertyValidator::UNamePropertyValidator()
 	PropertyClass = FNameProperty::StaticClass();
 }
 
-void UNamePropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UNamePropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FName* Name = GetPropertyValuePtr<FNameProperty>(PropertyMemory, Property);
 	check(Name);

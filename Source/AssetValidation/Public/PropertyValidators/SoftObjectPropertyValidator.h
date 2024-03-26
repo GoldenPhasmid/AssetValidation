@@ -13,6 +13,6 @@ public:
 	USoftObjectPropertyValidator();
 
 	//~Begin PropertyValidatorBase
-	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
 };

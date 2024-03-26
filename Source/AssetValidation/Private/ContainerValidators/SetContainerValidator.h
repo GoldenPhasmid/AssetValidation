@@ -12,7 +12,7 @@ public:
 	USetContainerValidator();
 
 	//~Begin ContainerPropertyValidator
-	virtual bool CanValidateProperty(const FProperty* Property) const override;
-	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const override;
+	virtual bool CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const override;
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
 	//~End ContainerPropertyValidator
 };

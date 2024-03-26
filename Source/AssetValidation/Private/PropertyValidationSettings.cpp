@@ -39,5 +39,6 @@ const TArray<FPropertyExternalValidationData>& UPropertyValidationSettings::GetE
 		}
 	}
 
-	return {};
+	static TArray<FPropertyExternalValidationData> EmptyData;
+	return EmptyData;
 }

@@ -1,6 +1,7 @@
 #include "PropertyValidators/PropertyValidatorBase.h"
 
 #include "PropertyValidatorSubsystem.h"
+#include "Editor/MetaDataContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 FFieldClass* UPropertyValidatorBase::GetPropertyClass() const
@@ -8,18 +9,13 @@ FFieldClass* UPropertyValidatorBase::GetPropertyClass() const
 	return PropertyClass;
 }
 
-bool UPropertyValidatorBase::CanValidateProperty(const FProperty* Property) const
+bool UPropertyValidatorBase::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	// don't check for property type as property validator is obtained by underlying property class
+	// check for property type
 	if (Property && Property->IsA(PropertyClass))
 	{
-		if (Property->HasMetaData(UE::AssetValidation::Validate))
-		{
-			return true;
-		}
-
-		if (const FProperty* OwnerProperty = Property->GetOwner<FProperty>();
-			OwnerProperty && UE::AssetValidation::IsContainerProperty(OwnerProperty) && OwnerProperty->HasMetaData(UE::AssetValidation::Validate))
+		// check for Validate meta by default
+		if (MetaData.HasMetaData(UE::AssetValidation::Validate))
 		{
 			return true;
 		}
