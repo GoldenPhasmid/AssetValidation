@@ -5,10 +5,10 @@
 
 class FBlueprintEditor;
 
-class FValidationTabSummoner: public FWorkflowTabFactory
+class FPropertyValidationTabSummoner: public FWorkflowTabFactory
 {
 public:
-	FValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor);
+	FPropertyValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor);
 
 	virtual TSharedRef<SWidget> CreateTabBody(const FWorkflowTabSpawnInfo& Info) const override;
 
