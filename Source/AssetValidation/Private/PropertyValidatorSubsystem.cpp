@@ -322,6 +322,16 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 
 		return true;
 	}
+	else if (const UObject* PropertyOwner = Property->GetOwnerUObject(); PropertyOwner->IsA<UBlueprintGeneratedClass>())
+	{
+		// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
+		// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
+		// and property to be object property derived from actor component
+		if (const FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
+		{
+			return ObjectProperty->PropertyClass->IsChildOf<UActorComponent>();
+		}
+	}
 
 	return false;
 }
