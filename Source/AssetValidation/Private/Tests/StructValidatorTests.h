@@ -84,7 +84,7 @@ struct FGameplayTagContainerStruct
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
-	FGameplayTagContainer EmptyTags;
+	FGameplayTagContainer BadTags;
 };
 
 UCLASS(HideDropdown)
@@ -92,19 +92,42 @@ class UValidationTestObject_GameplayTagContainer: public UObject
 {
 	GENERATED_BODY()
 
-	UValidationTestObject_GameplayTagContainer()
-	{
-		EmptyTagsArray.AddDefaulted();
-	}
-	
-	UPROPERTY(EditAnywhere, meta = (Validate))
-	FGameplayTagContainer EmptyTags;
+	UValidationTestObject_GameplayTagContainer();
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
-	TArray<FGameplayTagContainer> EmptyTagsArray;
+	FGameplayTagContainer BadTags;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FGameplayTagContainer> BadTagsArray;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FGameplayTagContainerStruct Struct;
+};
+
+USTRUCT()
+struct FGameplayTagQueryStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FGameplayTagQuery BadQuery;
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_GameplayTagQuery: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_GameplayTagQuery();
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FGameplayTagQuery BadQuery;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FGameplayTagQuery> BadQueryArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FGameplayTagQueryStruct Struct;
 };
 
 USTRUCT()

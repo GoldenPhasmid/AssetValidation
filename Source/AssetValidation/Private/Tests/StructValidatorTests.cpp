@@ -80,14 +80,16 @@ bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 	return !HasAnyErrors();
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PropertyTypes, FStructValidatorAutomationTest, "Editor.PropertyValidation.PropertyTypes", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PropertyTypes, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.PropertyTypes", AutomationFlags)
 
 bool FAutomationTest_PropertyTypes::RunTest(const FString& Parameters)
 {
 	return ValidateObject<UValidationTestObject_PropertyTypes>(8);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructValidation, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructProperties", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructValidation, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructProperties", AutomationFlags)
 
 bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 {
@@ -95,7 +97,8 @@ bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_StructValidation>(5);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.GameplayTag", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.GameplayTag", AutomationFlags)
 
 bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)
 {
@@ -103,7 +106,30 @@ bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_GameplayTag>(3);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTagContainer, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.GameplayTagContainer", AutomationFlags)
+FGameplayTag CreateInvalidTag()
+{
+	FGameplayTag Result;
+
+	const FNameProperty* NameProperty = CastFieldChecked<FNameProperty>(FGameplayTag::StaticStruct()->FindPropertyByName(TEXT("TagName")));
+	NameProperty->SetPropertyValue(NameProperty->ContainerPtrToValuePtr<void>(&Result), TEXT("Tag.Invalid"));
+
+	check(Result.GetTagName() == TEXT("Tag.Invalid"));
+	return Result;
+}
+
+UValidationTestObject_GameplayTagContainer::UValidationTestObject_GameplayTagContainer()
+{
+	const FGameplayTag InvalidTag = CreateInvalidTag();
+
+	BadTags.AddTag(InvalidTag);
+	Struct.BadTags.AddTag(InvalidTag);
+	BadTagsArray.Add(FGameplayTagContainer{InvalidTag});
+}
+
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTagContainer, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.GameplayTagContainer",
+                                        AutomationFlags)
 
 bool FAutomationTest_GameplayTagContainer::RunTest(const FString& Parameters)
 {
@@ -111,7 +137,27 @@ bool FAutomationTest_GameplayTagContainer::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_GameplayTagContainer>(3);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayAttribute, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.GameplayAttribute", AutomationFlags)
+UValidationTestObject_GameplayTagQuery::UValidationTestObject_GameplayTagQuery()
+{
+	const FGameplayTag InvalidTag = CreateInvalidTag();
+	FGameplayTagQuery InvalidQuery = FGameplayTagQuery::MakeQuery_MatchTag(InvalidTag);
+
+	BadQuery = InvalidQuery;
+	Struct.BadQuery = InvalidQuery;
+	BadQueryArray.Add(InvalidQuery);
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTagQuery, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.GameplayTagQuery", AutomationFlags)
+
+bool FAutomationTest_GameplayTagQuery::RunTest(const FString& Parameters)
+{
+	// GameplayTagQuery struct value should be validated
+	return ValidateObject<UValidationTestObject_GameplayTagQuery>(3);
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayAttribute, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.GameplayAttribute", AutomationFlags)
 
 bool FAutomationTest_GameplayAttribute::RunTest(const FString& Parameters)
 {
@@ -119,7 +165,8 @@ bool FAutomationTest_GameplayAttribute::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_GameplayAttribute>(3);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DataTableRow, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.DataTableRow", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DataTableRow, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.DataTableRow", AutomationFlags)
 
 bool FAutomationTest_DataTableRow::RunTest(const FString& Parameters)
 {
@@ -127,7 +174,8 @@ bool FAutomationTest_DataTableRow::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_DataTableRow>(3);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DirectoryPath, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.DirectoryPath", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_DirectoryPath, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.DirectoryPath", AutomationFlags)
 
 bool FAutomationTest_DirectoryPath::RunTest(const FString& Parameters)
 {
@@ -135,7 +183,8 @@ bool FAutomationTest_DirectoryPath::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_DirectoryPath>(4);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_FilePath, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.FilePath", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_FilePath, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.FilePath", AutomationFlags)
 
 bool FAutomationTest_FilePath::RunTest(const FString& Parameters)
 {
@@ -143,24 +192,11 @@ bool FAutomationTest_FilePath::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_FilePath>(4);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PrimaryAssetId, FStructValidatorAutomationTest, "Editor.PropertyValidation.StructValidators.PrimaryAssetId", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PrimaryAssetId, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.StructValidators.PrimaryAssetId", AutomationFlags)
 
 bool FAutomationTest_PrimaryAssetId::RunTest(const FString& Parameters)
 {
 	// PrimaryAssetID struct value should be validated
 	return ValidateObject<UValidationTestObject_PrimaryAssetId>(5);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

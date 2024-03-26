@@ -20,9 +20,9 @@ UStructValidator::UStructValidator()
 	PropertyClass = FStructProperty::StaticClass();
 }
 
-bool UStructValidator::CanValidateProperty(const FProperty* Property) const
+bool UStructValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
-	return Super::CanValidateProperty(Property) && Property->GetCPPType().Equals(CppType);
+	return Super::CanValidateProperty(Property, MetaData) && Property->GetCPPType().Equals(CppType);
 }
 
 UStructValidator_GameplayTag::UStructValidator_GameplayTag()
@@ -32,14 +32,14 @@ UStructValidator_GameplayTag::UStructValidator_GameplayTag()
 
 void ValidateGameplayTag(const FGameplayTag& Tag, const FProperty* Property, FPropertyValidationContext& ValidationContext)
 {
-	const FGameplayTag NewTag = FGameplayTag::RequestGameplayTag(Tag.GetTagName());
+	const FGameplayTag NewTag = FGameplayTag::RequestGameplayTag(Tag.GetTagName(), false);
 	if (!NewTag.IsValid())
 	{
 		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("GameplayTag_Invalid", "Gameplay tag with name %s no longer exists."), FText::FromName(NewTag.GetTagName())));
 	}
 }
 
-void UStructValidator_GameplayTag::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTag::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FGameplayTag* GameplayTag = ConvertStructMemory<FGameplayTag>(PropertyMemory);
 	check(GameplayTag);
@@ -59,7 +59,7 @@ UStructValidator_GameplayTagContainer::UStructValidator_GameplayTagContainer()
 	CppType = StaticStruct<FGameplayTagContainer>()->GetStructCPPName();
 }
 
-void UStructValidator_GameplayTagContainer::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTagContainer::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FGameplayTagContainer* GameplayTags = ConvertStructMemory<FGameplayTagContainer>(PropertyMemory);
 	check(GameplayTags);
@@ -75,7 +75,7 @@ UStructValidator_GameplayTagQuery::UStructValidator_GameplayTagQuery()
 	CppType = StaticStruct<FGameplayTagQuery>()->GetStructCPPName();
 }
 
-void UStructValidator_GameplayTagQuery::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayTagQuery::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FGameplayTagQuery* TagQuery = ConvertStructMemory<FGameplayTagQuery>(PropertyMemory);
 	check(TagQuery);
@@ -91,7 +91,7 @@ UStructValidator_GameplayAttribute::UStructValidator_GameplayAttribute()
 	CppType = StaticStruct<FGameplayAttribute>()->GetStructCPPName();
 }
 
-void UStructValidator_GameplayAttribute::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_GameplayAttribute::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FGameplayAttribute* GameplayAttribute = ConvertStructMemory<FGameplayAttribute>(PropertyMemory);
 	check(GameplayAttribute);
@@ -112,7 +112,7 @@ UStructValidator_DataTableRowHandle::UStructValidator_DataTableRowHandle()
 	CppType = StaticStruct<FDataTableRowHandle>()->GetStructCPPName();
 }
 
-void UStructValidator_DataTableRowHandle::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_DataTableRowHandle::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FDataTableRowHandle* DataTableRow = ConvertStructMemory<FDataTableRowHandle>(PropertyMemory);
 	check(DataTableRow);
@@ -132,7 +132,7 @@ UStructValidator_DirectoryPath::UStructValidator_DirectoryPath()
 	CppType = GetNativeScriptStruct(TEXT("DirectoryPath"))->GetStructCPPName();
 }
 
-void UStructValidator_DirectoryPath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_DirectoryPath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FDirectoryPath* DirectoryPath = ConvertStructMemory<FDirectoryPath>(PropertyMemory);
 	check(DirectoryPath);
@@ -160,7 +160,7 @@ UStructValidator_FilePath::UStructValidator_FilePath()
 	CppType = GetNativeScriptStruct(TEXT("FilePath"))->GetStructCPPName();
 }
 
-void UStructValidator_FilePath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_FilePath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FFilePath* FilePath = ConvertStructMemory<FFilePath>(PropertyMemory);
 	check(FilePath);
@@ -176,7 +176,7 @@ UStructValidator_PrimaryAssetId::UStructValidator_PrimaryAssetId()
 	CppType = GetNativeScriptStruct(TEXT("PrimaryAssetId"))->GetStructCPPName();
 }
 
-void UStructValidator_PrimaryAssetId::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_PrimaryAssetId::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FPrimaryAssetId* AssetID = ConvertStructMemory<FPrimaryAssetId>(PropertyMemory);
 	check(AssetID);
@@ -200,7 +200,7 @@ UStructValidator_Key::UStructValidator_Key()
 	CppType = StaticStruct<FKey>()->GetStructCPPName();
 }
 
-void UStructValidator_Key::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+void UStructValidator_Key::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FKey* Key = ConvertStructMemory<FKey>(PropertyMemory);
 	check(Key);
