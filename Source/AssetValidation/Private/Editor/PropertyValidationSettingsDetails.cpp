@@ -48,16 +48,13 @@ void FPropertyValidationSettingsDetails::CustomizeDetails(IDetailLayoutBuilder& 
 		return;
 	}
 
-	DetailBuilder.EditCategory(TEXT("Settings"), LOCTEXT("SettingsCategoryLabel", "Settings"), ECategoryPriority::Important)
+	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory(TEXT("Settings"), LOCTEXT("SettingsCategoryLabel", "Settings"), ECategoryPriority::Important)
 	.InitiallyCollapsed(false);
 	
 	ClassPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UPropertyValidationSettings, CustomizedObjectClass));
 	ClassPropertyHandle->MarkHiddenByCustomization();
 
 	const FSlateFontInfo DetailFont = IDetailLayoutBuilder::GetDetailFont();
-
-	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory(TEXT("ValidateEngineClasses"), LOCTEXT("EngineClassesCategoryLabel", "Validate Engine Classes"))
-	.InitiallyCollapsed(false);
 	
 	Category.AddCustomRow(FText::GetEmpty())
 	.NameContent()

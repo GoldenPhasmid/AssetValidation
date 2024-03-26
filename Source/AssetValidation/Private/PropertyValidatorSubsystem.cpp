@@ -290,12 +290,17 @@ bool UPropertyValidatorSubsystem::CanEverValidateProperty(const FProperty* Prope
 
 	// @todo: for some reason blueprint created components doesn't have CPF_Edit, only CPF_BlueprintVisible
 	// it is not required for component properties to be editable, as we want to validate their properties recursively
-	return Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit);
+	return true;
 }
 
 bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const
 {
-	if (CanEverValidateProperty(Property))
+	if (!CanEverValidateProperty(Property))
+	{
+		return false;
+	}
+
+	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
 	{
 		const UObject* SourceObject = ValidationContext.GetSourceObject();
 		if (SourceObject->IsAsset())
@@ -314,7 +319,6 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 			// EditInstanceOnly property for template object
 			return false;
 		}
-		
 
 		return true;
 	}

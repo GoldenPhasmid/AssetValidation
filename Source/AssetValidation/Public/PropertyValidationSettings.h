@@ -5,27 +5,23 @@
 #include "PropertyValidationSettings.generated.h"
 
 USTRUCT()
-struct FEnginePropertyDescription
+struct FEngineVariableDescription
 {
 	GENERATED_BODY()
+	
+	FORCEINLINE FProperty* GetProperty() const
+	{
+		return PropertyPath.Get(Struct);
+	}
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UStruct> Struct = nullptr;
 
 	UPROPERTY(EditAnywhere)
 	TFieldPath<FProperty> PropertyPath;
 
 	UPROPERTY(EditAnywhere)
-	bool bValidate = false;
-
-	UPROPERTY(EditAnywhere)
-	bool bValidateKey = false;
-
-	UPROPERTY(EditAnywhere)
-	bool bValidateValue = false;
-
-	UPROPERTY(EditAnywhere)
-	bool bValidateRecursive = false;
-
-	UPROPERTY(EditAnywhere)
-	FString FailureMessage{};
+	TMap<FName, FString> MetaDataMap;
 };
 
 USTRUCT()
@@ -33,11 +29,11 @@ struct FEngineClassDescription
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
-	TSoftClassPtr<UObject> EngineClass;
+	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
+	TSubclassOf<UObject> EngineClass;
 
 	UPROPERTY(EditAnywhere)
-	TArray<FEnginePropertyDescription> Properties;
+	TArray<FEngineVariableDescription> Properties;
 };
 
 USTRUCT()
@@ -46,10 +42,10 @@ struct FEngineStructDescription
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	TSoftObjectPtr<UScriptStruct> StructClass;
+	TObjectPtr<UScriptStruct> StructClass;
 
 	UPROPERTY(EditAnywhere)
-	TArray<FEnginePropertyDescription> Properties;
+	TArray<FEngineVariableDescription> Properties;
 };
 
 UCLASS(Config = Editor, DefaultConfig, DisplayName = "Property Validation")
@@ -64,6 +60,8 @@ public:
 	}
 
 	static bool CanValidatePackage(const FString& PackageName);
+
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToValidate;
@@ -112,5 +110,5 @@ public:
 	TArray<FEngineClassDescription> EngineClasses;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TArray<FEngineStructDescription> StructClasses;
+	TArray<FEngineStructDescription> EngineStructs;
 };

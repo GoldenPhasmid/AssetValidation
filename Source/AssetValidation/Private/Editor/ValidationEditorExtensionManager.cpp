@@ -3,7 +3,7 @@
 #include "BlueprintEditorModule.h"
 #include "BlueprintEditorTabs.h"
 #include "PropertyValidationSettings.h"
-#include "ValidationTabSummoner.h"
+#include "PropertyValidationTabSummoner.h"
 #include "PropertyValidationVariableDetailCustomization.h"
 #include "SubobjectData.h"
 #include "SubobjectDataSubsystem.h"
@@ -178,7 +178,7 @@ TSharedRef<SDockTab> UValidationEditorExtensionManager::SpawnValidationTab(const
 
 void UValidationEditorExtensionManager::RegisterValidationTab(FWorkflowAllowedTabSet& TabFactory, FName ModeName, TSharedPtr<FBlueprintEditor> BlueprintEditor)
 {
-	TabFactory.RegisterFactory(MakeShared<FValidationTabSummoner>(BlueprintEditor));
+	TabFactory.RegisterFactory(MakeShared<FPropertyValidationTabSummoner>(BlueprintEditor));
 }
 
 void UValidationEditorExtensionManager::RegisterBlueprintEditorLayout(FLayoutExtender& Extender)

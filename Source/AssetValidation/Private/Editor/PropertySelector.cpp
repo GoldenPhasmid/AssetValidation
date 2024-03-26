@@ -1,19 +1,71 @@
 #include "PropertySelector.h"
 
-#include "PropertyWidget.h"
+#include "AssetValidationModule.h"
+#include "DetailLayoutBuilder.h"
+#include "PropertyValidatorSubsystem.h"
 #include "Widgets/PropertyViewer/SPropertyViewer.h"
 
-TArray<FFieldVariant> FFieldIterator_Properties::GetFields(const UStruct* Struct) const
+class FFieldIterator_EditableProperties: public UE::PropertyViewer::IFieldIterator
 {
-	TArray<FFieldVariant> Result;
-	for (TFieldIterator<FProperty> It{Struct, EFieldIterationFlags::None}; It; ++It)
+public:
+	FFieldIterator_EditableProperties(UStruct* InBaseStruct, UPropertyValidatorSubsystem* InValidationSubsystem)
+		: BaseStruct(InBaseStruct)
+		, ValidationSubsystem(InValidationSubsystem)
+	{}
+	
+	static TUniquePtr<UE::PropertyViewer::IFieldIterator> Create(UStruct* BaseStruct, UPropertyValidatorSubsystem* ValidationSubsystem)
 	{
-		
+		return MakeUnique<FFieldIterator_EditableProperties>(BaseStruct, ValidationSubsystem);
 	}
-}
+
+	//~Begin IFieldIterator interface
+	virtual TArray<FFieldVariant> GetFields(const UStruct* Struct) const override
+	{
+		if (!BaseStruct.IsValid() || !ValidationSubsystem.IsValid() || Struct != BaseStruct.Get())
+		{
+			return {};
+		}
+    	
+    	TArray<FFieldVariant> Result;
+    	for (const FProperty* Property: TFieldRange<FProperty>{Struct, EFieldIterationFlags::None})
+    	{
+    		if (ValidationSubsystem->CanEverValidateProperty(Property) && ValidationSubsystem->HasValidatorForPropertyType(Property))
+    		{
+    			Result.Add(FFieldVariant{Property});
+    		}
+    	}
+    
+    	return Result;
+	}
+	virtual ~FFieldIterator_EditableProperties() override {}
+	//~End IFieldIterator interface
+
+private:
+	
+	TWeakObjectPtr<UStruct> BaseStruct;
+	TWeakObjectPtr<UPropertyValidatorSubsystem> ValidationSubsystem;
+};
+
+class FFieldExpander_DontExpand: public UE::PropertyViewer::FFieldExpander_Default
+{
+public:
+	static TUniquePtr<UE::PropertyViewer::IFieldExpander> Create()
+	{
+		TUniquePtr Result{MakeUnique<FFieldExpander_DontExpand>()};
+		Result->SetExpandScriptStruct(false);
+		Result->SetExpandObject(EObjectExpandFlag::None);
+		Result->SetExpandFunction(EFunctionExpand::None);
+
+		return Result;
+	}
+};
 
 void SPropertySelector::Construct(const FArguments& Args)
 {
+	OnGetStruct = Args._OnGetStruct;
+	OnGetPropertyPath = Args._OnGetPropertyPath;
+	OnPropertySelectionChanged = Args._OnPropertySelectionChanged;
+	
 	ChildSlot
 	[
 		SNew(SBox)
@@ -23,13 +75,76 @@ void SPropertySelector::Construct(const FArguments& Args)
 			.OnGetMenuContent(this, &SPropertySelector::GetMenuContent)
 			.ButtonContent()
 			[
-				SNew(SPropertyWidget)
+				SNew(STextBlock)
+				.Text(this, &SPropertySelector::GetPropertyName)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
 		]
 	];
 }
 
-TSharedRef<SWidget> SPropertySelector::GetMenuContent() const
+TSharedRef<SWidget> SPropertySelector::GetMenuContent()
 {
+	UStruct* Struct = nullptr;
+	if (OnGetStruct.IsBound())
+	{
+		Struct = OnGetStruct.Execute();
+	}
+	
+	FieldIterator = FFieldIterator_EditableProperties::Create(Struct, UPropertyValidatorSubsystem::Get());
+	FieldExpander = FFieldExpander_DontExpand::Create();
+	
 	PropertyViewer = SNew(SPropertyViewer)
+	.FieldIterator(FieldIterator.Get())
+	.FieldExpander(FieldExpander.Get())
+	.SelectionMode(ESelectionMode::Single)
+	.bShowFieldIcon(true)
+	.bSanitizeName(true)
+	.bShowSearchBox(true)
+	.PropertyVisibility(SPropertyViewer::EPropertyVisibility::Hidden)
+	.OnSelectionChanged(this, &SPropertySelector::HandlePropertySelectionChanged);
+
+	if (Struct)
+	{
+		if (const UClass* Class = Cast<UClass>(Struct))
+		{
+			PropertyViewer->AddContainer(Class);
+		}
+		else if (const UScriptStruct* ScriptStruct = Cast<UScriptStruct>(Struct))
+		{
+			PropertyViewer->AddContainer(ScriptStruct);
+		}
+	}
+	
+	return PropertyViewer.ToSharedRef();
+}
+
+FText SPropertySelector::GetPropertyName() const
+{
+	if (OnGetPropertyPath.IsBound() && OnGetStruct.IsBound())
+	{
+		UStruct* Struct = OnGetStruct.Execute();
+		TFieldPath<FProperty> PropertyPath = OnGetPropertyPath.Execute();
+		if (const FProperty* Property = PropertyPath.Get(Struct))
+		{
+			return Property->GetDisplayNameText();
+		}
+	}
+
+	return NSLOCTEXT("AssetValidation", "PropertySelectionEmptyLabel", "No property selected");
+}
+
+void SPropertySelector::HandlePropertySelectionChanged(SPropertyViewer::FHandle Handle, TArrayView<const FFieldVariant> FieldPath, ESelectInfo::Type SelectionType)
+{
+	ComboButton->SetIsOpen(false);
+	
+	if (FieldPath.Num() == 1)
+	{
+		const FFieldVariant& FieldVariant = FieldPath[0];
+		if (FProperty* Property = FieldVariant.Get<FProperty>())
+		{
+			OnPropertySelectionChanged.ExecuteIfBound(TFieldPath<FProperty>{Property});
+		}
+	}
+
 }

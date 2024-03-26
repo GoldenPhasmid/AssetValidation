@@ -16,7 +16,10 @@ namespace UE::AssetValidation
 	static const FName ValidateValue("ValidateValue");
 	static const FName ValidateRecursive("ValidateRecursive");
 	static const FName FailureMessage("FailureMessage");
+}
 
+namespace UE::AssetValidation
+{
 	/** @return true if property is a container property (array, set or map) */
 	bool IsContainerProperty(const FProperty* Property);
 

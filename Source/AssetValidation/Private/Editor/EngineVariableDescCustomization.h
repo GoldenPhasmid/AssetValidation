@@ -1,8 +1,11 @@
 #pragma once
 
-class FEnginePropertyDescriptionCustomization: public IPropertyTypeCustomization
+struct FEngineVariableDescription;
+class SPropertySelector;
+
+class FEngineVariableDescCustomization: public IPropertyTypeCustomization
 {
-	using ThisClass = FEnginePropertyDescriptionCustomization;
+	using ThisClass = FEngineVariableDescCustomization;
 public:
 	static TSharedRef<IPropertyTypeCustomization> MakeInstance()
 	{
@@ -14,15 +17,23 @@ public:
 
 private:
 
-	TSharedRef<SWidget> ConstructPropertyTree() const;
-	FText GetPropertyName() const;
+	void HandlePropertyChanged(TFieldPath<FProperty> NewPath);
 
+	TFieldPath<FProperty> GetPropertyPath() const;
+	UStruct* GetOwningStruct() const;
+
+	FEngineVariableDescription GetPropertyDescription() const;
+	
 	/** customized objects */
 	TWeakObjectPtr<UObject> CustomizedObject;
-	/** struct property handle */
+	/** Handle to FEnginePropertyDescription struct */
 	TSharedPtr<IPropertyHandle> StructHandle;
+	/** Handle to property path */
+	TSharedPtr<IPropertyHandle> PropertyPathHandle;
 	/** Property table */
 	TSharedPtr<IPropertyTable> PropertyTable;
 	/** */
 	TSharedPtr<SComboButton> ComboButton;
+	/** */
+	TSharedPtr<SPropertySelector> PropertySelector;
 };

@@ -9,7 +9,7 @@
 #include "PropertyValidatorSubsystem.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
-#include "Editor/EnginePropertyDescriptionCustomization.h"
+#include "Editor/EngineVariableDescCustomization.h"
 #include "Editor/PropertyValidationSettingsDetails.h"
 #include "Misc/ScopedSlowTask.h"
 
@@ -50,7 +50,7 @@ void FAssetValidationModule::StartupModule()
 
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyEditor.RegisterCustomClassLayout("PropertyValidationSettings", FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
-	PropertyEditor.RegisterCustomPropertyTypeLayout("EnginePropertyDescription", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FEnginePropertyDescriptionCustomization::MakeInstance));
+	PropertyEditor.RegisterCustomPropertyTypeLayout("EngineVariableDescription", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FEngineVariableDescCustomization::MakeInstance));
 }
 
 void FAssetValidationModule::RegisterMenus()
