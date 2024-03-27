@@ -11,6 +11,10 @@ namespace UE::PropertyViewer
 	class IFieldIterator;
 	class IFieldExpander;
 }
+
+namespace UE::AssetValidation
+{
+
 using SPropertyViewer = UE::PropertyViewer::SPropertyViewer;
 
 DECLARE_DELEGATE_RetVal(TFieldPath<FProperty>, FGetPropertyPathEvent);
@@ -29,21 +33,21 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
-	
+
 	//~Begin FTickableEditorObject interface
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override { return TStatId{}; }
 	virtual ETickableTickType GetTickableTickType() const override { return ETickableTickType::Always; }
 	//~End FTickableEditorObject interface
 
-private:
+	private:
 
 	TSharedRef<SWidget> GetMenuContent();
 	FText GetPropertyName() const;
 	void HandlePropertySelectionChanged(SPropertyViewer::FHandle Handle, TArrayView<const FFieldVariant> FieldPath, ESelectInfo::Type SelectionType);
 	TSharedRef<SWidget> HandleGenerateContainer(SPropertyViewer::FHandle Handle, TOptional<FText> DisplayName);
 	TSharedPtr<SWidget> HandleGetPreSlot(SPropertyViewer::FHandle, TArrayView<const FFieldVariant> FieldPath);
-	
+
 	TSharedPtr<SComboButton> ComboButton;
 	TSharedPtr<SPropertyViewer> PropertyViewer;
 
@@ -54,3 +58,5 @@ private:
 	TUniquePtr<UE::PropertyViewer::IFieldIterator> FieldIterator;
 	TUniquePtr<UE::PropertyViewer::IFieldExpander> FieldExpander;
 };
+
+}

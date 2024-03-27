@@ -1,11 +1,13 @@
 #include "PropertySelector.h"
 
-#include "AssetValidationModule.h"
 #include "DetailLayoutBuilder.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Widgets/PropertyViewer/SFieldName.h"
 #include "Widgets/PropertyViewer/SPropertyViewer.h"
 
+namespace UE::AssetValidation
+{
+	
 class FFieldIterator_EditableProperties: public UE::PropertyViewer::IFieldIterator
 {
 public:
@@ -13,7 +15,7 @@ public:
 		: BaseStruct(InBaseStruct)
 		, ValidationSubsystem(InValidationSubsystem)
 	{}
-	
+
 	static TUniquePtr<UE::PropertyViewer::IFieldIterator> Create(UStruct* BaseStruct, UPropertyValidatorSubsystem* ValidationSubsystem)
 	{
 		return MakeUnique<FFieldIterator_EditableProperties>(BaseStruct, ValidationSubsystem);
@@ -26,23 +28,23 @@ public:
 		{
 			return {};
 		}
-    	
-    	TArray<FFieldVariant> Result;
-    	for (const FProperty* Property: TFieldRange<FProperty>{Struct, EFieldIterationFlags::None})
-    	{
-    		if (ValidationSubsystem->CanEverValidateProperty(Property) && ValidationSubsystem->HasValidatorForPropertyType(Property))
-    		{
-    			Result.Add(FFieldVariant{Property});
-    		}
-    	}
     
-    	return Result;
+		TArray<FFieldVariant> Result;
+		for (const FProperty* Property: TFieldRange<FProperty>{Struct, EFieldIterationFlags::None})
+		{
+			if (ValidationSubsystem->CanEverValidateProperty(Property) && ValidationSubsystem->HasValidatorForPropertyType(Property))
+			{
+				Result.Add(FFieldVariant{Property});
+			}
+		}
+
+		return Result;
 	}
 	virtual ~FFieldIterator_EditableProperties() override {}
 	//~End IFieldIterator interface
 
-private:
-	
+	private:
+
 	TWeakObjectPtr<UStruct> BaseStruct;
 	TWeakObjectPtr<UPropertyValidatorSubsystem> ValidationSubsystem;
 };
@@ -66,7 +68,7 @@ void SPropertySelector::Construct(const FArguments& Args)
 	OnGetStruct = Args._OnGetStruct;
 	OnGetPropertyPath = Args._OnGetPropertyPath;
 	OnPropertySelectionChanged = Args._OnPropertySelectionChanged;
-	
+
 	ChildSlot
 	[
 		SNew(SBox)
@@ -93,7 +95,7 @@ TSharedRef<SWidget> SPropertySelector::GetMenuContent()
 	}
 	FieldIterator = FFieldIterator_EditableProperties::Create(Struct, UPropertyValidatorSubsystem::Get());
 	FieldExpander = FFieldExpander_DontExpand::Create();
-	
+
 	PropertyViewer = SNew(SPropertyViewer)
 	.FieldIterator(FieldIterator.Get())
 	.FieldExpander(FieldExpander.Get())
@@ -117,7 +119,7 @@ TSharedRef<SWidget> SPropertySelector::GetMenuContent()
 			PropertyViewer->AddContainer(ScriptStruct);
 		}
 	}
-	
+
 	return PropertyViewer.ToSharedRef();
 }
 
@@ -139,7 +141,7 @@ FText SPropertySelector::GetPropertyName() const
 void SPropertySelector::HandlePropertySelectionChanged(SPropertyViewer::FHandle Handle, TArrayView<const FFieldVariant> FieldPath, ESelectInfo::Type SelectionType)
 {
 	ComboButton->SetIsOpen(false);
-	
+
 	if (FieldPath.Num() == 1)
 	{
 		const FFieldVariant& FieldVariant = FieldPath[0];
@@ -174,7 +176,7 @@ TSharedRef<SWidget> SPropertySelector::HandleGenerateContainer(SPropertyViewer::
 			.OverrideDisplayName(DisplayName);
 		}
 	}
-	
+
 	return ItemWidget.ToSharedRef();
 }
 
@@ -208,4 +210,6 @@ void SPropertySelector::Tick(float DeltaTime)
 			Struct->SetStructTrashed(false);
 		}
 	}
+}
+	
 }

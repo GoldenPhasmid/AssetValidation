@@ -4,7 +4,10 @@
 #include "Editor/CustomizationTarget.h"
 
 struct FPropertyExternalValidationData;
-class SPropertySelector;
+namespace UE::AssetValidation
+{
+	class SPropertySelector;
+}
 
 class FPropertyExternalValidationDataCustomization: public IPropertyTypeCustomization
 {
@@ -64,5 +67,5 @@ private:
 	/** */
 	TSharedPtr<SComboButton> ComboButton;
 	/** */
-	TSharedPtr<SPropertySelector> PropertySelector;
+	TSharedPtr<UE::AssetValidation::SPropertySelector> PropertySelector;
 };

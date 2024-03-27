@@ -71,6 +71,8 @@ void FPropertyExternalValidationDataCustomization::CustomizeHeader(TSharedRef<IP
 	
 	StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPropertyExternalValidationData, Struct))
 	->MarkHiddenByCustomization();
+
+	using namespace UE::AssetValidation;
 	
 	HeaderRow
 	.ShouldAutoExpand(true)
