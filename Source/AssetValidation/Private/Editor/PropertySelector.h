@@ -17,7 +17,7 @@ DECLARE_DELEGATE_RetVal(TFieldPath<FProperty>, FGetPropertyPathEvent);
 DECLARE_DELEGATE_RetVal(UStruct*, FGetStructEvent);
 DECLARE_DELEGATE_OneParam(FPropertySelectionEvent, TFieldPath<FProperty>);
 
-class SPropertySelector: public SCompoundWidget
+class SPropertySelector: public SCompoundWidget, public FTickableEditorObject
 {
 public:
 
@@ -29,12 +29,21 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args);
+	
+	//~Begin FTickableEditorObject interface
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override { return TStatId{}; }
+	virtual ETickableTickType GetTickableTickType() const override { return ETickableTickType::Always; }
+	//~End FTickableEditorObject interface
+
+private:
 
 	TSharedRef<SWidget> GetMenuContent();
 	FText GetPropertyName() const;
 	void HandlePropertySelectionChanged(SPropertyViewer::FHandle Handle, TArrayView<const FFieldVariant> FieldPath, ESelectInfo::Type SelectionType);
-
-private:
+	TSharedRef<SWidget> HandleGenerateContainer(SPropertyViewer::FHandle Handle, TOptional<FText> DisplayName);
+	TSharedPtr<SWidget> HandleGetPreSlot(SPropertyViewer::FHandle, TArrayView<const FFieldVariant> FieldPath);
+	
 	TSharedPtr<SComboButton> ComboButton;
 	TSharedPtr<SPropertyViewer> PropertyViewer;
 

@@ -3,6 +3,7 @@
 #include "AssetValidationModule.h"
 #include "DetailLayoutBuilder.h"
 #include "PropertyValidatorSubsystem.h"
+#include "Widgets/PropertyViewer/SFieldName.h"
 #include "Widgets/PropertyViewer/SPropertyViewer.h"
 
 class FFieldIterator_EditableProperties: public UE::PropertyViewer::IFieldIterator
@@ -90,7 +91,6 @@ TSharedRef<SWidget> SPropertySelector::GetMenuContent()
 	{
 		Struct = OnGetStruct.Execute();
 	}
-	
 	FieldIterator = FFieldIterator_EditableProperties::Create(Struct, UPropertyValidatorSubsystem::Get());
 	FieldExpander = FFieldExpander_DontExpand::Create();
 	
@@ -102,6 +102,8 @@ TSharedRef<SWidget> SPropertySelector::GetMenuContent()
 	.bSanitizeName(true)
 	.bShowSearchBox(true)
 	.PropertyVisibility(SPropertyViewer::EPropertyVisibility::Hidden)
+	.OnGetPreSlot(this, &SPropertySelector::HandleGetPreSlot)
+	.OnGenerateContainer(this, &SPropertySelector::HandleGenerateContainer)
 	.OnSelectionChanged(this, &SPropertySelector::HandlePropertySelectionChanged);
 
 	if (Struct)
@@ -146,5 +148,64 @@ void SPropertySelector::HandlePropertySelectionChanged(SPropertyViewer::FHandle 
 			OnPropertySelectionChanged.ExecuteIfBound(TFieldPath<FProperty>{Property});
 		}
 	}
+}
 
+TSharedRef<SWidget> SPropertySelector::HandleGenerateContainer(SPropertyViewer::FHandle Handle, TOptional<FText> DisplayName)
+{
+	// Implementation copy from FPropertyViewerImpl::HandleGenerateRow to avoid ContainerPin->IsValid() check
+	// which would fail for UScriptStruct not being trashed
+	// @todo: remove after epic's bug is fixed
+	TSharedPtr<SWidget> ItemWidget = SNullWidget::NullWidget;
+	if (OnGetStruct.IsBound())
+	{
+		const UStruct* Struct = OnGetStruct.Execute();
+		if (const UClass* Class = Cast<const UClass>(Struct))
+		{
+			return SNew(UE::PropertyViewer::SFieldName, Class)
+			.bShowIcon(true)
+			.bSanitizeName(true)
+			.OverrideDisplayName(DisplayName);
+		}
+		if (const UScriptStruct* ScriptStruct = Cast<const UScriptStruct>(Struct))
+		{
+			return SNew(UE::PropertyViewer::SFieldName, ScriptStruct)
+			.bShowIcon(true)
+			.bSanitizeName(true)
+			.OverrideDisplayName(DisplayName);
+		}
+	}
+	
+	return ItemWidget.ToSharedRef();
+}
+
+TSharedPtr<SWidget> SPropertySelector::HandleGetPreSlot(SPropertyViewer::FHandle, TArrayView<const FFieldVariant> FieldPath)
+{
+	if (OnGetStruct.IsBound())
+	{
+		if (UScriptStruct* Struct = Cast<UScriptStruct>(OnGetStruct.Execute()))
+		{
+			// add STRUCT_Trashed flag to struct container, so that FContainer::IsValid check succeeds for script structs
+			// adding here, because delegate conveniently happens before any FContainer::IsValid checks
+			// @todo: remove after epic's bug is fixed
+			Struct->SetStructTrashed(true);
+		}
+	}
+
+	return nullptr;
+}
+
+void SPropertySelector::Tick(float DeltaTime)
+{
+	if (OnGetStruct.IsBound())
+	{
+		if (UScriptStruct* Struct = Cast<UScriptStruct>(OnGetStruct.Execute()))
+		{
+			// clear STRUCT_Trashed flag from struct container.
+			// We can't set STRUCT_Trashed flag in OnGetPreSlot and clear in OnGetPostSlot,
+			// because adding OnGetPostSlot delegate inevitably fucks up visualization
+			// (as no one uses it I suppose that's another bug on epic's side)
+			// @todo: remove after epic's bug is fixed
+			Struct->SetStructTrashed(false);
+		}
+	}
 }
