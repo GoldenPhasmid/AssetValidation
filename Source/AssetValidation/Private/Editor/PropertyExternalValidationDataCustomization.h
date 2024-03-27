@@ -50,7 +50,7 @@ private:
 	/** @return struct that owns the property from customized struct */
 	UStruct* GetOwningStruct() const;
 
-	FPropertyExternalValidationData& GetPropertyDescription() const;
+	FPropertyExternalValidationData& GetExternalPropertyData() const;
 
 	/** */
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;

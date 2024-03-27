@@ -25,14 +25,30 @@ bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleI
 
 bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
-	return Customization.IsValid() && Customization.Pin()->GetProperty() != nullptr;
+	if (Customization.IsValid())
+	{
+		auto Shared = Customization.Pin();
+		if (FProperty* Property = Shared->GetProperty())
+		{
+			if (MetaKey == UE::AssetValidation::FailureMessage)
+			{
+				// enable editing FailureMessage only if value validation meta is already set
+				const FPropertyExternalValidationData& PropertyDesc = Shared->GetExternalPropertyData();
+				return PropertyDesc.HasMetaData(UE::AssetValidation::Validate) || PropertyDesc.HasMetaData(UE::AssetValidation::ValidateKey) || PropertyDesc.HasMetaData(UE::AssetValidation::ValidateValue);
+			}
+
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
 {
 	if (Customization.IsValid())
 	{
-		const FPropertyExternalValidationData& PropertyDesc = Customization.Pin()->GetPropertyDescription();
+		const FPropertyExternalValidationData& PropertyDesc = Customization.Pin()->GetExternalPropertyData();
 		if (PropertyDesc.HasMetaData(MetaKey))
 		{
 			OutValue = PropertyDesc.GetMetaData(MetaKey);
@@ -47,8 +63,20 @@ void FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleM
 {
 	if (Customization.IsValid())
 	{
-		FPropertyExternalValidationData& PropertyDesc = Customization.Pin()->GetPropertyDescription();
-		PropertyDesc.SetMetaData(MetaKey, MetaValue);
+		auto Shared = Customization.Pin();
+		Shared->StructHandle->NotifyPreChange();
+		
+		FPropertyExternalValidationData& PropertyDesc = Shared->GetExternalPropertyData();
+		if (NewMetaState)
+		{
+			PropertyDesc.SetMetaData(MetaKey, MetaValue);
+		}
+		else
+		{
+			PropertyDesc.RemoveMetaData(MetaKey);
+		}
+		
+		Shared->StructHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
@@ -112,10 +140,15 @@ FPropertyExternalValidationDataCustomization::~FPropertyExternalValidationDataCu
 
 void FPropertyExternalValidationDataCustomization::HandlePropertyChanged(TFieldPath<FProperty> NewPath)
 {
-	// set property path value to a new path
-	PropertyPathHandle->SetValue(NewPath.Get(GetOwningStruct()));
-	// empty meta data map
-	MetaDataMapHandle->AsMap()->Empty();
+	// notify pre change to a struct value
+	StructHandle->NotifyPreChange();
+	
+	FPropertyExternalValidationData& PropertyData = GetExternalPropertyData();
+	PropertyData.PropertyPath = NewPath.Get(PropertyData.Struct);
+	PropertyData.MetaDataMap.Empty();
+	
+	// notify post change to a struct value
+	StructHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	
 	if (PropertyUtilities.IsValid())
 	{
@@ -126,20 +159,20 @@ void FPropertyExternalValidationDataCustomization::HandlePropertyChanged(TFieldP
 
 FProperty* FPropertyExternalValidationDataCustomization::GetProperty() const
 {
-	return GetPropertyDescription().GetProperty();
+	return GetExternalPropertyData().GetProperty();
 }
 
 TFieldPath<FProperty> FPropertyExternalValidationDataCustomization::GetPropertyPath() const
 {
-	return GetPropertyDescription().PropertyPath;
+	return GetExternalPropertyData().PropertyPath;
 }
 
 UStruct* FPropertyExternalValidationDataCustomization::GetOwningStruct() const
 {
-	return GetPropertyDescription().Struct;
+	return GetExternalPropertyData().Struct;
 }
 
-FPropertyExternalValidationData& FPropertyExternalValidationDataCustomization::GetPropertyDescription() const
+FPropertyExternalValidationData& FPropertyExternalValidationDataCustomization::GetExternalPropertyData() const
 {
 	if (uint8* StructValue = StructHandle->GetValueBaseAddress(reinterpret_cast<uint8*>(CustomizedObject.Get())))
 	{

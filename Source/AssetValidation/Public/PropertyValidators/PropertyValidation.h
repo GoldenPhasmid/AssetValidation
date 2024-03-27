@@ -36,6 +36,10 @@ namespace UE::AssetValidation
 	 * Includes unwrapping container properties to check whether underlying type can be validated at all
 	 */
 	bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
+	/** @return true if property value validation meta can be added to a property */
+	bool CanValidatePropertyValue(const FProperty* Property);
+	/** @return true if property can be validated recursively */
+	bool CanValidatePropertyRecursively(const FProperty* Property);
 
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property

@@ -25,6 +25,19 @@ bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::Handl
 
 bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
+    if (Customization.IsValid())
+    {
+        auto Shared = Customization.Pin();
+        if (FProperty* Property = Shared->CachedProperty.Get())
+        {
+        	if (MetaKey == UE::AssetValidation::FailureMessage)
+        	{
+        		return Property->HasMetaData(UE::AssetValidation::Validate) || Property->HasMetaData(UE::AssetValidation::ValidateKey) || Property->HasMetaData(UE::AssetValidation::ValidateValue);
+        	}
+
+        	return true;
+        }
+    }
 	return Customization.IsValid() && Customization.Pin()->IsVariableInBlueprint();
 }
 

@@ -1,7 +1,8 @@
-#include "MetaDataContainer.h"
+#include "MetaDataSource.h"
 
 namespace UE::AssetValidation
 {
+	
 bool FMetaDataSource::HasMetaData(const FName& Key) const
 {
 	if (auto PropertyPtr = Variant.TryGet<FProperty*>())

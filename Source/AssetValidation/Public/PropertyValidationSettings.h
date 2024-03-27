@@ -152,6 +152,9 @@ public:
 	bool bAddMetaToNewBlueprintVariables = true;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	FPropertyExternalValidationData ExternalProperty; 
+
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TArray<FClassExternalValidationData> ExternalClasses;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")

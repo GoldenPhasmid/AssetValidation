@@ -58,8 +58,9 @@ bool UE::AssetValidation::CanApplyMeta_ValidateRecursive(const FProperty* Proper
 	return ApplyToNonContainerProperty(Property, [](const FProperty* Property)
 	{
 		// property is an object property, soft object property, or auto unwrapping for struct properties is disabled
+		// @todo: allow "ValidateRecursive" to object and soft object properties only
 		const FFieldClass* PropertyClass = Property->GetClass();
-		return PropertyClass == FObjectProperty::StaticClass() || PropertyClass == FSoftObjectProperty::StaticClass() || (!UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties && Property->IsA<FStructProperty>());
+		return Property->IsA<FObjectPropertyBase>() || Property->IsA<FStructProperty>();
 	});
 }
 
@@ -120,6 +121,16 @@ bool UE::AssetValidation::CanApplyMeta(const FProperty* Property, const FName& M
 	}
 
 	return false;
+}
+
+bool UE::AssetValidation::CanValidatePropertyValue(const FProperty* Property)
+{
+	return CanApplyMeta_Validate(Property) || CanApplyMeta_ValidateKey(Property) || CanApplyMeta_ValidateValue(Property);
+}
+
+bool UE::AssetValidation::CanValidatePropertyRecursively(const FProperty* Property)
+{
+	return CanApplyMeta_ValidateRecursive(Property);
 }
 
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)
