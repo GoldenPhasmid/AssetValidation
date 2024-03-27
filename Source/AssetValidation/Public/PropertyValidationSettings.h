@@ -4,6 +4,8 @@
 
 #include "PropertyValidationSettings.generated.h"
 
+class UClassExternalMetaData;
+
 USTRUCT()
 struct FPropertyExternalValidationData
 {
@@ -114,12 +116,30 @@ public:
 	
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
+	/**
+	 * List of packages asset property validator will ignore
+	 * Can be any content that doesn't have properties (e.g. /Game/Meshes, /Game/Materials, etc.)
+	 */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToIgnore;
 
+	/**
+	 * List of packages that should be validated using class property iteration
+	 * Include any C++/Blueprint packages that your team can edit (project, project plugins, blueprints)
+	 * For validating packages that you don't have edit access (engine code & engine plugins), see @ExternalClasses/@ExternalStructs
+	 */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToIterate;
 
+#if 0
+	/**
+	 * List of additional class external meta data, neatly grouped together
+	 * If adding external validation meta data for a particular class, consider using UClassExternalMetaData data asset
+	 */
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	TArray<TSoftObjectPtr<UClassExternalMetaData>> ExternalMetaData;
+#endif
+	
 	/**
 	 * if set to true, allows unwrapping and iterating over struct inner properties without "ValidateRecursive" meta specifier
 	 * Desired default behavior. It means users will require placing any metas on struct properties only if they want to validate an actual value, e.g. FGameplayTag or FGameplayAttribute
@@ -152,19 +172,13 @@ public:
 	bool bAddMetaToNewBlueprintVariables = true;
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	FPropertyExternalValidationData ExternalProperty; 
+	TSubclassOf<UObject> CustomizedObjectClass;
 
+	/** List of classes with additional validation meta data */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TArray<FClassExternalValidationData> ExternalClasses;
 
+	/** List of structs with additional validation meta data */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TArray<FStructExternalValidationData> ExternalStructs;
-	
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TSubclassOf<UObject> ObjectClass;
-
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TSubclassOf<UObject> CustomizedObjectClass;
-
-
 };

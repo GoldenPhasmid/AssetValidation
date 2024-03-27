@@ -16,9 +16,9 @@ public:
 		, ValidationSubsystem(InValidationSubsystem)
 	{}
 
-	static TUniquePtr<UE::PropertyViewer::IFieldIterator> Create(UStruct* BaseStruct, UPropertyValidatorSubsystem* ValidationSubsystem)
+	static TUniquePtr<UE::PropertyViewer::IFieldIterator> Create(UStruct* BaseStruct)
 	{
-		return MakeUnique<FFieldIterator_EditableProperties>(BaseStruct, ValidationSubsystem);
+		return MakeUnique<FFieldIterator_EditableProperties>(BaseStruct, UPropertyValidatorSubsystem::Get());
 	}
 
 	//~Begin IFieldIterator interface
@@ -93,7 +93,7 @@ TSharedRef<SWidget> SPropertySelector::GetMenuContent()
 	{
 		Struct = OnGetStruct.Execute();
 	}
-	FieldIterator = FFieldIterator_EditableProperties::Create(Struct, UPropertyValidatorSubsystem::Get());
+	FieldIterator = FFieldIterator_EditableProperties::Create(Struct);
 	FieldExpander = FFieldExpander_DontExpand::Create();
 
 	PropertyViewer = SNew(SPropertyViewer)
