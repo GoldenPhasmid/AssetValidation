@@ -2,7 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
-#include "Editor/MetaDataContainer.h"
+#include "Editor/MetaDataSource.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 USetContainerValidator::USetContainerValidator()

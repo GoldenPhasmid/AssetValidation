@@ -1,7 +1,7 @@
 #include "ObjectContainerValidator.h"
 
 #include "PropertyValidatorSubsystem.h"
-#include "Editor/MetaDataContainer.h"
+#include "Editor/MetaDataSource.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UObjectContainerValidator::UObjectContainerValidator()

@@ -2,7 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "ContainerValidators/PropertyContainerValidator.h"
-#include "Editor/MetaDataContainer.h"
+#include "Editor/MetaDataSource.h"
 #include "Editor/ValidationEditorExtensionManager.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"

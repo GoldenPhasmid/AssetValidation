@@ -2,7 +2,7 @@
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
-#include "Editor/MetaDataContainer.h"
+#include "Editor/MetaDataSource.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
