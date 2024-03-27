@@ -32,7 +32,7 @@ public:
 		TArray<FFieldVariant> Result;
 		for (const FProperty* Property: TFieldRange<FProperty>{Struct, EFieldIterationFlags::None})
 		{
-			if (ValidationSubsystem->CanEverValidateProperty(Property) && ValidationSubsystem->HasValidatorForPropertyType(Property))
+			if (ValidationSubsystem->CanEverValidateProperty(Property) && (CanValidatePropertyValue(Property) || CanValidatePropertyRecursively(Property)))
 			{
 				Result.Add(FFieldVariant{Property});
 			}
