@@ -1,4 +1,4 @@
-#include "PropertySelector.h"
+#include "SPropertySelector.h"
 
 #include "DetailLayoutBuilder.h"
 #include "PropertyValidatorSubsystem.h"

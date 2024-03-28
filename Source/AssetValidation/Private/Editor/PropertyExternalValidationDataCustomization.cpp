@@ -4,7 +4,7 @@
 #include "DetailWidgetRow.h"
 #include "IDetailChildrenBuilder.h"
 #include "IPropertyUtilities.h"
-#include "PropertySelector.h"
+#include "SPropertySelector.h"
 #include "PropertyValidationSettings.h"
 #include "PropertyValidationVariableDetailCustomization.h"
 
