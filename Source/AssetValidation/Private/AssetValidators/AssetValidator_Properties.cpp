@@ -15,6 +15,7 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	if (Object->IsA<UUserDefinedStruct>() || Object->IsA<UUserDefinedEnum>())
 	{
 		// ignore user defined struct and enum blueprints
+		AssetPasses(Object);
 		return EDataValidationResult::Valid;
 	}
 	
