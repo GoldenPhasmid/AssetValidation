@@ -16,6 +16,11 @@ bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleI
 	{
 		if (const FProperty* Property = Customization.Pin()->GetProperty())
 		{
+			if (Property->IsA<FMapProperty>() && MetaKey == UE::AssetValidation::Validate)
+			{
+				// don't should all "Validate", "ValidateKey" and "ValidateValue" for map properties
+				return false;
+			}
 			return UE::AssetValidation::CanApplyMeta(Property, MetaKey);
 		}
 	}

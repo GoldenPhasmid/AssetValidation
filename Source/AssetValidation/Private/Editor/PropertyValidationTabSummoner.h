@@ -5,6 +5,9 @@
 
 class FBlueprintEditor;
 
+namespace UE::AssetValidation
+{
+
 class FPropertyValidationTabSummoner: public FWorkflowTabFactory
 {
 public:
@@ -15,3 +18,6 @@ public:
 protected:
 	TWeakPtr<FBlueprintEditor> BlueprintEditor;
 };
+	
+}
+

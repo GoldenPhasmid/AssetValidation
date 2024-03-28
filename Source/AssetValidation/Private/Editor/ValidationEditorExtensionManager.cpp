@@ -7,6 +7,7 @@
 #include "PropertyValidationVariableDetailCustomization.h"
 #include "SubobjectData.h"
 #include "SubobjectDataSubsystem.h"
+#include "UserDefinedStructValidationDetails.h"
 #include "Framework/Docking/LayoutExtender.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
@@ -160,25 +161,9 @@ void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBluepri
 	UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateRecursive, bAddIfPossible);
 }
 
-
-TSharedRef<SDockTab> UValidationEditorExtensionManager::SpawnValidationTab(const FSpawnTabArgs& Args, UObject* Asset)
-{
-	UUserDefinedStruct* EditedStruct = CastChecked<UUserDefinedStruct>(Asset);
-
-	FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	FDetailsViewArgs DetailsViewArgs;
-	DetailsViewArgs.bAllowSearch = false;
-	DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
-	DetailsViewArgs.bHideSelectionTip = true;
-	DetailsViewArgs.bShowOptions = false;
-	
-	// @todo: implement
-	return SNew(SDockTab);
-}
-
 void UValidationEditorExtensionManager::RegisterValidationTab(FWorkflowAllowedTabSet& TabFactory, FName ModeName, TSharedPtr<FBlueprintEditor> BlueprintEditor)
 {
-	TabFactory.RegisterFactory(MakeShared<FPropertyValidationTabSummoner>(BlueprintEditor));
+	TabFactory.RegisterFactory(MakeShared<UE::AssetValidation::FPropertyValidationTabSummoner>(BlueprintEditor));
 }
 
 void UValidationEditorExtensionManager::RegisterBlueprintEditorLayout(FLayoutExtender& Extender)
@@ -216,6 +201,19 @@ void UValidationEditorExtensionManager::HandleAssetEditorPreConstruction(const T
 			}
 		}
 	}
+}
+
+TSharedRef<SDockTab> UValidationEditorExtensionManager::SpawnValidationTab(const FSpawnTabArgs& Args, UObject* Asset)
+{
+	UUserDefinedStruct* EditedStruct = CastChecked<UUserDefinedStruct>(Asset);
+	
+	return SNew(SDockTab)
+	.Label(NSLOCTEXT("AssetValidation", "ValidationTabLabel", "Validation"))
+	.TabColorScale(FLinearColor{ForceInitToZero})
+	[
+		SNew(SValidationTabWidget)
+		.Struct(EditedStruct)
+	];
 }
 
 void UValidationEditorExtensionManager::HandleAssetEditorOpened(UObject* Asset)

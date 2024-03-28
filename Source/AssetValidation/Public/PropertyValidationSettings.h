@@ -5,6 +5,7 @@
 #include "PropertyValidationSettings.generated.h"
 
 class UClassExternalMetaData;
+class UUserDefinedStruct;
 
 USTRUCT()
 struct FPropertyExternalValidationData
@@ -67,6 +68,11 @@ struct FClassExternalValidationData
 {
 	GENERATED_BODY()
 
+	FClassExternalValidationData() = default;
+	FClassExternalValidationData(UClass* InClass)
+		: Class(InClass)
+	{}
+
 	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
 	TSubclassOf<UObject> Class;
 
@@ -83,6 +89,11 @@ USTRUCT()
 struct FStructExternalValidationData
 {
 	GENERATED_BODY()
+
+	FStructExternalValidationData() = default;
+	FStructExternalValidationData(UScriptStruct* InStruct)
+		: StructClass(InStruct)
+	{}
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UScriptStruct> StructClass;
@@ -107,10 +118,8 @@ class ASSETVALIDATION_API UPropertyValidationSettings: public UDeveloperSettings
 	GENERATED_BODY()
 public:
 
-	FORCEINLINE static const UPropertyValidationSettings* Get()
-	{
-		return GetDefault<UPropertyValidationSettings>();
-	}
+	FORCEINLINE static const UPropertyValidationSettings* Get() { return GetDefault<UPropertyValidationSettings>(); }
+	FORCEINLINE static UPropertyValidationSettings* GetMutable() { return GetMutableDefault<UPropertyValidationSettings>(); }
 
 	static const TArray<FPropertyExternalValidationData>& GetExternalValidationData(const UStruct* Struct);
 	
@@ -181,4 +190,7 @@ public:
 	/** List of structs with additional validation meta data */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TArray<FStructExternalValidationData> ExternalStructs;
+
+	UPROPERTY(Config)
+	TMap<FSoftObjectPath, FStructExternalValidationData> UserDefinedStructs;
 };

@@ -397,6 +397,17 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator
 			PropertyValidator = *ValidatorPtr;
 		}
 	}
+	else if (const FByteProperty* ByteProperty = CastField<FByteProperty>(PropertyType))
+	{
+		// @todo:  This is ugly. Byte property can represent either byte or enum. We don't want byte but want enum.
+		if (ByteProperty->IsEnum())
+		{
+			if (auto ValidatorPtr = PropertyValidators.Find(FByteProperty::StaticClass()))
+			{
+				PropertyValidator = *ValidatorPtr;
+			}
+		}
+	}
 	else
 	{
 		const FFieldClass* PropertyClass = PropertyType->GetClass();

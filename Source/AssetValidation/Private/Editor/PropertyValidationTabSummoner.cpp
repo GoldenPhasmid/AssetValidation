@@ -2,6 +2,9 @@
 
 #include "BlueprintEditor.h"
 
+namespace UE::AssetValidation
+{
+	
 FPropertyValidationTabSummoner::FPropertyValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor)
 	: FWorkflowTabFactory("ValidationTab", InBlueprintEditor)
 	, BlueprintEditor(InBlueprintEditor)
@@ -15,4 +18,6 @@ FPropertyValidationTabSummoner::FPropertyValidationTabSummoner(TSharedPtr<FBluep
 TSharedRef<SWidget> FPropertyValidationTabSummoner::CreateTabBody(const FWorkflowTabSpawnInfo& Info) const
 {
 	return FWorkflowTabFactory::CreateTabBody(Info);
+}
+	
 }
