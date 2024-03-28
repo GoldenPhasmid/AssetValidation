@@ -3,6 +3,9 @@
 #include "Misc/AutomationTest.h"
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
+#include "Tests/AutomationFlags.h"
+
+using UE::AssetValidation::AutomationFlags;
 
 static TArray<TPair<FName, EDataValidationResult>> PropertyNames
 {

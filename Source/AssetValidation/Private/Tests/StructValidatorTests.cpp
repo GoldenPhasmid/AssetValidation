@@ -4,7 +4,9 @@
 
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidatorTests.h"
-#include "PropertyValidators/PropertyValidation.h"
+#include "Tests/AutomationFlags.h"
+
+using UE::AssetValidation::AutomationFlags;
 
 class FStructValidatorAutomationTest: public FAutomationTestBase
 {

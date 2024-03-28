@@ -4,8 +4,6 @@
 
 #include "PropertyValidatorTests.generated.h"
 
-static constexpr uint32 AutomationFlags = EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask;
-
 UCLASS(HideDropdown)
 class UEmptyObject: public UObject
 {
