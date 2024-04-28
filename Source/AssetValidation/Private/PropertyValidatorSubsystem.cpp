@@ -247,10 +247,10 @@ bool UPropertyValidatorSubsystem::HasValidatorForPropertyType(const FProperty* P
 
 void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const
 {
-	const bool bIsStruct = Cast<UScriptStruct>(Struct) != nullptr;
+	const bool bIsScriptStruct = Cast<UScriptStruct>(Struct) != nullptr;
 	const UPackage* Package = Struct->GetPackage();
 	
-	while (Struct && (bIsStruct || !ShouldIgnorePackage(Package)))
+	while (Struct && (bIsScriptStruct || !ShouldIgnorePackage(Package)))
 	{
 		if (ShouldSkipPackage(Package))
 		{
@@ -276,6 +276,10 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 		}
 		
 		Struct = Struct->GetSuperStruct();
+		if (Struct)
+		{
+			Package = Struct->GetPackage();
+		}
 	}
 }
 

@@ -154,6 +154,30 @@ bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, cons
 	return false;
 }
 
+FPropertyValidationContext::FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject)
+	: Subsystem(OwningSubsystem)
+	, SourceObject(InSourceObject)
+{
+	// obtain object's package. It can be either outermost package or external package (in case of external actors)
+	const UPackage* Package = SourceObject->GetPackage();
+	check(Package);
+
+	// construct outer chain until we meet a package
+	TArray<const UObject*, TInlineAllocator<4>> Outers;
+	Outers.Add(SourceObject.Get());
+	for (UObject* Outer = SourceObject->GetOuter(); Outer && !Outer->IsA<UPackage>() && Outer != Package; Outer = Outer->GetOuter())
+	{
+		Outers.Add(Outer);
+	}
+
+	// push outer chain as a validation prefix
+	// explicitly exclude last outer, as it is probably a context that user can understand (blueprint, map, etc.)
+	for (int32 Index = Outers.Num() - 2; Index >= 0; --Index)
+	{
+		PushPrefix(GetBeautifiedName(Outers[Index]));
+	}
+}
+
 FPropertyValidationResult FPropertyValidationContext::MakeValidationResult() const
 {
 	FPropertyValidationResult Result;
@@ -209,6 +233,13 @@ void FPropertyValidationContext::IsPropertyContainerValid(TNonNullPtr<const uint
 	Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);
 }
 
+void FPropertyValidationContext::IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, const FString& ScopedPrefix)
+{
+	PushPrefix(ScopedPrefix);
+	Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);
+	PopPrefix();
+}
+
 void FPropertyValidationContext::IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData)
 {
 	Subsystem->ValidatePropertyWithContext(ContainerMemory, Property, MetaData, *this);
@@ -217,6 +248,17 @@ void FPropertyValidationContext::IsPropertyValid(TNonNullPtr<const uint8> Contai
 void FPropertyValidationContext::IsPropertyValueValid(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData)
 {
 	Subsystem->ValidatePropertyValueWithContext(PropertyMemory, Property, MetaData, *this);
+}
+
+FString FPropertyValidationContext::GetBeautifiedName(const UObject* Object) const
+{
+	if (const AActor* Actor = Cast<AActor>(Object))
+	{
+		// display actor label instead of actor name. In editor world it is impossible to find an actor by its name
+		return Actor->GetActorNameOrLabel();
+	}
+
+	return Object->GetName();
 }
 
 FText FPropertyValidationContext::MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const

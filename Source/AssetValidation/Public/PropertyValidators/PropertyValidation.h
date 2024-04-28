@@ -66,11 +66,8 @@ class FPropertyValidationContext: public FNoncopyable
 {
 public:
 	
-	FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject)
-		: Subsystem(OwningSubsystem)
-		, SourceObject(InSourceObject)
-	{ }
-	
+	FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject);
+
 	FPropertyValidationResult MakeValidationResult() const;
 
 	FORCEINLINE void FailOnCondition(bool Condition, const FProperty* Property, const FText& DefaultFailureMessage)
@@ -86,6 +83,8 @@ public:
 	/** push prefix to context string */
 	FORCEINLINE void PushPrefix(const FString& Prefix)
 	{
+		check(!Prefix.IsEmpty());
+		
 		Prefixes.Push(Prefix);
 		ContextString.Append(Prefix + TEXT("."));
 	}
@@ -99,6 +98,8 @@ public:
 
 	/** Route property container validation request to validator subsystem */
 	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct);
+	/** Route property container validation request to validator subsystem, add scoped prefix */
+	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, const FString& ScopedPrefix);
 	/** Route property validation request to validator subsystem */
 	void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData);
 	/** Route property value validation request to validator subsystem */
@@ -109,11 +110,13 @@ public:
 		check(SourceObject.IsValid());
 		return SourceObject.Get();
 	}
-	
+
 private:
-
+	
 	FText MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const;
-
+	/** @return beautified name for an object */
+    FString GetBeautifiedName(const UObject* Object) const;
+	
 	struct FIssue
 	{
 		FText Message;

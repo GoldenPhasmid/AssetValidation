@@ -6,7 +6,7 @@
 
 bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(UObject* InAsset) const
 {
-	return Super::CanValidateAsset_Implementation(InAsset) && InAsset && InAsset->IsA(UAnimSequenceBase::StaticClass());
+	return Super::CanValidateAsset_Implementation(InAsset) && InAsset && InAsset->IsA<UAnimSequenceBase>();
 }
 
 EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)

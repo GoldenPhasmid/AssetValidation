@@ -21,7 +21,7 @@ void UObjectContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Proper
 
 	if (const UObject* Object = ObjectProperty->LoadObjectPropertyValue(PropertyMemory))
 	{
-		ValidationContext.PushPrefix(Property->GetName() + "." + Object->GetName());
+		ValidationContext.PushPrefix(Property->GetName());
 		// validate underlying object recursively
 		ValidationContext.IsPropertyContainerValid(reinterpret_cast<const uint8*>(Object), Object->GetClass());
 		ValidationContext.PopPrefix();

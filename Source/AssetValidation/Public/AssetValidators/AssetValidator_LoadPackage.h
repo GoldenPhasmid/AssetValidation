@@ -14,5 +14,6 @@ public:
 	
 	virtual bool IsEnabled() const override;
 	virtual bool CanValidate_Implementation(const EDataValidationUsecase InUsecase) const override;
+	virtual bool CanValidateAsset_Implementation(UObject* InAsset) const override;
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors) override;
 };

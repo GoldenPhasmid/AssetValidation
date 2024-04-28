@@ -11,6 +11,11 @@ class FMenuBuilder;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAssetValidation, Log, All);
 
+FORCEINLINE EDataValidationResult operator&=(EDataValidationResult Lhs, EDataValidationResult Rhs)
+{
+	return CombineDataValidationResults(Lhs, Rhs);
+}
+
 class ASSETVALIDATION_API IAssetValidationModule: public IModuleInterface
 {
 public:

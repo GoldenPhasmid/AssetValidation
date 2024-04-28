@@ -3,6 +3,7 @@
 #include "AssetCompilingManager.h"
 #include "AssetValidationModule.h"
 #include "AssetValidationStatics.h"
+#include "DataValidationModule.h"
 
 bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
 {
@@ -17,13 +18,13 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 
 	if (Package && UWorld::IsWorldOrExternalActorPackage(Package))
 	{
-		// don't validate external actors
+		// don't validate world packages or external actors
 		return true;
 	}
 
 	if (Package && (Package->ContainsMap() || Package->HasAnyPackageFlags(PKG_ContainsMapData) || PackageName.EndsWith("_BuildData")))
 	{
-		// don't validate map packages
+		// don't validate map packages, build data assets or any map data
 		return true;
 	}
 
@@ -32,7 +33,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	{
 		if (!PackageName.StartsWith(TEXT("/Script/")))
 		{
-			// in memory but not yet saved, and its not a script package 
+			// in memory but not yet saved, and its not a script package
 			UE_LOG(LogAssetValidation, Warning, TEXT("Package %s is in memory but not yet saved (no source file)"), *PackageName);
 		}
 
@@ -128,7 +129,12 @@ bool UAssetValidator_LoadPackage::IsEnabled() const
 
 bool UAssetValidator_LoadPackage::CanValidate_Implementation(const EDataValidationUsecase InUsecase) const
 {
-	return true;
+	return InUsecase != EDataValidationUsecase::Commandlet;
+}
+
+bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(UObject* InAsset) const
+{
+	return Super::CanValidateAsset_Implementation(InAsset) && InAsset != nullptr;
 }
 
 EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
