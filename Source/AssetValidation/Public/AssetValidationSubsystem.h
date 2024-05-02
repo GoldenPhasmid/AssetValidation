@@ -18,11 +18,13 @@ public:
 		return GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
 	}
 	
-	virtual EDataValidationResult IsStandaloneActorValid(AActor* Actor, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, EDataValidationUsecase InValidationUsecase) const;
 	//~Begin EditorValidatorSubsystem interface
+	virtual int32 ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
 	virtual EDataValidationResult IsAssetValid(const FAssetData& AssetData, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, const EDataValidationUsecase InValidationUsecase) const override;
 	virtual EDataValidationResult IsObjectValid(UObject* InObject, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, const EDataValidationUsecase InValidationUsecase) const override;
 	//~End EditorValidatorSubsystem interface
+	/** */
+	virtual EDataValidationResult IsStandaloneActorValid(AActor* Actor, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, EDataValidationUsecase InValidationUsecase) const;
 
 protected:
 

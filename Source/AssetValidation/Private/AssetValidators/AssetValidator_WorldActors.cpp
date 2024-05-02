@@ -6,9 +6,7 @@
 #include "Engine/LevelScriptActor.h"
 #include "Engine/LevelScriptBlueprint.h"
 #include "WorldPartition/WorldPartition.h"
-#include "WorldPartition/WorldPartitionBuilder.h"
 #include "WorldPartition/DataLayer/DataLayerManager.h"
-#include "WorldPartition/LoaderAdapter/LoaderAdapterActor.h"
 #include "WorldPartition/LoaderAdapter/LoaderAdapterShape.h"
 
 #include "AssetValidationModule.h"
@@ -151,23 +149,25 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, 
 	check(ValidationSubsystem);
 
 	EDataValidationResult Result = EDataValidationResult::Valid;
-	// don't explicitly validate world settings, actor iterator will walk over it
+	// don't validate world settings explicitly, actor iterator will walk over it
 	TArray<FText> ValidationWarnings;
 	Result &= ValidationSubsystem->IsObjectValid(World->PersistentLevel->LevelScriptBlueprint, ValidationErrors, ValidationWarnings, CurrentUseCase);
 	Result &= ValidationSubsystem->IsStandaloneActorValid(World->PersistentLevel->GetLevelScriptActor(), ValidationErrors, ValidationWarnings, CurrentUseCase);
 
 	if (!UWorld::IsPartitionedWorld(World))
 	{
+		// validate sublevel level blueprints
 		for (const ULevelStreaming* LevelStreaming: World->GetStreamingLevels())
 		{
 			if (const ULevel* Level = LevelStreaming->GetLoadedLevel())
 			{
+				Result &= ValidationSubsystem->IsObjectValid(World->PersistentLevel->LevelScriptBlueprint, ValidationErrors, ValidationWarnings, CurrentUseCase);
 				Result &= ValidationSubsystem->IsStandaloneActorValid(Level->GetLevelScriptActor(), ValidationErrors, ValidationWarnings, CurrentUseCase);
 			}
 		}
 	}
 	
-	for (TActorIterator<AActor> It{World, AActor::StaticClass(), EActorIteratorFlags::AllActors}; It; ++It)
+	for (FActorIterator It{World, AActor::StaticClass(), EActorIteratorFlags::AllActors}; It; ++It)
 	{
 		AActor* Actor = *It;
 		ValidationSubsystem->IsStandaloneActorValid(Actor, ValidationErrors, ValidationWarnings, CurrentUseCase);

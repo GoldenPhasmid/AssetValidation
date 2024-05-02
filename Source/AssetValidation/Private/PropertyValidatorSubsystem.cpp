@@ -38,6 +38,7 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 
 	for (const UClass* ValidatorClass: ValidatorClasses)
 	{
+		// group validators by their base class to speed up property validation
 		if (!ValidatorClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
 		{
 			UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
@@ -340,7 +341,7 @@ bool UPropertyValidatorSubsystem::CanEverValidateProperty(const FProperty* Prope
 		return false;
 	}
 
-	// @todo: for some reason blueprint created components doesn't have CPF_Edit, only CPF_BlueprintVisible
+	// for some reason blueprint created components doesn't have CPF_Edit, only CPF_BlueprintVisible. So we don't require CPF_Edit to be on a component property
 	// it is not required for component properties to be editable, as we want to validate their properties recursively
 	return true;
 }
