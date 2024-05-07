@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "EditorValidatorBase.h"
@@ -12,6 +10,20 @@ class ASSETVALIDATION_API UAssetValidator: public UEditorValidatorBase
 	GENERATED_BODY()
 public:
 
-	virtual bool CanValidateAsset_Implementation(UObject* InAsset) const override;
-	virtual EDataValidationResult ValidateAsset(const FAssetData& AssetData, UPARAM(ref) TArray<FText>& ValidationErrors);
+	UAssetValidator();
+	
+	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
+
+	EDataValidationResult ValidateAsset(const FAssetData& InAssetData, FDataValidationContext& InContext);
+	virtual EDataValidationResult ValidateAsset_Implementation(const FAssetData& InAssetData, FDataValidationContext& InContext)
+	{
+		return EDataValidationResult::NotValidated;
+	}
+
+protected:
+
+	void LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context);
+
+	UPROPERTY()
+	bool bLogValidatingAssetMessage = false;
 };

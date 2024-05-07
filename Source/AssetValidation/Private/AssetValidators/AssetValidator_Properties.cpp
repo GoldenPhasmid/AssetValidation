@@ -4,20 +4,22 @@
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
 
+#if WITH_DATA_VALIDATION_UPDATE
+bool UAssetValidator_Properties::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+{
+	return InObject != nullptr && !InObject->IsA<UUserDefinedStruct>() && !InObject->IsA<UUserDefinedEnum>();
+}
+
+EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
+#else
 EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
+#endif
 {
 	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	check(PropertyValidators);
 
 	UClass* Class = InAsset->GetClass();
 	UObject* Object = InAsset;
-	
-	if (Object->IsA<UUserDefinedStruct>() || Object->IsA<UUserDefinedEnum>())
-	{
-		// ignore user defined struct and enum blueprints
-		AssetPasses(Object);
-		return EDataValidationResult::Valid;
-	}
 	
 	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
@@ -28,17 +30,17 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	check(Class && Object);
 	
 	FPropertyValidationResult Result = PropertyValidators->ValidateObject(Object);
-	for (const FText& Text: Result.Warnings)
+	for (const FText& Warning: Result.Warnings)
 	{
-		AssetWarning(Object, Text);
+		AssetMessage(InAssetData, EMessageSeverity::Warning, Warning);
 	}
 	
 	if (Result.ValidationResult == EDataValidationResult::Invalid)
 	{
 		check(Result.Errors.Num() > 0);
-		for (const FText& Text: Result.Errors)
+		for (const FText& Error: Result.Errors)
 		{
-			AssetFails(Object, Text, ValidationErrors);
+			AssetMessage(InAssetData, EMessageSeverity::Error, Error);
 		}
 	}
 	else

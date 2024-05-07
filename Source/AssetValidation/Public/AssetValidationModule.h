@@ -1,6 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
@@ -9,11 +7,16 @@ struct FPropertyValidationResult;
 class FToolBarBuilder;
 class FMenuBuilder;
 
+namespace UE::AssetValidation
+{
+	class ISourceControlProxy;
+}
+
 DECLARE_LOG_CATEGORY_EXTERN(LogAssetValidation, Log, All);
 
-FORCEINLINE EDataValidationResult operator&=(EDataValidationResult Lhs, EDataValidationResult Rhs)
+FORCEINLINE void operator&=(EDataValidationResult& Lhs, EDataValidationResult Rhs)
 {
-	return CombineDataValidationResults(Lhs, Rhs);
+	Lhs = CombineDataValidationResults(Lhs, Rhs);
 }
 
 class ASSETVALIDATION_API IAssetValidationModule: public IModuleInterface
@@ -32,6 +35,6 @@ public:
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_IAssetValidationModule_IsAvailable);
 		return FModuleManager::Get().IsModuleLoaded("AssetValidation");
 	}
-
-	virtual FPropertyValidationResult ValidateProperty(UObject* Object, FProperty* Property) const = 0;
+	
+	virtual TSharedRef<UE::AssetValidation::ISourceControlProxy> GetSourceControlProxy() const = 0;
 };

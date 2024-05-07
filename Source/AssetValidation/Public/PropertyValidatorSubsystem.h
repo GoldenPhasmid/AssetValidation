@@ -103,7 +103,6 @@ protected:
 	 * @brief validate all properties in @Container
 	 * @param ContainerMemory container to get data from
 	 * @param Struct struct to retrieve
-	 * @param MetaData
 	 * @param ValidationContext provided validation context
 	 */
 	virtual void ValidateContainerWithContext(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, FPropertyValidationContext& ValidationContext) const;
@@ -112,7 +111,7 @@ protected:
 	 * @brief validate @Property in @Container
 	 * @param ContainerMemory container to get data from
 	 * @param Property property to validate
-	 * @param MetaData
+	 * @param MetaData ref that describes property meta data. Should be used instead of querying property meta data directly
 	 * @param ValidationContext provided validation context
 	 */
 	virtual void ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const;
@@ -121,7 +120,7 @@ protected:
 	 * @brief validate given property value
 	 * @param PropertyMemory property value
 	 * @param Property property to validate
-	 * @param MetaData
+	 * @param MetaData ref that describes property meta data. Should be used instead of querying property meta data directly
 	 * @param ValidationContext provided validation context
 	 */
 	virtual void ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const;

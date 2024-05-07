@@ -1,5 +1,6 @@
 #include "WorldPartitionSourceControlValidator.h"
 
+#include "WorldPartition/WorldPartitionActorDescView.h"
 #include "WorldPartition/DataLayer/DataLayerInstanceWithAsset.h"
 
 #define LOCTEXT_NAMESPACE "WorldPartitionChangelistValidation"

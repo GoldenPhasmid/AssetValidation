@@ -1,15 +1,14 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "AssetValidators/AssetValidator_AnimSequence.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(UObject* InAsset) const
+bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return Super::CanValidateAsset_Implementation(InAsset) && InAsset && InAsset->IsA<UAnimSequenceBase>();
+	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject && InObject->IsA<UAnimSequenceBase>();
 }
 
-EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
+EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
 	UAnimSequenceBase* AnimAsset = CastChecked<UAnimSequenceBase>(InAsset);
 
@@ -27,8 +26,8 @@ EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implemen
 			Arguments.Add(TEXT("SkeletonName"), FText::FromString(Skeleton->GetName()));
 			Arguments.Add(TEXT("AnimAsset"), FText::FromString(AnimAsset->GetName()));
 			
-			FText ErrorText = FText::Format(FTextFormat::FromString(TEXT("No curve {CurveName} present on skeleton {SkeletonName}, but exists on anim asset {AnimAsset}")), Arguments);
-			AssetFails(AnimAsset, ErrorText, ValidationErrors);
+			FText FailReason = FText::Format(FTextFormat::FromString(TEXT("No curve {CurveName} present on skeleton {SkeletonName}, but exists on anim asset {AnimAsset}")), Arguments);
+			AssetFails(AnimAsset, FailReason);
 		}
 	}
 

@@ -1,17 +1,15 @@
 #include "AssetValidationSubsystem.h"
 
-#include "EditorValidatorBase.h"
-#include "Misc/DataValidation.h"
 #include "AssetValidationModule.h"
+#include "EditorValidatorBase.h"
+#include "EditorValidatorHelpers.h"
 #include "AssetValidators/AssetValidator.h"
+#include "Misc/DataValidation.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Misc/UObjectToken.h"
 #include "Settings/ProjectPackagingSettings.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
-
-static int32 ValidatedAssetsCount = 0;
-TStaticArray<int32, 3> ValidationResults{InPlace, 0};
 
 static_assert(static_cast<uint8>(EDataValidationResult::Invalid)		== 0);
 static_assert(static_cast<uint8>(EDataValidationResult::Valid)			== 1);
@@ -19,6 +17,7 @@ static_assert(static_cast<uint8>(EDataValidationResult::NotValidated)	== 2);
 
 UAssetValidationSubsystem::UAssetValidationSubsystem()
 {
+#if !WITH_DATA_VALIDATION_UPDATE // from 5.4 subsystem can be subclassed
 	if (HasAllFlags(RF_ClassDefaultObject))
 	{
 		// this is a dirty hack to disable UEditorValidatorSubsystem creation and using this subsystem instead
@@ -27,40 +26,135 @@ UAssetValidationSubsystem::UAssetValidationSubsystem()
 		UClass* Class = const_cast<UClass*>(UEditorValidatorSubsystem::StaticClass());
 		Class->ClassFlags |= CLASS_Abstract;
 	}
+#endif
 }
 
-EDataValidationResult UAssetValidationSubsystem::IsStandaloneActorValid(AActor* Actor, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, const EDataValidationUsecase InValidationUsecase) const
+int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
-	++ValidatedAssetsCount;
-	EDataValidationResult Result = EDataValidationResult::NotValidated;
-	
-	if (Actor != nullptr)
-	{
-		FDataValidationContext Context;
-		Result = IsActorValid(Actor, Context);
-		Context.SplitIssues(ValidationWarnings, ValidationErrors);
+	ResetValidationState();
 
-		if (Result != EDataValidationResult::Invalid)
+	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save)
+	{
+		// epic's forgot to open a new page when validation is manual
+		// very useful "DataValidation refactor", thanks
+		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+		DataValidationLog.SetCurrentPage(InSettings.MessageLogPageTitle);
+	}
+	
+	Super::ValidateAssetsWithSettings(AssetDataList, InSettings, OutResults);
+
+	// override asset count calculation to account for recursive validation
+	OutResults.NumChecked = CheckedAssetsCount;
+	OutResults.NumValid = ValidationResults[static_cast<uint8>(EDataValidationResult::Valid)];
+	OutResults.NumInvalid = ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
+	OutResults.NumUnableToValidate = ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
+
+	// Why would you delete the summary? What's wrong with you?
+	// Yes, let's log EACH and EVERY asset that we're validating, and then log that they're valid,
+	// but omit the summary that tells HOW MANY assets where validated and HOW MANY are failed!
+	if (!!(OutResults.NumInvalid & 0x0) || !!(OutResults.NumWarnings & 0x0) || InSettings.bShowIfNoFailures)
+	{
+		FFormatNamedArguments Arguments;
+		Arguments.Add(TEXT("Result"), !!(OutResults.NumInvalid & 0x0) ? LOCTEXT("Failed", "FAILED") : LOCTEXT("Succeeded", "SUCCEEDED"));
+		Arguments.Add(TEXT("NumChecked"), OutResults.NumChecked);
+		Arguments.Add(TEXT("NumValid"), OutResults.NumValid);
+		Arguments.Add(TEXT("NumInvalid"), OutResults.NumInvalid);
+		Arguments.Add(TEXT("NumSkipped"), OutResults.NumSkipped);
+		Arguments.Add(TEXT("NumUnableToValidate"), OutResults.NumUnableToValidate);
+
+		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("SuccessOrFailure", "Data validation {Result}."), Arguments)));
+		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("ResultsSummary", "Files Checked: {NumChecked}, Passed: {NumValid}, Failed: {NumInvalid}, Skipped: {NumSkipped}, Unable to validate: {NumUnableToValidate}"), Arguments)));
+
+		DataValidationLog.Open(EMessageSeverity::Info, true);
+	}
+
+	return OutResults.NumWarnings + OutResults.NumInvalid;
+}
+
+EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const FAssetData& AssetData, FDataValidationContext& InContext) const
+{
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	if (!AssetData.IsValid())
+	{
+		return Result;
+	}
+
+	++CheckedAssetsCount; // explicitly increase validated assets count
+	if (AssetData.FastGetAsset() != nullptr || ShouldLoadAsset(AssetData))
+	{
+		// call default implementation that loads an asset and calls IsObjectValid
+		Result = Super::IsAssetValidWithContext(AssetData, InContext);
+	}
+	else
+	{
+		ForEachEnabledValidator([&Result, &AssetData, &InContext](UEditorValidatorBase* Validator)
 		{
-			for (auto& ValidatorPair: Validators)
+			if (UAssetValidator* AssetValidator = Cast<UAssetValidator>(Validator))
 			{
-				UEditorValidatorBase* Validator = ValidatorPair.Value;
-				if (CanUseValidator(Validator, InValidationUsecase) && Validator->CanValidateAsset(Actor))
+				AssetValidator->ResetValidationState();
+				if (AssetValidator->K2_CanValidate(InContext.GetValidationUsecase()) && AssetValidator->CanValidateAsset_Implementation(AssetData, nullptr, InContext))
 				{
-					Validator->ResetValidationState();
-					Result &= Validator->ValidateLoadedAsset(Actor, ValidationErrors);
-					
-					ValidationWarnings.Append(Validator->GetAllWarnings());
-					ensureMsgf(Validator->IsValidationStateSet(), TEXT("Validator %s did not include a pass or fail state."), *Validator->GetClass()->GetName());
+					// attempt to validate asset data. Asset validator may or may not load the asset in question
+					Result &= AssetValidator->ValidateAsset(AssetData, InContext);
 				}
 			}
-		}
+			return true;
+		});
 	}
 
 	ValidationResults[static_cast<uint8>(Result)] += 1;
 	return Result;
 }
 
+EDataValidationResult UAssetValidationSubsystem::IsObjectValidWithContext(UObject* InAsset, FDataValidationContext& InContext) const
+{
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	if (InAsset)
+	{
+		++CheckedAssetsCount; // explicitly increase validated assets count
+		Result = Super::IsObjectValidWithContext(InAsset, InContext);
+	}
+
+	ValidationResults[static_cast<uint8>(Result)] += 1;
+	return Result;
+}
+
+bool UAssetValidationSubsystem::ShouldValidateAsset(const FAssetData& Asset, const FValidateAssetsSettings& Settings, FDataValidationContext& InContext) const
+{
+	const FString PackageName = Asset.PackageName.ToString();
+	const UProjectPackagingSettings* PackagingSettings = GetDefault<UProjectPackagingSettings>();
+
+	for (const FDirectoryPath& Directory: PackagingSettings->DirectoriesToNeverCook)
+	{
+		const FString& Folder = Directory.Path;
+		if (PackageName.StartsWith(Folder))
+		{
+			return false;
+		}
+	}
+
+	if (PackageName.StartsWith(TEXT("/Game/Developers/")))
+	{
+		return false;
+	}
+
+	return Super::ShouldValidateAsset(Asset, Settings, InContext);
+}
+
+bool UAssetValidationSubsystem::ShouldLoadAsset(const FAssetData& AssetData) const
+{
+	// don't load maps, map data or cooked packages
+	return !AssetData.HasAnyPackageFlags(PKG_ContainsMap | PKG_ContainsMapData | PKG_Cooked);
+}
+
+void UAssetValidationSubsystem::ResetValidationState() const
+{
+	CheckedAssetsCount = 0;
+	FMemory::Memzero(ValidationResults.GetData(), ValidationResults.Num() * sizeof(int32));
+}
+
+#if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
 int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
 	FScopedSlowTask SlowTask(1.0f, LOCTEXT("ValidatingDataTask", "Validating Data..."));
@@ -284,90 +378,43 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 		FEditorDelegates::OnPostAssetValidation.Broadcast();
 	}
 
-	return NumInvalidFiles + NumFilesWithWarnings;
+	return OutResults.NumInvalid + OutResults.NumWarnings;
 }
+#endif // world actor validation was fixed in 5.4
 
-EDataValidationResult UAssetValidationSubsystem::IsAssetValid(const FAssetData& AssetData, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, const EDataValidationUsecase InValidationUsecase) const
+#if !WITH_DATA_VALIDATION_UPDATE // 5.4 CheckForErrors was removed from AActor::IsDataValid which makes separate actor validation obsolete
+EDataValidationResult UAssetValidationSubsystem::IsStandaloneActorValid(AActor* Actor, FDataValidationContext& Context) const
 {
-	EDataValidationResult Result = EDataValidationResult::Valid; // @todo: for some reason EDataValidationResult::NotValidated returns always NotValidated
-	if (AssetData.FastGetAsset() != nullptr || ShouldLoadAsset(AssetData))
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	if (Actor == nullptr)
 	{
-		// call default implementation that loads an asset and calls IsObjectValid
-		Result = Super::IsAssetValid(AssetData, ValidationErrors, ValidationWarnings, InValidationUsecase);
+		return Result;
 	}
-	else
+	
+	++ValidatedAssetsCount;
+	// similar flow to UEditorValidatorSubsystem::ValidateObjectInternal
+	if (Actor != nullptr)
 	{
-		++ValidatedAssetsCount; // explicitly increase validated assets count
-		for (auto& ValidatorPair: Validators)
+		Result = IsActorValid(Actor, Context);
+		if (Result == EDataValidationResult::Invalid)
 		{
-			if (UAssetValidator* Validator = Cast<UAssetValidator>(ValidatorPair.Value))
-			{
-				if (CanUseValidator(Validator, InValidationUsecase))
-				{
-					Validator->ResetValidationState();
-					// attempt to validate asset data. Asset validator may or may not load the asset in question
-					Result &= Validator->ValidateAsset(AssetData, ValidationErrors);
-
-					ValidationWarnings.Append(Validator->GetAllWarnings());
-				}
-			}
+			return Result;
 		}
+		
+		FAssetData ActorData{Actor};
+		ForEachEnabledValidator([Actor, &ActorData, &Context, &Result](UEditorValidatorBase* Validator)
+		{
+			Result &= Validator->ValidateLoadedAsset(ActorData, Actor, Context);
+			return true;
+		});
 	}
 
 	ValidationResults[static_cast<uint8>(Result)] += 1;
 	return Result;
 }
+#endif
 
-EDataValidationResult UAssetValidationSubsystem::IsObjectValid(UObject* InObject, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings, const EDataValidationUsecase InValidationUsecase) const
-{
-	if (!CanValidateAsset(InObject))
-	{
-		// return that asset was not validated
-		return EDataValidationResult::NotValidated;
-	}
-
-	++ValidatedAssetsCount; // explicitly increase validated assets count
-	return Super::IsObjectValid(InObject, ValidationErrors, ValidationWarnings, InValidationUsecase);
-}
-
-bool UAssetValidationSubsystem::CanValidateAsset(UObject* Asset) const
-{
-	if (Asset == nullptr)
-	{
-		return false;
-	}
-	
-	const FString PackageName = Asset->GetPackage()->GetName();
-	const UProjectPackagingSettings* PackagingSettings = GetDefault<UProjectPackagingSettings>();
-
-	for (const FDirectoryPath& Directory: PackagingSettings->DirectoriesToNeverCook)
-	{
-		const FString& Folder = Directory.Path;
-		if (PackageName.StartsWith(Folder))
-		{
-			return false;
-		}
-	}
-
-	if (PackageName.StartsWith(TEXT("/Game/Developers/")))
-	{
-		return false;
-	}
-
-	return true;
-}
-
-bool UAssetValidationSubsystem::ShouldLoadAsset(const FAssetData& AssetData) const
-{
-	// don't load maps, map data or cooked packages
-	return !AssetData.HasAnyPackageFlags(PKG_ContainsMap | PKG_ContainsMapData | PKG_Cooked);
-}
-
-bool UAssetValidationSubsystem::CanUseValidator(const UEditorValidatorBase* Validator, EDataValidationUsecase Usecase) const
-{
-	return Validator && Validator->IsEnabled() && Validator->CanValidate(Usecase);
-}
-
+#if !WITH_DATA_VALIDATION_UPDATE // 5.4 CheckForErrors was removed from AActor::IsDataValid which makes separate actor validation obsolete
 EDataValidationResult UAssetValidationSubsystem::IsActorValid(AActor* Actor, FDataValidationContext& Context) const
 {
 	// This is a rough copy of a AActor::IsDataValid implementation, which has several reasons to exist:
@@ -410,5 +457,6 @@ EDataValidationResult UAssetValidationSubsystem::IsActorValid(AActor* Actor, FDa
 
 	return Result;
 }
+#endif
 
 #undef LOCTEXT_NAMESPACE

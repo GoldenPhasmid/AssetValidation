@@ -15,8 +15,8 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	{
 		return true;
 	}
-
-	if (Package && UWorld::IsWorldOrExternalActorPackage(Package))
+	
+	if (Package && UE::AssetValidation::IsWorldOrWorldExternalPackage(Package))
 	{
 		// don't validate world packages or external actors
 		return true;
@@ -44,7 +44,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	if (Package == nullptr)
 	{
 		// Not in memory, just load it
-		FLogMessageGatherer Gatherer;
+		UE::AssetValidation::FLogMessageGatherer Gatherer;
 		Package = LoadPackage(nullptr, *PackageName, LOAD_None);
 
 		OutWarnings = Gatherer.GetWarnings();
@@ -64,7 +64,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	}
 
 	{
-		FLogMessageGatherer Gatherer;
+		UE::AssetValidation::FLogMessageGatherer Gatherer;
 
 		const int32 LoadFlags = LOAD_ForDiff | LOAD_DisableCompileOnLoad;
 		UPackage* DestPackage = LoadPackage(nullptr, *DestPackageName, LoadFlags);
@@ -114,8 +114,6 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 			
 			GEngine->ForceGarbageCollection(true);
 		}
-
-		
 	}
 
 	return true;
@@ -127,22 +125,21 @@ bool UAssetValidator_LoadPackage::IsEnabled() const
 	return !IsRunningCommandlet() && Super::IsEnabled();
 }
 
-bool UAssetValidator_LoadPackage::CanValidate_Implementation(const EDataValidationUsecase InUsecase) const
+bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return InUsecase != EDataValidationUsecase::Commandlet;
+	return InContext.GetValidationUsecase() != EDataValidationUsecase::Commandlet;
 }
 
-bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(UObject* InAsset) const
+EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
-	return Super::CanValidateAsset_Implementation(InAsset) && InAsset != nullptr;
-}
-
-EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
-{
-	check(InAsset);
-
+	FString PackageName = InAssetData.PackageName.ToString();
+	if (UNLIKELY(PackageName.IsEmpty()))
+	{
+		PackageName = InAsset ? InAsset->GetPackage()->GetName() : TEXT("");
+	}
+	
 	TArray<FString> Warnings, Errors;
-	if (GetPackageLoadErrors(InAsset->GetPackage()->GetName(), Warnings, Errors))
+	if (GetPackageLoadErrors(InAssetData.PackageName.ToString(), Warnings, Errors))
 	{
 		for (const FString& Warning: Warnings)
 		{
@@ -151,7 +148,7 @@ EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implement
 
 		for (const FString& Error: Errors)
 		{
-			AssetFails(InAsset, FText::FromString(Error), ValidationErrors);
+			AssetFails(InAsset, FText::FromString(Error));
 		}
 	}
 
@@ -162,3 +159,4 @@ EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implement
 	
 	return GetValidationResult();
 }
+

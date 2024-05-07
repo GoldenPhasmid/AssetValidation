@@ -1,14 +1,13 @@
 ﻿#include "AssetValidators/AssetValidator_DataTable.h"
 
 #include "PropertyValidatorSubsystem.h"
-#include "PropertyValidators/PropertyValidation.h"
 
-bool UAssetValidator_DataTable::CanValidateAsset_Implementation(UObject* InAsset) const
+bool UAssetValidator_DataTable::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return Super::CanValidateAsset_Implementation(InAsset) && InAsset->IsAsset() && InAsset->IsA(UDataTable::StaticClass());
+	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject->IsAsset() && InObject->IsA<UDataTable>();
 }
 
-EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
+EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
 	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	check(PropertyValidators);
@@ -29,7 +28,7 @@ EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementat
 			check(Result.Errors.Num() > 0);
 			for (const FText& Text: Result.Errors)
 			{
-				AssetFails(DataTable, Text, ValidationErrors);
+				AssetFails(DataTable, Text);
 			}
 		}
 	}
@@ -41,3 +40,4 @@ EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementat
 
 	return GetValidationResult();
 }
+

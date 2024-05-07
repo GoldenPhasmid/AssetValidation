@@ -6,7 +6,8 @@
 #include "AssetValidationStyle.h"
 #include "EditorValidatorSubsystem.h"
 #include "ISourceControlModule.h"
-#include "PropertyValidatorSubsystem.h"
+#include "ISourceControlProvider.h"
+#include "SourceControlProxy.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
 #include "Editor/PropertyExternalValidationDataCustomization.h"
@@ -17,8 +18,11 @@ DEFINE_LOG_CATEGORY(LogAssetValidation);
 
 #define LOCTEXT_NAMESPACE "FAssetValidationModule"
 
-class FAssetValidationModule : public IAssetValidationModule
+using UE::AssetValidation::ISourceControlProxy;
+
+class FAssetValidationModule final : public IAssetValidationModule 
 {
+	using ThisClass = FAssetValidationModule;
 public:
 
 	//~Begin IModuleInterface
@@ -26,10 +30,46 @@ public:
 	virtual void ShutdownModule() override;
 	//~End IModuleInterface
 	
-	virtual FPropertyValidationResult ValidateProperty(UObject* Object, FProperty* Property) const override;
-	
+	virtual TSharedRef<ISourceControlProxy> GetSourceControlProxy() const override
+	{
+		return SourceControlProxy.ToSharedRef();
+	}
+
 private:
 
+	void UpdateSourceControlProxy(ISourceControlProvider& OldProvider, ISourceControlProvider& NewProvider);
+
+	TSharedPtr<ISourceControlProxy> SourceControlProxy;
+	FDelegateHandle SCProviderChangedHandle;
+
+#if 0
+	struct FNativeClassMap
+	{
+		static const FName ModuleNameTag{"ModuleName"};
+		static const FName ModuleRelativePathTag{"ModuleRelativePath"};
+
+		FNativeClassMap()
+		{
+			for (TObjectIterator<UClass> It; It; ++It)
+			{
+				UClass* Class = *It;
+				if (Class->HasAnyClassFlags(CLASS_Native))
+				{
+					FAssetData ClassData{Class};
+					FString ModuleName = ClassData.GetTagValueRef<FString>(ModuleNameTag);
+					FString ModulePath = ClassData.GetTagValueRef<FString>(ModuleRelativePathTag);
+
+					const FString Key = ModuleName / ModulePath;
+					Classes.FindOrAdd(Key).Add(Class);
+				}
+			}
+		}
+		
+		TMap<FString, TArray<TWeakObjectPtr<UClass>>> Classes;
+	};
+#endif
+	
+	
 	static void CheckContent();
 	static void CheckProjectSettings();
 	static void ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings);
@@ -37,17 +77,45 @@ private:
 	void RegisterMenus();
 };
 
+void FAssetValidationModule::UpdateSourceControlProxy(ISourceControlProvider& OldProvider, ISourceControlProvider& NewProvider)
+{
+	static const FName GitProviderName{"Git"};
+	static const FName PerforceProviderName{"Perforce"};
+	
+	const FName ProviderName = NewProvider.GetName();
+	if (ProviderName == GitProviderName)
+	{
+		SourceControlProxy = MakeShared<UE::AssetValidation::FGitSourceControlProxy>();
+	}
+	else if (ProviderName == PerforceProviderName)
+	{
+		SourceControlProxy = MakeShared<UE::AssetValidation::FPerforceSourceControlProxy>();
+	}
+	else
+	{
+		SourceControlProxy = MakeShared<UE::AssetValidation::FNullSourceControlProxy>();
+	}
+}
+
 void FAssetValidationModule::StartupModule()
 {
 	FAssetValidationStyle::Initialize();
 	
 	if (FSlateApplication::IsInitialized())
 	{
-		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FAssetValidationModule::RegisterMenus));
+		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &ThisClass::RegisterMenus));
 	}
 	
-	ISourceControlModule::Get().RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&FAssetValidationModule::ValidateChangelistPreSubmit));
+	ISourceControlModule& SourceControl = ISourceControlModule::Get();
+	SourceControl.RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&ThisClass::ValidateChangelistPreSubmit));
+	SCProviderChangedHandle = SourceControl.RegisterProviderChanged(FSourceControlProviderChanged::FDelegate::CreateRaw(this, &ThisClass::UpdateSourceControlProxy));
 
+	if (SourceControl.IsEnabled())
+	{
+		ISourceControlProvider& SCCProvider = SourceControl.GetProvider();
+		UpdateSourceControlProxy(SCCProvider, SCCProvider);
+	}
+	
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyEditor.RegisterCustomClassLayout("PropertyValidationSettings", FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
 	PropertyEditor.RegisterCustomPropertyTypeLayout("PropertyExternalValidationData", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FPropertyExternalValidationDataCustomization::MakeInstance));
@@ -120,12 +188,9 @@ void FAssetValidationModule::ShutdownModule()
 
 	FAssetValidationStyle::Shutdown();
 	
-	ISourceControlModule::Get().UnregisterPreSubmitDataValidation();
-}
-
-FPropertyValidationResult FAssetValidationModule::ValidateProperty(UObject* Object, FProperty* Property) const
-{
-	return GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>()->ValidateObjectProperty(Object, Property);
+	ISourceControlModule& SourceControl = ISourceControlModule::Get();
+	SourceControl.UnregisterPreSubmitDataValidation();
+	SourceControl.UnregisterProviderChanged(SCProviderChangedHandle);
 }
 
 void FAssetValidationModule::CheckContent()
@@ -137,31 +202,22 @@ void FAssetValidationModule::CheckContent()
 	}
 
 	TArray<FString> Warnings, Errors;
-	AssetValidationStatics::ValidateSourceControl(true, EDataValidationUsecase::Manual, Warnings, Errors);
+	UE::AssetValidation::ValidateCheckedOutAssets(true, EDataValidationUsecase::Manual, Warnings, Errors);
 }
 
 void FAssetValidationModule::CheckProjectSettings()
 {
-	if (!ISourceControlModule::Get().IsEnabled())
-	{
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControlDisabled", "Your source control is disabled. Enable and try again."));
-		return;
-	}
-	
-	{
-		FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
-		SlowTask.MakeDialog();
+	FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
+	SlowTask.MakeDialog();
 		
-		TArray<FString> Warnings, Errors;
-		AssetValidationStatics::ValidateProjectSettings(EDataValidationUsecase::Manual, Warnings, Errors);
-	}
-
+	TArray<FString> Warnings, Errors;
+	UE::AssetValidation::ValidateProjectSettings(EDataValidationUsecase::Manual, Warnings, Errors);
 }
 
 void FAssetValidationModule::ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings)
 {
 	TArray<FString> Warnings, Errors;
-	AssetValidationStatics::ValidateSourceControl(true, EDataValidationUsecase::Manual, Warnings, Errors);
+	UE::AssetValidation::ValidateCheckedOutAssets(true, EDataValidationUsecase::PreSubmit, Warnings, Errors);
 
 	OutResult = Errors.Num() > 0 ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 

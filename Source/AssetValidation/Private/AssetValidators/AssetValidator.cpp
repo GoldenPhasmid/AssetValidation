@@ -1,13 +1,42 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "AssetValidators/AssetValidator.h"
 
-bool UAssetValidator::CanValidateAsset_Implementation(UObject* InAsset) const
+#include "Misc/DataValidation.h"
+#include "AssetValidationModule.h"
+#include "AssetRegistry/AssetDataToken.h"
+
+UAssetValidator::UAssetValidator()
+{
+}
+
+bool UAssetValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	return true;
 }
 
-EDataValidationResult UAssetValidator::ValidateAsset(const FAssetData& AssetData, TArray<FText>& ValidationErrors)
+EDataValidationResult UAssetValidator::ValidateAsset(const FAssetData& InAssetData, FDataValidationContext& InContext)
 {
-	return EDataValidationResult::NotValidated;
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	
+	ResetValidationState();
+	if (CanValidateAsset_Implementation(InAssetData, nullptr, InContext))
+	{
+		Result &= ValidateAsset_Implementation(InAssetData, InContext);
+	}
+	
+	Result &= ExtractValidationState(InContext);
+	return Result;
+}
+
+void UAssetValidator::LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context)
+{
+	if (bLogValidatingAssetMessage == false || !AssetData.IsValid())
+	{
+		return;
+	}
+	// can't use AssetMessage because AssetValidator resets its validation state when doing recursive validation
+	TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(EMessageSeverity::Info)
+	->AddToken(FAssetDataToken::Create(AssetData))
+	->AddToken(FTextToken::Create(NSLOCTEXT("AssetValidation", "ValidatingAsset", "Validating asset")));
+	
+	Context.AddMessage(Message);
 }

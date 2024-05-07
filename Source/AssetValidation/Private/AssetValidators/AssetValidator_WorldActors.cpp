@@ -2,7 +2,6 @@
 
 #include "EditorValidatorSubsystem.h"
 #include "EditorWorldUtils.h"
-#include "EngineUtils.h"
 #include "Engine/LevelScriptActor.h"
 #include "Engine/LevelScriptBlueprint.h"
 #include "WorldPartition/WorldPartition.h"
@@ -11,24 +10,26 @@
 
 #include "AssetValidationModule.h"
 #include "AssetValidationSubsystem.h"
+#include "EngineUtils.h"
 #include "PackageTools.h"
 
-bool UAssetValidator_WorldActors::CanValidate_Implementation(const EDataValidationUsecase InUsecase) const
+bool UAssetValidator_WorldActors::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	// save current use case to pass it for world actor validation
-	const_cast<ThisClass*>(this)->CurrentUseCase = InUsecase;
-#if 0
-	return InUsecase != EDataValidationUsecase::Save && InUsecase != EDataValidationUsecase::PreSubmit;
-#endif
+	EDataValidationUsecase Usecase = InContext.GetValidationUsecase();
+	if (Usecase == EDataValidationUsecase::Save)
+	{
+		// don't validate on save, wait until PreSubmit or Manual
+		return false;
+	}
+
+	if (InObject != nullptr && !InObject->IsA<UWorld>())
+	{
+		return false;
+	}
 	return true;
 }
 
-bool UAssetValidator_WorldActors::CanValidateAsset_Implementation(UObject* InAsset) const
-{
-	return Super::CanValidateAsset_Implementation(InAsset) && InAsset != nullptr && InAsset->IsA<UWorld>();
-}
-
-EDataValidationResult UAssetValidator_WorldActors::ValidateAsset(const FAssetData& AssetData, TArray<FText>& ValidationErrors)
+EDataValidationResult UAssetValidator_WorldActors::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
 {
 	check(AssetData.IsValid());
 
@@ -61,7 +62,7 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateAsset(const FAssetDat
 	{
 		if (UWorld* World = UWorld::FindWorldInPackage(WorldPackage))
 		{
-			Result &= ValidateLoadedAsset(World, ValidationErrors);
+			Result &= ValidateLoadedAsset_Implementation(AssetData, World, Context);
 		}
 		// force unload package, otherwise engine may crash trying to re-load the same world
 		UPackageTools::UnloadPackages({WorldPackage});
@@ -70,20 +71,19 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateAsset(const FAssetDat
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_WorldActors::ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors)
+EDataValidationResult UAssetValidator_WorldActors::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)
 {
 	check(bRecursiveGuard == false);
 	check(InAsset);
 
 	// guard against recursive world validation. We're not safe 
-	TGuardValue{bRecursiveGuard, true};
+	TGuardValue RecursiveGuard{bRecursiveGuard, true};
 
 	UWorld* World = CastChecked<UWorld>(InAsset);
 	
-	TUniquePtr<FScopedEditorWorld> ScopedWorld;
+	TUniquePtr<FScopedEditorWorld> ScopedWorld{};
 	if (!World->bIsWorldInitialized)
 	{
-		// @todo: figure out how to load a proper editor world in such cases
 		UWorld::InitializationValues IVS;
 		IVS.RequiresHitProxies(false);
 		IVS.ShouldSimulatePhysics(false);
@@ -95,24 +95,30 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateLoadedAsset_Implement
 
 		ScopedWorld = MakeUnique<FScopedEditorWorld>(World, IVS, EWorldType::Editor);
 	}
-
-	const int32 NumValidationErrors = ValidationErrors.Num();
-	const EDataValidationResult Result = ValidateWorld(World, ValidationErrors);
+	else if (bEnsureInactiveWorld)
+	{
+		// @todo: if world is already initialized, it either means it is already opened (active map in editor), or loaded via GetAsset call
+		// second option sets WorldType == Inactive which means world is not properly initialized
+		ensureAlwaysMsgf(World->WorldType != EWorldType::Inactive, TEXT("World %s skipped proper editor initialization, loaded as inactive"), *World->GetName());
+	}
+	
+	const uint32 NumValidationErrors = InContext.GetNumErrors();
+	const EDataValidationResult Result = ValidateWorld(World, InContext);
 	if (Result == EDataValidationResult::Valid)
 	{
 		AssetPasses(World);
 	}
 	else
 	{
-		check(ValidationErrors.Num() > NumValidationErrors);
-		FText ErrorMsg = FText::Format(NSLOCTEXT("AssetValidation", "WorldActors_Failed_AssetCheck", "{0} is not valid. See AssetCheck log for more details."), FText::FromString(World->GetName()));
-		AssetFails(World, ErrorMsg, ValidationErrors);
+		check(InContext.GetNumErrors() > NumValidationErrors);
+		FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "WorldActors_Failed_AssetCheck", "{0} is not valid. See AssetCheck log for more details."), FText::FromString(World->GetName()));
+		AssetFails(World, FailReason);
 	}
 	
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, TArray<FText>& ValidationErrors)
+EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, FDataValidationContext& Context)
 {
 	TUniquePtr<FLoaderAdapterShape> AllActors;
 	
@@ -145,15 +151,14 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, 
 		// @todo: load all sublevels for non-partitioned worlds
 	}
 	
-	UAssetValidationSubsystem* ValidationSubsystem = GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
-	check(ValidationSubsystem);
+	UAssetValidationSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
+	check(Subsystem);
 
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	// don't validate world settings explicitly, actor iterator will walk over it
-	TArray<FText> ValidationWarnings;
-	Result &= ValidationSubsystem->IsObjectValid(World->PersistentLevel->LevelScriptBlueprint, ValidationErrors, ValidationWarnings, CurrentUseCase);
-	Result &= ValidationSubsystem->IsStandaloneActorValid(World->PersistentLevel->GetLevelScriptActor(), ValidationErrors, ValidationWarnings, CurrentUseCase);
-
+	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
+	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->GetLevelScriptActor(), Context);
+	
 	if (!UWorld::IsPartitionedWorld(World))
 	{
 		// validate sublevel level blueprints
@@ -161,19 +166,34 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, 
 		{
 			if (const ULevel* Level = LevelStreaming->GetLoadedLevel())
 			{
-				Result &= ValidationSubsystem->IsObjectValid(World->PersistentLevel->LevelScriptBlueprint, ValidationErrors, ValidationWarnings, CurrentUseCase);
-				Result &= ValidationSubsystem->IsStandaloneActorValid(Level->GetLevelScriptActor(), ValidationErrors, ValidationWarnings, CurrentUseCase);
+				Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
+				Result &= ValidateAssetInternal(*Subsystem, Level->GetLevelScriptActor(), Context);
 			}
 		}
 	}
-	
+
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 world calls IsDataValid on actor using FActorIterator
+	Result &= World->IsDataValid(Context);
+#endif
 	for (FActorIterator It{World, AActor::StaticClass(), EActorIteratorFlags::AllActors}; It; ++It)
 	{
 		AActor* Actor = *It;
-		ValidationSubsystem->IsStandaloneActorValid(Actor, ValidationErrors, ValidationWarnings, CurrentUseCase);
+		Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
 	}
 
 	// @todo: validate level instances?
 
 	return Result;
+}
+
+EDataValidationResult UAssetValidator_WorldActors::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
+{
+#if WITH_DATA_VALIDATION_UPDATE // actor validation is fixed in 5.4
+	FAssetData AssetData{Asset};
+	LogValidatingAssetMessage(AssetData, Context);
+	
+	return ValidationSubsystem.IsAssetValidWithContext(AssetData, Context);
+#else
+	return ValidationSubsystem->IsStandaloneActorValid(Asset, Context);
+#endif
 }

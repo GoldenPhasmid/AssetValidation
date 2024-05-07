@@ -1,7 +1,6 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
+#include "CoreMinimal.h"
 #include "AssetValidator.h"
 
 #include "AssetValidator_AnimSequence.generated.h"
@@ -12,8 +11,10 @@ class ASSETVALIDATION_API UAssetValidator_AnimSequence: public UAssetValidator
 	GENERATED_BODY()
 public:
 	
-	virtual bool CanValidateAsset_Implementation(UObject* InAsset) const override;
-	virtual EDataValidationResult ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors) override;
+	//~Begin EditorValidatorBase interface
+	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
+	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
+	//~End EditorValidatorBase interface
 
 protected:
 
