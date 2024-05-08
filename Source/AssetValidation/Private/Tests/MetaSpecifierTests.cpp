@@ -200,12 +200,14 @@ bool FAutomationTest_MetaSpecifiers::RunTest(const FString& Parameters)
 	 * meta = ("ValidateRecursive") can be placed either on object property, soft object property, or struct property,
 	 * both as a plain property and a part of some container property (array, set, map).
 	 * Struct property allow meta specifier, but don't require it by default.
+	 * @todo: disallow "ValidateRecursive" for FClassProperty and FObjectPropertyBase.
 	 */
 	
 	CanApplyMeta = CanApplyMeta_ValidateRecursive;
 	What = TEXT("CanApplyMeta_ValidateRecursive returns true for correct properties");
 	
 	TestEqual(What, CanApplyToProperty<FTextProperty>(CanApplyMeta), false);
+	TestEqual(What, CanApplyToProperty<FNameProperty>(CanApplyMeta), false);
 	TestEqual(What, CanApplyToProperty<FObjectPropertyBase>(CanApplyMeta), false);
 	TestEqual(What, CanApplyToProperty<FClassProperty>(CanApplyMeta), false);
 	TestEqual(What, CanApplyToProperty<FSoftClassProperty>(CanApplyMeta), false);

@@ -2,7 +2,6 @@
 
 #include <mutex>
 
-#include "AssetValidationStatics.h"
 #include "AssetValidationDefines.h"
 
 struct FValidateAssetsResults;
@@ -75,7 +74,7 @@ private:
 };
 
 // @todo: refactor
-struct FLogMessageGatherer: public FAssetValidationMessageGatherer {};
+struct ASSETVALIDATION_API FLogMessageGatherer: public FAssetValidationMessageGatherer {};
 	
 } // UE::AssetValidation
 
@@ -90,7 +89,14 @@ namespace UE::AssetValidation
 	 * @param OutResults validation results
 	 * @return number of failures
 	 */
-	static int32 ValidateCheckedOutAssets(bool bInteractive, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
+	ASSETVALIDATION_API int32 ValidateCheckedOutAssets(bool bInteractive, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
+
+	/**
+	 * Validates project settings.
+	 * @param InSettings data validation context
+	 * @param OutResults
+	 */
+	ASSETVALIDATION_API void ValidateProjectSettings(const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
 
 #if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 	/**
@@ -118,20 +124,15 @@ namespace UE::AssetValidation
 	 * @param InSettings data validation settings
 	 * @param OutResults data validation results
 	 */
-	static void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
+	void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
 
-	static bool ShouldValidatePackage(const FString& PackageName);
-	/**
-	 * Validates project settings.
-	 * @param Context data validation context
-	 */
-	static void ValidateProjectSettings(const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
+	bool ShouldValidatePackage(const FString& PackageName);
 
 	/** validate source control file state for an empty package */
-	static FString ValidateEmptyPackage(const FString& PackageName);
+	FString ValidateEmptyPackage(const FString& PackageName);
 
 	/** Given a package, return if package contains a UWorld or an external world object */
-	static bool IsWorldOrWorldExternalPackage(UPackage* Package);
+	bool IsWorldOrWorldExternalPackage(UPackage* Package);
 
 #if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 	static FString GetPackagePath(const UPackage* Package);
@@ -143,9 +144,9 @@ namespace UE::AssetValidation
 #endif
 
 	/** @return true if filename is a C++ source file */
-	static bool IsCppFile(const FString& Filename);
+	bool IsCppFile(const FString& Filename);
 
 	/** Add validation messages to validation context in "data validation format" */
-	static void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FLogMessageGatherer& Gatherer);
-	static void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
+	ASSETVALIDATION_API void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FLogMessageGatherer& Gatherer);
+	ASSETVALIDATION_API void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
 } // UE::AssetValidation

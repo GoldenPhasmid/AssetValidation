@@ -50,12 +50,52 @@ class UValidationTestObject_StructValidation: public UObject
 };
 
 USTRUCT()
+struct FSoftObjectPathStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftObjectPath EmptyPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftObjectPath BadPath;
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_SoftObjectPath: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_SoftObjectPath()
+	{
+		EmptyPathArray.AddDefaulted();
+		BadPath			= TEXT("//Path/That/Doesnt/Exist");
+		Struct.BadPath	= TEXT("//Path/That/Doesnt/Exist");
+	}
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftObjectPath EmptyPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftObjectPath BadPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FSoftObjectPath> EmptyPathArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftObjectPathStruct Struct;
+};
+
+USTRUCT()
 struct FGameplayTagStruct
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FGameplayTag EmptyTag = FGameplayTag::EmptyTag;
+	
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FGameplayTag BadTag = FGameplayTag::EmptyTag;
 };
 
 UCLASS(HideDropdown)
@@ -63,13 +103,13 @@ class UValidationTestObject_GameplayTag: public UObject
 {
 	GENERATED_BODY()
 	
-	UValidationTestObject_GameplayTag()
-	{
-		EmptyTagArray.AddDefaulted();
-	}
+	UValidationTestObject_GameplayTag();
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FGameplayTag EmptyTag = FGameplayTag::EmptyTag;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FGameplayTag BadTag = FGameplayTag::EmptyTag;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	TArray<FGameplayTag> EmptyTagArray;

@@ -99,14 +99,15 @@ bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_StructValidation>(5);
 }
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, FStructValidatorAutomationTest,
-                                        "Editor.PropertyValidation.StructValidators.GameplayTag", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_SoftObjectPath, FStructValidatorAutomationTest,
+										"Editor.PropertyValidation.StructValidators.SoftObjectPath", AutomationFlags)
 
-bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)
+bool FAutomationTest_SoftObjectPath::RunTest(const FString& Parameters)
 {
-	// GameplayTag struct value should be validated
-	return ValidateObject<UValidationTestObject_GameplayTag>(3);
+	// SoftObjectPath struct value should be validated
+	return ValidateObject<UValidationTestObject_SoftObjectPath>(5);
 }
+
 
 FGameplayTag CreateInvalidTag()
 {
@@ -117,6 +118,22 @@ FGameplayTag CreateInvalidTag()
 
 	check(Result.GetTagName() == TEXT("Tag.Invalid"));
 	return Result;
+}
+
+UValidationTestObject_GameplayTag::UValidationTestObject_GameplayTag()
+{
+	EmptyTagArray.AddDefaulted();
+	BadTag = CreateInvalidTag();
+	Struct.BadTag = CreateInvalidTag();
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, FStructValidatorAutomationTest,
+										"Editor.PropertyValidation.StructValidators.GameplayTag", AutomationFlags)
+
+bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)
+{
+	// GameplayTag struct value should be validated
+	return ValidateObject<UValidationTestObject_GameplayTag>(5);
 }
 
 UValidationTestObject_GameplayTagContainer::UValidationTestObject_GameplayTagContainer()

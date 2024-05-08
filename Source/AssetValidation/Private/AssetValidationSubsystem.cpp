@@ -11,8 +11,6 @@
 #include "AssetValidators/AssetValidator.h"
 #include "Misc/DataValidation.h"
 #include "Misc/ScopedSlowTask.h"
-#include "Misc/UObjectToken.h"
-#include "Settings/ProjectPackagingSettings.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -79,7 +77,7 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("SuccessOrFailure", "Data validation {Result}."), Arguments)));
 		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("ResultsSummary", "Files Checked: {NumChecked}, Passed: {NumValid}, Failed: {NumInvalid}, Skipped: {NumSkipped}, Unable to validate: {NumUnableToValidate}"), Arguments)));
 
-		DataValidationLog.Open(EMessageSeverity::Info, true);
+		DataValidationLog.Open(EMessageSeverity::Warning, true);
 	}
 	
 	return OutResults.NumWarnings + OutResults.NumInvalid;

@@ -25,6 +25,26 @@ bool UStructValidator::CanValidateProperty(const FProperty* Property, FMetaDataS
 	return Super::CanValidateProperty(Property, MetaData) && Property->GetCPPType().Equals(CppType);
 }
 
+UStructValidator_SoftObjectPath::UStructValidator_SoftObjectPath()
+{
+	CppType = GetNativeScriptStruct(TEXT("SoftObjectPath"))->GetStructCPPName();
+}
+
+void UStructValidator_SoftObjectPath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
+	const FSoftObjectPath* SoftObjectPath = ConvertStructMemory<FSoftObjectPath>(PropertyMemory);
+	check(SoftObjectPath);
+	
+	if (SoftObjectPath->IsNull())
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("SoftObjectPath_Null", "Soft object path not set."));
+	}
+	else if (const FString PackageName = SoftObjectPath->GetLongPackageName(); !FPackageName::DoesPackageExist(PackageName))
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("SoftObjectPath_NotExists", "Soft object path: package doesn't exist on disk."));
+	}
+}
+
 UStructValidator_GameplayTag::UStructValidator_GameplayTag()
 {
 	CppType = StaticStruct<FGameplayTag>()->GetStructCPPName();
@@ -46,7 +66,7 @@ void UStructValidator_GameplayTag::ValidateProperty(TNonNullPtr<const uint8> Pro
 
 	if (!GameplayTag->IsValid())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("GameplayTag_Empty", "Gameplay tag property not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("GameplayTag_Empty", "Gameplay tag property not set."));
 	}
 	else
 	{
@@ -99,7 +119,7 @@ void UStructValidator_GameplayAttribute::ValidateProperty(TNonNullPtr<const uint
 	// @todo: additional attribute validation in case of property renaming
 	if (!GameplayAttribute->IsValid())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("GameplayAttribute_Empty", "Gameplay attribute property is not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("GameplayAttribute_Empty", "Gameplay attribute property is not set."));
 	}
 	else if (UClass* AttributeSet = GameplayAttribute->GetAttributeSetClass(); AttributeSet == nullptr)
 	{
@@ -119,11 +139,11 @@ void UStructValidator_DataTableRowHandle::ValidateProperty(TNonNullPtr<const uin
 
 	if (DataTableRow->DataTable == nullptr || DataTableRow->RowName == NAME_None)
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("DataTableRow_Empty", "Data table row property is not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("DataTableRow_Empty", "Data table row property is not set."));
 	}
 	else if (!DataTableRow->DataTable->GetRowMap().Find(DataTableRow->RowName))
 	{
-		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("DataTableRow_Invalid", "Invalid row name %s for data table row property"), FText::FromName(DataTableRow->RowName)));
+		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("DataTableRow_Invalid", "Invalid row name %s for data table row property."), FText::FromName(DataTableRow->RowName)));
 	}
 }
 
@@ -151,7 +171,7 @@ void UStructValidator_DirectoryPath::ValidateProperty(TNonNullPtr<const uint8> P
 	
 	if (DirectoryPath->Path.IsEmpty() || !FPaths::DirectoryExists(FullPath))
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("DirectoryPath", "Directory path is invalid"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("DirectoryPath", "Directory path is invalid."));
 	}
 }
 
@@ -167,7 +187,7 @@ void UStructValidator_FilePath::ValidateProperty(TNonNullPtr<const uint8> Proper
 	
 	if (FilePath->FilePath.IsEmpty() || !FPackageName::DoesPackageExist(FilePath->FilePath))
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("FilePath", "File path is invalid"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("FilePath", "File path is invalid."));
 	}
 }
 
@@ -183,14 +203,14 @@ void UStructValidator_PrimaryAssetId::ValidateProperty(TNonNullPtr<const uint8> 
 
 	if (!AssetID->IsValid())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("PrimaryAsset_NotSet", "Primary asset property is not set"));
+		ValidationContext.PropertyFails(Property, LOCTEXT("PrimaryAsset_NotSet", "Primary asset property is not set."));
 	}
 	else if (UAssetManager* AssetManager = UAssetManager::GetIfInitialized())
 	{
 		FAssetData AssetData;
 		if (!AssetManager->GetPrimaryAssetData(*AssetID, AssetData))
 		{
-			ValidationContext.PropertyFails(Property, LOCTEXT("PrimaryAsset_Invalid", "Primary asset property stores invalid value"));
+			ValidationContext.PropertyFails(Property, LOCTEXT("PrimaryAsset_Invalid", "Primary asset property stores invalid value."));
 		}
 	}
 }
@@ -205,7 +225,7 @@ void UStructValidator_Key::ValidateProperty(TNonNullPtr<const uint8> PropertyMem
 	const FKey* Key = ConvertStructMemory<FKey>(PropertyMemory);
 	check(Key);
 
-	ValidationContext.FailOnCondition(!Key->IsValid(), Property, LOCTEXT("Key", "Key property is not set"));
+	ValidationContext.FailOnCondition(!Key->IsValid(), Property, LOCTEXT("Key", "Key property is not set."));
 }
 
 #undef LOCTEXT_NAMESPACE
