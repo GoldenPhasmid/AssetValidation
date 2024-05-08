@@ -1,6 +1,6 @@
-#include "BytePropertyValidator.h"
+#include "PropertyValidators/BytePropertyValidator.h"
 
-#include "PropertyValidation.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 UBytePropertyValidator::UBytePropertyValidator()
 {
