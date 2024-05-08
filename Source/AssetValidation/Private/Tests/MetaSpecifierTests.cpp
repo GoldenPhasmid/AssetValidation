@@ -90,7 +90,7 @@ bool CanApplyToProperty(TPred&& Pred, TArgs&&... Args)
 	return Pred(Property.Get());
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAutomationTest_MetaSpecifiers, "Editor.PropertyValidation.MetaSpecifiers", AutomationFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAutomationTest_MetaSpecifiers, "PropertyValidation.MetaSpecifiers", AutomationFlags)
 
 bool FAutomationTest_MetaSpecifiers::RunTest(const FString& Parameters)
 {

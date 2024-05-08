@@ -113,10 +113,9 @@ bool UE::AssetValidation::CanApplyMeta_ValidateRecursive(const FProperty* Proper
 	// check if property is an object property (or struct property without auto validation), unwrapping container property types
 	return ApplyToNonContainerProperty(Property, [](const FProperty* Property)
 	{
-		// property is an object property, soft object property, or auto unwrapping for struct properties is disabled
-		// @todo: allow "ValidateRecursive" to object and soft object properties only
+		// property is an object property, soft object property, or a struct property
 		const FFieldClass* PropertyClass = Property->GetClass();
-		return Property->IsA<FObjectPropertyBase>() || Property->IsA<FStructProperty>();
+		return PropertyClass == FObjectProperty::StaticClass() || PropertyClass == FSoftObjectProperty::StaticClass() || Property->IsA<FStructProperty>();
 	});
 }
 

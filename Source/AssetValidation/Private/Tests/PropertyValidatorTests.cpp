@@ -18,7 +18,7 @@ static TArray<TPair<FName, EDataValidationResult>> PropertyNames
 	{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
 };
 
-BEGIN_DEFINE_SPEC(FAutomationSpec_ValidationConditions, "Editor.PropertyValidation.Conditions", AutomationFlags)
+BEGIN_DEFINE_SPEC(FAutomationSpec_ValidationConditions, "PropertyValidation.Conditions", AutomationFlags)
 	UObject* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
 END_DEFINE_SPEC(FAutomationSpec_ValidationConditions)
@@ -123,7 +123,7 @@ void FAutomationSpec_ValidationConditions::Define()
 	});
 }
 
-BEGIN_DEFINE_SPEC(FAutomationSpec_ContainerProperties, "Editor.PropertyValidation", AutomationFlags)
+BEGIN_DEFINE_SPEC(FAutomationSpec_ContainerProperties, "PropertyValidation", AutomationFlags)
 	UValidationTestObject_ContainerProperties* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
 	FProperty* TestProperty;
@@ -289,7 +289,7 @@ void FAutomationSpec_ContainerProperties::Define()
 	});
 }
 
-BEGIN_DEFINE_SPEC(FAutomationSpec_ValidateMetas, "Editor.PropertyValidation.ValidationMetas", AutomationFlags)
+BEGIN_DEFINE_SPEC(FAutomationSpec_ValidateMetas, "PropertyValidation.ValidationMetas", AutomationFlags)
 	UValidationTestObject_ValidationMetas* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
 END_DEFINE_SPEC(FAutomationSpec_ValidateMetas)
@@ -373,7 +373,7 @@ void FAutomationSpec_ValidateMetas::Define()
 }
 
 #if 0 // alternative implementation to FAutomationSpec_ValidationConditions
-IMPLEMENT_COMPLEX_AUTOMATION_TEST(FComplexAutomationTest_ObjectPropertyValidation, "Editor.PropertyValidation.ObjectProperties", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask);
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FComplexAutomationTest_ObjectPropertyValidation, "PropertyValidation.ObjectProperties", EAutomationTestFlags::ProductFilter | EAutomationTestFlags::ApplicationContextMask);
 void FComplexAutomationTest_ObjectPropertyValidation::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
 {
 	int32 Index = 0;
