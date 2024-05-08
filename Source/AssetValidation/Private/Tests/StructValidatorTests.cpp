@@ -8,21 +8,21 @@
 
 using UE::AssetValidation::AutomationFlags;
 
-class FStructValidatorAutomationTest: public FAutomationTestBase
+class FStructValidatorAutomationTest : public FAutomationTestBase
 {
 public:
-
-	FStructValidatorAutomationTest( const FString& InName, const bool bInComplexTask)
+	FStructValidatorAutomationTest(const FString& InName, const bool bInComplexTask)
 		: FAutomationTestBase(InName, bInComplexTask)
-	{ }
-	
+	{
+	}
+
 	template <typename TObjectClass>
 	bool ValidateObject(int32 ExpectedErrors)
 	{
 		UPropertyValidatorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-		
+
 		UObject* Object = NewObject<TObjectClass>();
-		
+
 		FPropertyValidationResult Result = Subsystem->ValidateObject(Object);
 		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid)
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), ExpectedErrors);
@@ -33,18 +33,19 @@ public:
 	}
 };
 
-IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructProperties, FStructValidatorAutomationTest, "Editor.PropertyValidation.SubsystemAPI", AutomationFlags)
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_StructProperties, FStructValidatorAutomationTest,
+                                        "Editor.PropertyValidation.SubsystemAPI", AutomationFlags)
 
 bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 {
 	// ensures that ValidateObjectProperty, ValidateNestedStruct and ValidateNestedStructProperty work as expected in relation to one another
 	UPropertyValidatorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	check(Subsystem);
-	
+
 	UObject* Object = NewObject<UValidationTestObject_StructValidation>();
 	const UScriptStruct* StructType = FValidationStruct::StaticStruct();
 	const FProperty* StructProperty = Object->GetClass()->FindPropertyByName("Struct");
-	
+
 	{
 		// validate struct as an object's property
 		FPropertyValidationResult Result = Subsystem->ValidateObjectProperty(Object, StructProperty);
@@ -63,12 +64,13 @@ bool FAutomationTest_StructProperties::RunTest(const FString& Parameters)
 	FProperty* NameProperty = StructType->FindPropertyByName("TagToValidate");
 	{
 		// validate single "TagToValidate" property inside same struct
-		FPropertyValidationResult Result = Subsystem->ValidateStructProperty(Object, StructType, NameProperty, StructMemory);
+		FPropertyValidationResult Result = Subsystem->ValidateStructProperty(
+			Object, StructType, NameProperty, StructMemory);
 		UTEST_EQUAL(TEXT("ValidationResult"), Result.ValidationResult, EDataValidationResult::Invalid);
 		UTEST_EQUAL(TEXT("NumErrors"), Result.Errors.Num(), 1);
 	}
 
-	// @todo: currently ValidateStruct ignores the actual struct and does only property validation.
+	// @todo: currently ValidateStruct ignores the actual struct and does only property validation. https://github.com/GoldenPhasmid/AssetValidation/issues/20
 	// We should also check if there's a struct validator for this struct type and if the struct value is valid
 #if 0
 	{
@@ -99,8 +101,15 @@ bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_StructValidation>(5);
 }
 
+UValidationTestObject_SoftObjectPath::UValidationTestObject_SoftObjectPath()
+{
+	EmptyPathArray.AddDefaulted();
+	BadPath			= TEXT("/Temp/Path/That/Doesnt/Exist");
+	Struct.BadPath	= TEXT("/Temp/Path/That/Doesnt/Exist");
+}
+
 IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_SoftObjectPath, FStructValidatorAutomationTest,
-										"Editor.PropertyValidation.StructValidators.SoftObjectPath", AutomationFlags)
+                                        "Editor.PropertyValidation.StructValidators.SoftObjectPath", AutomationFlags)
 
 bool FAutomationTest_SoftObjectPath::RunTest(const FString& Parameters)
 {
@@ -108,12 +117,12 @@ bool FAutomationTest_SoftObjectPath::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_SoftObjectPath>(5);
 }
 
-
 FGameplayTag CreateInvalidTag()
 {
 	FGameplayTag Result;
 
-	const FNameProperty* NameProperty = CastFieldChecked<FNameProperty>(FGameplayTag::StaticStruct()->FindPropertyByName(TEXT("TagName")));
+	const FNameProperty* NameProperty = CastFieldChecked<FNameProperty>(
+		FGameplayTag::StaticStruct()->FindPropertyByName(TEXT("TagName")));
 	NameProperty->SetPropertyValue(NameProperty->ContainerPtrToValuePtr<void>(&Result), TEXT("Tag.Invalid"));
 
 	check(Result.GetTagName() == TEXT("Tag.Invalid"));
@@ -128,7 +137,7 @@ UValidationTestObject_GameplayTag::UValidationTestObject_GameplayTag()
 }
 
 IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_GameplayTag, FStructValidatorAutomationTest,
-										"Editor.PropertyValidation.StructValidators.GameplayTag", AutomationFlags)
+                                        "Editor.PropertyValidation.StructValidators.GameplayTag", AutomationFlags)
 
 bool FAutomationTest_GameplayTag::RunTest(const FString& Parameters)
 {

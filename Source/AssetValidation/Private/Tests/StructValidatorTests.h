@@ -66,12 +66,7 @@ class UValidationTestObject_SoftObjectPath: public UObject
 {
 	GENERATED_BODY()
 
-	UValidationTestObject_SoftObjectPath()
-	{
-		EmptyPathArray.AddDefaulted();
-		BadPath			= TEXT("//Path/That/Doesnt/Exist");
-		Struct.BadPath	= TEXT("//Path/That/Doesnt/Exist");
-	}
+	UValidationTestObject_SoftObjectPath();
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FSoftObjectPath EmptyPath;

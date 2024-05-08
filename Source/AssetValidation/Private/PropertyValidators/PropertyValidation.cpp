@@ -1,6 +1,6 @@
 #include "PropertyValidators/PropertyValidation.h"
 
-#include "PropertyValidationSettings.h"
+#include "AssetValidationModule.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Editor/MetaDataSource.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -36,6 +36,62 @@ bool ApplyToNonContainerProperty(const FProperty* Property, TPropPred&& Func)
 	}
 
 	return Func(Property);
+}
+
+bool UE::AssetValidation::CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled)
+{
+	static TMap<const FProperty*, bool> CheckedProperties;
+	if (const bool* Found = CheckedProperties.Find(Property))
+	{
+		return *Found;
+	}
+	
+	const FString Pattern{TEXT("{0} : {1} property type does not support \"{2}\" meta specifier. Please update source code to fix incorrect meta usage.")};
+	
+	const FString CppPropertyName = GetNameSafe(Property->GetOwnerUObject()) + TEXT(".") + Property->GetNameCPP();
+	const FString CppType = Property->GetCPPType();
+
+	bool bPropertyValid = true;
+	{
+		// check "Validate" meta specifier
+		const bool bUsedOnStructProperty = ApplyToNonContainerProperty(Property, [](const FProperty* Property) { return Property->IsA<FStructProperty>(); });
+		// struct properties can have "Validate" meta all they want, even if struct value validator doesn't exist
+		const bool bMetaAllowed = !MetaData.HasMetaData(Validate) || bUsedOnStructProperty || CanApplyMeta_Validate(Property);
+		UE_CLOG(!bMetaAllowed, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		bPropertyValid &= bMetaAllowed;
+	}
+
+	{
+		// check "ValidateKey" meta specifier
+		const bool bMetaAllowed = !MetaData.HasMetaData(ValidateKey) || CanApplyMeta_ValidateKey(Property);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		bPropertyValid &= bMetaAllowed;
+	}
+
+	{
+		// check "ValidateValue" meta specifier
+		const bool bMetaAllowed = !MetaData.HasMetaData(ValidateValue) || CanApplyMeta_ValidateValue(Property);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		bPropertyValid &= bMetaAllowed;
+	}
+
+	{
+		// check "ValidateRecursive" meta specifier
+		const bool bMetaAllowed = !MetaData.HasMetaData(ValidateRecursive) || CanApplyMeta_ValidateRecursive(Property);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		bPropertyValid &= bMetaAllowed;
+	}
+
+	{
+		// check "FailureMessage" meta specifier
+		const bool bMetaAllowed = !MetaData.HasMetaData(FailureMessage) || CanApplyMeta(Property, FailureMessage);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, FailureMessage.ToString()}));
+		bPropertyValid &= bMetaAllowed;
+	}
+
+	CheckedProperties.Add(Property, bPropertyValid);
+	
+	return bPropertyValid;
 }
 
 bool UE::AssetValidation::CanApplyMeta_Validate(const FProperty* Property)
@@ -113,6 +169,7 @@ bool UE::AssetValidation::CanApplyMeta(const FProperty* Property, const FName& M
 	}
 	else if (MetaName == UE::AssetValidation::FailureMessage)
 	{
+		// @todo: replace with "has any valid meta specifier AND it can be applied"
 		return CanApplyMeta_Validate(Property) || CanApplyMeta_ValidateKey(Property) || CanApplyMeta_ValidateValue(Property);
 	}
 	else

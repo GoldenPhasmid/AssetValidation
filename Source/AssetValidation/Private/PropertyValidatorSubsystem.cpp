@@ -292,6 +292,11 @@ void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const 
 		return;
 	}
 
+	if (UPropertyValidationSettings::Get()->bReportIncorrectMetaUsage)
+	{
+		UE::AssetValidation::CheckPropertyMetaData(Property, MetaData, true);
+	}
+	
 	TNonNullPtr<const uint8> PropertyMemory{Property->ContainerPtrToValuePtr<uint8>(ContainerMemory)};
 	// validate property value
 	if (auto PropertyValidator = FindPropertyValidator(Property))
@@ -388,7 +393,6 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 
 	return false;
 }
-
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator(const FProperty* PropertyType) const
 {

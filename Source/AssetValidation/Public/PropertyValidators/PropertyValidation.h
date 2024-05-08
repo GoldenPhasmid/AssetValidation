@@ -5,7 +5,6 @@
 #include "Templates/NonNullPointer.h"
 #include "UObject/UObjectGlobals.h"
 
-
 struct FPropertyValidationResult;
 class FPropertyValidationContext;
 class UPropertyValidatorSubsystem;
@@ -13,7 +12,11 @@ class UPropertyValidatorSubsystem;
 namespace UE::AssetValidation
 {
 	class FMetaDataSource;
-	
+
+	/**
+	 * Property validation meta specifiers
+	 * see Tests/MetaSpecifierTests.cpp/FAutomationTest_MetaSpecifiers::RunTest for more info
+	 */
 	static const FName Validate("Validate");
 	static const FName ValidateKey("ValidateKey");
 	static const FName ValidateValue("ValidateValue");
@@ -23,6 +26,11 @@ namespace UE::AssetValidation
 
 namespace UE::AssetValidation
 {
+	/**
+	 * checks property meta data to see if any meta specifiers are placed incorrectly
+	 * @return true if all metas can be applied to a property, false otherwise
+	 */
+	bool CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled);
 	/** @return true if "Validate" meta can be applied to given property */
 	bool CanApplyMeta_Validate(const FProperty* Property);
 	/** @return true if "ValidateRecursive" meta can be applied to given property */

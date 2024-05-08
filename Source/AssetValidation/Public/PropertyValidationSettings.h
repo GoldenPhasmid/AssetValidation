@@ -180,6 +180,13 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bAddMetaToNewBlueprintVariables = true;
 
+	/**
+	 * If set to true, will report incorrect meta usage for C++ and Blueprint properties.
+	 * Enabled by default
+	 */
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	bool bReportIncorrectMetaUsage = true;
+
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TSubclassOf<UObject> CustomizedObjectClass;
 
