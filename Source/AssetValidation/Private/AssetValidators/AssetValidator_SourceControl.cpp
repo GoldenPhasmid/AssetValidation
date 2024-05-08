@@ -1,5 +1,6 @@
 #include "AssetValidators/AssetValidator_SourceControl.h"
 
+#include "AssetValidationDefines.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlHelpers.h"
@@ -14,10 +15,13 @@ bool UAssetValidator_SourceControl::CanValidateAsset_Implementation(const FAsset
 
 EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_SourceControl, AssetValidationChannel);
 	check(InAsset);
 	
 	const FString PackageName = InAsset->GetPackage()->GetName();
-	if (!FPackageName::DoesPackageExist(PackageName) && !PackageName.StartsWith("/Script/"))
+	// cache filename to use for source control queries and avoid SourceControlHelpers::PackageFilename
+	FString PackageFilename{}; 
+	if (!FPackageName::DoesPackageExist(PackageName, &PackageFilename) && !PackageName.StartsWith("/Script/"))
 	{
 		const FText FailReason = FText::Format(LOCTEXT("SourceControl_InvalidAsset", "Asset {0} is part of package {1} which doesn't exist"),
                                    FText::FromString(InAsset->GetName()), FText::FromString(PackageName));
@@ -26,7 +30,7 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	}
 
 	ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
-	FSourceControlStatePtr AssetState = SCCProvider.GetState(SourceControlHelpers::PackageFilename(PackageName), EStateCacheUsage::Use);
+	FSourceControlStatePtr AssetState = SCCProvider.GetState(PackageFilename, EStateCacheUsage::Use);
 
 	if (!AssetState.IsValid() || !AssetState->IsSourceControlled())
 	{

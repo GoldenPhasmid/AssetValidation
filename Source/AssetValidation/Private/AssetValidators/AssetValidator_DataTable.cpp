@@ -1,5 +1,6 @@
 ﻿#include "AssetValidators/AssetValidator_DataTable.h"
 
+#include "AssetValidationDefines.h"
 #include "PropertyValidatorSubsystem.h"
 
 bool UAssetValidator_DataTable::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
@@ -9,6 +10,8 @@ bool UAssetValidator_DataTable::CanValidateAsset_Implementation(const FAssetData
 
 EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_DataTable, AssetValidationChannel);
+	
 	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	check(PropertyValidators);
 	

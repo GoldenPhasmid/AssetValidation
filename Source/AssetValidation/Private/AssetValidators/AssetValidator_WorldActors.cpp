@@ -32,7 +32,8 @@ bool UAssetValidator_WorldActors::CanValidateAsset_Implementation(const FAssetDa
 EDataValidationResult UAssetValidator_WorldActors::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
 {
 	check(AssetData.IsValid());
-
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_WorldActors, AssetValidationChannel);
+	
 #if 0
 	const FString WorldPackageName = InAsset->GetPackage()->GetName();
 	// @todo: this doesn't actually work, package does not get reset

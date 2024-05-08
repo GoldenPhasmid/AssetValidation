@@ -14,8 +14,6 @@
 #include "Editor/PropertyValidationSettingsDetails.h"
 #include "Misc/ScopedSlowTask.h"
 
-DEFINE_LOG_CATEGORY(LogAssetValidation);
-
 #define LOCTEXT_NAMESPACE "FAssetValidationModule"
 
 using UE::AssetValidation::ISourceControlProxy;

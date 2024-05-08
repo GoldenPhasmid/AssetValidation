@@ -39,6 +39,7 @@ public class AssetValidation : ModuleRules
 				"SubobjectDataInterface", 
 				"AdvancedWidgets", 
 				"StudioTelemetry",
+				"TraceLog",
 			}
 		);
 	}

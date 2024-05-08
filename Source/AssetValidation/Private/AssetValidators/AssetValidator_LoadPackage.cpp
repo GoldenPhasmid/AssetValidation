@@ -4,9 +4,13 @@
 #include "AssetValidationModule.h"
 #include "AssetValidationStatics.h"
 #include "DataValidationModule.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
 
 bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(LoadPackage_GetErrors, AssetValidationChannel);
+	
 	check(GEngine);
 	check(!PackageName.IsEmpty());
 
@@ -47,8 +51,8 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 		UE::AssetValidation::FLogMessageGatherer Gatherer;
 		Package = LoadPackage(nullptr, *PackageName, LOAD_None);
 
-		OutWarnings = Gatherer.GetWarnings();
-		OutErrors = Gatherer.GetErrors();
+		OutWarnings.Append(Gatherer.GetWarnings());
+		OutErrors.Append(Gatherer.GetErrors());
 		return true;
 	}
 
@@ -56,13 +60,37 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	const FString DestPackageName = FString::Printf(TEXT("/Temp/%s_%d"), *FPackageName::GetLongPackageAssetName(PackageName), ++PackageIdentifier);
 	const FString DestFilename = FPackageName::LongPackageNameToFilename(DestPackageName, FPaths::GetExtension(SourceFilename, true));
 
-	const uint32 CopyResult = IFileManager::Get().Copy(*DestFilename, *SourceFilename);
-	if (!ensure(CopyResult == COPY_OK))
 	{
-		UE_LOG(LogAssetValidation, Error, TEXT("Failed to copy package in editor, source [%s], destination [%s]"), *SourceFilename, *DestFilename);
-		return false;
+		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(LoadPackage_CopyFile, AssetValidationChannel);
+		const uint32 CopyResult = IFileManager::Get().Copy(*DestFilename, *SourceFilename);
+		if (!ensure(CopyResult == COPY_OK))
+		{
+			UE_LOG(LogAssetValidation, Error, TEXT("Failed to copy package in editor, source [%s], destination [%s]"), *SourceFilename, *DestFilename);
+			return false;
+		}
 	}
 
+	// @todo: this crashes because GetObjectsWithPackage returns some garbage object as a last element
+	// and it is impossible to verify that it is a garbage (because flags are normal and it is a part of root set?)
+	// crash happens in Cast, skipping through null check and low level validity check
+#if 0
+	TArray<UObject*> LoadedObjects;
+	GetObjectsWithPackage(Package, LoadedObjects, false);
+	
+	// compile all loaded blueprints from existing package
+	for (UObject* LoadedObject: LoadedObjects)
+	{
+		if (LoadedObject && LoadedObject->IsValidLowLevel())
+		{
+			if (UBlueprint* Blueprint = Cast<UBlueprint>(LoadedObject);
+				Blueprint && !FBlueprintEditorUtils::IsDataOnlyBlueprint(Blueprint))
+			{
+				FKismetEditorUtilities::CompileBlueprint(Blueprint);
+			}
+		}
+	}
+#endif
+	
 	{
 		UE::AssetValidation::FLogMessageGatherer Gatherer;
 
@@ -73,7 +101,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 		
 		if (DestPackage)
 		{
-			auto CopyMessages = [&](const TArray<FString>& Input, TArray<FString>& Output)
+			auto FixupAndCopyMessages = [&](const TArray<FString>& Input, TArray<FString>& Output)
 			{
 				for (FString Msg: Input)
 				{
@@ -83,8 +111,8 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 				}
 			};
 			// correct messages with real package name, remove the temp one
-			CopyMessages(Gatherer.GetWarnings(), OutWarnings);
-			CopyMessages(Gatherer.GetErrors(), OutErrors);
+			FixupAndCopyMessages(Gatherer.GetWarnings(), OutWarnings);
+			FixupAndCopyMessages(Gatherer.GetErrors(), OutErrors);
 			
 			ResetLoaders(DestPackage);
 			IFileManager::Get().Delete(*DestFilename);
@@ -111,8 +139,9 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 				}
 				TempObject->MarkAsGarbage();
 			}
-			
-			GEngine->ForceGarbageCollection(true);
+
+			// GEngine->ForceGarbageCollection(true);
+			CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, false);
 		}
 	}
 
@@ -122,16 +151,18 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 bool UAssetValidator_LoadPackage::IsEnabled() const
 {
 	// Commandlets do not need this validation step as they loaded the content while running.
-	return !IsRunningCommandlet() && Super::IsEnabled();
+	return false && !IsRunningCommandlet() && Super::IsEnabled();
 }
 
 bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return InContext.GetValidationUsecase() != EDataValidationUsecase::Commandlet;
+	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext);
 }
 
 EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_LoadPackage, AssetValidationChannel);
+	
 	FString PackageName = InAssetData.PackageName.ToString();
 	if (UNLIKELY(PackageName.IsEmpty()))
 	{

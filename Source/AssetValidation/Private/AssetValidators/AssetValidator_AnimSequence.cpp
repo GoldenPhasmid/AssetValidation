@@ -1,6 +1,8 @@
 
 #include "AssetValidators/AssetValidator_AnimSequence.h"
 
+#include "AssetValidationDefines.h"
+
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
 bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
@@ -10,6 +12,8 @@ bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(const FAssetD
 
 EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_AnimSequence, AssetValidationChannel);
+	
 	UAnimSequenceBase* AnimAsset = CastChecked<UAnimSequenceBase>(InAsset);
 
 	USkeleton* Skeleton = AnimAsset->GetSkeleton();

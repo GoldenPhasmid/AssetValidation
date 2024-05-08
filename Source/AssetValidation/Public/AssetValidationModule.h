@@ -12,8 +12,6 @@ namespace UE::AssetValidation
 	class ISourceControlProxy;
 }
 
-DECLARE_LOG_CATEGORY_EXTERN(LogAssetValidation, Log, All);
-
 FORCEINLINE void operator&=(EDataValidationResult& Lhs, EDataValidationResult Rhs)
 {
 	Lhs = CombineDataValidationResults(Lhs, Rhs);

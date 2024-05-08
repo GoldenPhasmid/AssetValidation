@@ -1,6 +1,6 @@
 #include "PropertyValidators/PropertyValidation.h"
 
-#include "AssetValidationModule.h"
+#include "AssetValidationDefines.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Editor/MetaDataSource.h"
 #include "Kismet2/BlueprintEditorUtils.h"

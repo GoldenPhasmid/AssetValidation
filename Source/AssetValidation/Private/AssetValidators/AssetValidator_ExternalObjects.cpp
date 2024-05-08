@@ -12,6 +12,8 @@ bool UAssetValidator_ExternalObjects::CanValidateAsset_Implementation(const FAss
 
 EDataValidationResult UAssetValidator_ExternalObjects::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_ExternalObjects, AssetValidationChannel);
+	
 	UAssetValidationSubsystem* ValidationSubsystem = UAssetValidationSubsystem::Get();
 	check(ValidationSubsystem);
 

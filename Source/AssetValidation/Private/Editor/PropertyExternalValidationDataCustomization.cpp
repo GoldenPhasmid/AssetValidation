@@ -1,6 +1,6 @@
 #include "PropertyExternalValidationDataCustomization.h"
 
-#include "AssetValidationModule.h"
+#include "AssetValidationDefines.h"
 #include "DetailWidgetRow.h"
 #include "IDetailChildrenBuilder.h"
 #include "IPropertyUtilities.h"

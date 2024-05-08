@@ -35,6 +35,7 @@ UAssetValidationSubsystem::UAssetValidationSubsystem()
 #if WITH_DATA_VALIDATION_UPDATE
 int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidationSubsystem_ValidateAssetsWithSettings, AssetValidationChannel);
 	check(bRecursiveCall == false);
 	TGuardValue RecursionGuard{bRecursiveCall, true};
 	
@@ -77,7 +78,7 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("SuccessOrFailure", "Data validation {Result}."), Arguments)));
 		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("ResultsSummary", "Files Checked: {NumChecked}, Passed: {NumValid}, Failed: {NumInvalid}, Skipped: {NumSkipped}, Unable to validate: {NumUnableToValidate}"), Arguments)));
 
-		DataValidationLog.Open(EMessageSeverity::Warning, true);
+		DataValidationLog.Open(EMessageSeverity::Info, true);
 	}
 	
 	return OutResults.NumWarnings + OutResults.NumInvalid;

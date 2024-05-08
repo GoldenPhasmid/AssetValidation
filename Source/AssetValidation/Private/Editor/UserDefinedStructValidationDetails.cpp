@@ -1,6 +1,6 @@
 #include "UserDefinedStructValidationDetails.h"
 
-#include "AssetValidationModule.h"
+#include "AssetValidationDefines.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
