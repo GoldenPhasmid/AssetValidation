@@ -1,16 +1,22 @@
 #pragma once
+
 #include <mutex>
 
 #include "AssetValidationStatics.h"
-#include "ISourceControlState.h"
+#include "AssetValidationDefines.h"
 
-class UActorDescContainer;
+struct FValidateAssetsResults;
+struct FValidateAssetsSettings;
+
 enum class EDataValidationUsecase : uint8;
 
+#if !WITH_DATA_VALIDATION_UPDATE
+class UActorDescContainer;
 template<class ActorDescContPtrType>
 class TActorDescContainerCollection;
 
 using FActorDescContainerCollection = TActorDescContainerCollection<TObjectPtr<UActorDescContainer>>;
+#endif
 
 namespace UE::AssetValidation
 {
@@ -80,12 +86,13 @@ namespace UE::AssetValidation
 	 * Validate opened files under source control.
 	 * Depending on source control provider it either validates active changelist (Perforce) or active changes (Git)
 	 * @param bInteractive whether to show message dialogs or dump information to log
-	 * @param Usecase validation use case
-	 * @param OutWarnings validation warnings
-	 * @param OutErrors validation errors
+	 * @param InSettings validation settings
+	 * @param OutResults validation results
+	 * @return number of failures
 	 */
-	static void ValidateCheckedOutAssets(bool bInteractive, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+	static int32 ValidateCheckedOutAssets(bool bInteractive, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
 
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 	/**
 	 * Validate OFPA packages and World Partition runtime settings
 	 * Duplicates functionality from UWorldPartitionChangelistValidator because git doesn't have changelists :)
@@ -102,36 +109,41 @@ namespace UE::AssetValidation
 	 * @see UDirtyFilesChangelistValidator
 	 */
 	static void ValidateDirtyFiles(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
-
+#endif
+	
 	/**
 	 * Run asset validation for packages that were modified under source control
-	 * @param PackagesToValidate 
-	 * @param Usecase 
-	 * @param OutWarnings 
-	 * @param OutErrors 
+	 * @param ModifiedPackages
+	 * @param DeletedPackages
+	 * @param InSettings data validation settings
+	 * @param OutResults data validation results
 	 */
-	static void ValidateModifiedPackages(const TArray<FString>& PackagesToValidate, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+	static void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
 
+	static bool ShouldValidatePackage(const FString& PackageName);
 	/**
 	 * Validates project settings.
-	 * @param ValidationUsecase
-	 * @param OutWarnings
-	 * @param OutErrors
+	 * @param Context data validation context
 	 */
-	static void ValidateProjectSettings(EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+	static void ValidateProjectSettings(const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
+
+	/** validate source control file state for an empty package */
+	static FString ValidateEmptyPackage(const FString& PackageName);
 
 	/** Given a package, return if package contains a UWorld or an external world object */
 	static bool IsWorldOrWorldExternalPackage(UPackage* Package);
 
-	static FString ValidateEmptyPackage(const FString& PackageName);
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 	static FString GetPackagePath(const UPackage* Package);
 
 	static UClass* GetAssetNativeClass(const FAssetData& AssetData);
 	static FTopLevelAssetPath GetAssetWorld(const FAssetData& AssetData);
 
-	static bool IsCppFile(const FString& Filename);
-
 	static void RegisterActorContainer(UWorld* World, FName ContainerPackageName, FActorDescContainerCollection& RegisteredContainers);
+#endif
+
+	/** @return true if filename is a C++ source file */
+	static bool IsCppFile(const FString& Filename);
 
 	/** Add validation messages to validation context in "data validation format" */
 	static void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FLogMessageGatherer& Gatherer);

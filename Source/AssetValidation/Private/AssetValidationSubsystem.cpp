@@ -1,8 +1,13 @@
 #include "AssetValidationSubsystem.h"
 
 #include "AssetValidationModule.h"
+#include "AssetValidationStatics.h"
+#include "DataValidationChangelist.h"
 #include "EditorValidatorBase.h"
 #include "EditorValidatorHelpers.h"
+#include "ISourceControlModule.h"
+#include "ISourceControlProvider.h"
+#include "SourceControlProxy.h"
 #include "AssetValidators/AssetValidator.h"
 #include "Misc/DataValidation.h"
 #include "Misc/ScopedSlowTask.h"
@@ -29,8 +34,69 @@ UAssetValidationSubsystem::UAssetValidationSubsystem()
 #endif
 }
 
+#if WITH_DATA_VALIDATION_UPDATE
 int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
+	check(bRecursiveCall == false);
+	TGuardValue RecursionGuard{bRecursiveCall, true};
+	
+	ResetValidationState();
+	
+	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save)
+	{
+		// epic's forgot to open a new page when validation is manual
+		// very useful "DataValidation refactor", thanks
+		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+		DataValidationLog.NewPage(InSettings.MessageLogPageTitle);
+	}
+
+	FValidateAssetsResults PrevResults = OutResults;
+	
+	Super::ValidateAssetsWithSettings(AssetDataList, InSettings, OutResults);
+
+	// override asset count calculation to account for recursive validation
+	// also include previous results in case @OutResults was used more than once
+	OutResults.NumRequested			= PrevResults.NumRequested + AssetDataList.Num();
+	OutResults.NumChecked			= PrevResults.NumChecked + CheckedAssetsCount;
+	OutResults.NumValid				= PrevResults.NumValid + ValidationResults[static_cast<uint8>(EDataValidationResult::Valid)];
+	OutResults.NumInvalid			= PrevResults.NumInvalid + ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
+	OutResults.NumUnableToValidate	= PrevResults.NumUnableToValidate + ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
+
+	// Why would you delete the summary? What's wrong with you?
+	// Yes, let's log EACH and EVERY asset that we're validating, and then log that they're valid,
+	// but omit the summary that tells HOW MANY assets where validated and HOW MANY are failed!
+	if (OutResults.NumInvalid > 0 || OutResults.NumWarnings > 0 || InSettings.bShowIfNoFailures)
+	{
+		FFormatNamedArguments Arguments;
+		Arguments.Add(TEXT("Result"), OutResults.NumInvalid > 0 ? LOCTEXT("Failed", "FAILED") : LOCTEXT("Succeeded", "SUCCEEDED"));
+		Arguments.Add(TEXT("NumChecked"), OutResults.NumChecked);
+		Arguments.Add(TEXT("NumValid"), OutResults.NumValid);
+		Arguments.Add(TEXT("NumInvalid"), OutResults.NumInvalid);
+		Arguments.Add(TEXT("NumSkipped"), OutResults.NumSkipped);
+		Arguments.Add(TEXT("NumUnableToValidate"), OutResults.NumUnableToValidate);
+
+		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("SuccessOrFailure", "Data validation {Result}."), Arguments)));
+		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("ResultsSummary", "Files Checked: {NumChecked}, Passed: {NumValid}, Failed: {NumInvalid}, Skipped: {NumSkipped}, Unable to validate: {NumUnableToValidate}"), Arguments)));
+
+		DataValidationLog.Open(EMessageSeverity::Info, true);
+	}
+	
+	return OutResults.NumWarnings + OutResults.NumInvalid;
+}
+#endif
+
+#if WITH_DATA_VALIDATION_UPDATE
+EDataValidationResult UAssetValidationSubsystem::ValidateChangelist(UDataValidationChangelist* InChangelist, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
+{
+	return ValidateChangelists({InChangelist}, InSettings, OutResults);
+}
+
+EDataValidationResult UAssetValidationSubsystem::ValidateChangelists(const TArray<UDataValidationChangelist*> InChangelists, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
+{
+	check(bRecursiveCall == false);
+	TGuardValue RecursionGuard{bRecursiveCall, true};
+	
 	ResetValidationState();
 
 	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save)
@@ -41,7 +107,7 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 		DataValidationLog.SetCurrentPage(InSettings.MessageLogPageTitle);
 	}
 	
-	Super::ValidateAssetsWithSettings(AssetDataList, InSettings, OutResults);
+	EDataValidationResult Result = Super::ValidateChangelists(InChangelists, InSettings, OutResults);
 
 	// override asset count calculation to account for recursive validation
 	OutResults.NumChecked = CheckedAssetsCount;
@@ -68,8 +134,42 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 
 		DataValidationLog.Open(EMessageSeverity::Info, true);
 	}
+	
+	return Result;
+}
 
-	return OutResults.NumWarnings + OutResults.NumInvalid;
+void UAssetValidationSubsystem::GatherAssetsToValidateFromChangelist(UDataValidationChangelist* InChangelist, const FValidateAssetsSettings& Settings, TSet<FAssetData>& OutAssets, FDataValidationContext& InContext) const
+{
+	if (IsEmptyChangelist(InChangelist))
+	{
+		auto SCProxy = IAssetValidationModule::Get().GetSourceControlProxy();
+
+		TArray<FSourceControlStateRef> OpenedFiles;
+		SCProxy->GetOpenedFiles(OpenedFiles);
+
+		InChangelist->Initialize(OpenedFiles);
+	}
+	
+	Super::GatherAssetsToValidateFromChangelist(InChangelist, Settings, OutAssets, InContext);
+
+	// @todo: source file analysis
+}
+#endif
+
+bool UAssetValidationSubsystem::IsEmptyChangelist(UDataValidationChangelist* Changelist) const
+{
+	if (Changelist->Changelist.IsValid())
+	{
+		ISourceControlProvider& Provider = ISourceControlModule::Get().GetProvider();
+		FSourceControlChangelistStatePtr ChangelistStatePtr = Provider.GetState(Changelist->Changelist.ToSharedRef(), EStateCacheUsage::Use);
+		return ChangelistStatePtr.IsValid();
+	}
+
+	bool bEmpty = Changelist->ModifiedPackageNames.Num() & 0x01;
+	bEmpty &= Changelist->DeletedPackageNames.Num() & 0x01;
+	bEmpty &= Changelist->ModifiedFiles.Num() & 0x01;
+	bEmpty &= Changelist->DeletedFiles.Num() & 0x01;
+	return bEmpty;
 }
 
 EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const FAssetData& AssetData, FDataValidationContext& InContext) const
@@ -122,24 +222,7 @@ EDataValidationResult UAssetValidationSubsystem::IsObjectValidWithContext(UObjec
 
 bool UAssetValidationSubsystem::ShouldValidateAsset(const FAssetData& Asset, const FValidateAssetsSettings& Settings, FDataValidationContext& InContext) const
 {
-	const FString PackageName = Asset.PackageName.ToString();
-	const UProjectPackagingSettings* PackagingSettings = GetDefault<UProjectPackagingSettings>();
-
-	for (const FDirectoryPath& Directory: PackagingSettings->DirectoriesToNeverCook)
-	{
-		const FString& Folder = Directory.Path;
-		if (PackageName.StartsWith(Folder))
-		{
-			return false;
-		}
-	}
-
-	if (PackageName.StartsWith(TEXT("/Game/Developers/")))
-	{
-		return false;
-	}
-
-	return Super::ShouldValidateAsset(Asset, Settings, InContext);
+	return UE::AssetValidation::ShouldValidatePackage(Asset.PackageName.ToString()) && Super::ShouldValidateAsset(Asset, Settings, InContext);
 }
 
 bool UAssetValidationSubsystem::ShouldLoadAsset(const FAssetData& AssetData) const

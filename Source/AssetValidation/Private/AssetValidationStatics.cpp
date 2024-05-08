@@ -3,31 +3,47 @@
 #include "AssetValidationDefines.h"
 #include "AssetValidationModule.h"
 #include "DataValidationModule.h"
+#include "EditorValidatorHelpers.h"
 #include "EditorValidatorSubsystem.h"
-#include "FileHelpers.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "ShaderCompiler.h"
 #include "SourceControlHelpers.h"
 #include "SourceControlProxy.h"
-#include "StudioAnalytics.h"
 #include "AssetRegistry/AssetDataToken.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Logging/MessageLog.h"
 #include "Misc/ScopedSlowTask.h"
+#include "Settings/ProjectPackagingSettings.h"
+#if !WITH_DATA_VALIDATION_UPDATE
 #include "WorldPartition/WorldPartition.h"
+#include "FileHelpers.h"
 #include "WorldPartition/WorldPartitionActorDescUtils.h"
 #include "WorldPartition/DataLayer/WorldDataLayers.h"
+#endif
+
+#if WITH_DATA_VALIDATION_UPDATE // studio analytics is deprecated in 5.4
+#include "StudioTelemetry.h"
+#else
+#include "StudioAnalytics.h"
+#endif
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
 namespace UE::AssetValidation
 {
-	void ValidateCheckedOutAssets(bool bInteractive, EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+	int32 ValidateCheckedOutAssets(bool bInteractive, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidateCheckedOutAssets);
 
+#if WITH_DATA_VALIDATION_UPDATE
+		if (FStudioTelemetry::IsAvailable())
+		{
+			FStudioTelemetry::Get().RecordEvent(TEXT("ValidateCheckedOutAssets"));
+		}
+#else
 		FStudioAnalytics::RecordEvent(TEXT("ValidateCheckedOutAssets"));
+#endif
 		
 		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 		if (AssetRegistryModule.Get().IsLoadingAssets())
@@ -40,7 +56,7 @@ namespace UE::AssetValidation
 			{
 				UE_LOG(LogAssetValidation, Display, TEXT("Cannot validate content while still loading assets."));
 			}
-			return;
+			return 0;
 		}
 
 		if (GShaderCompilingManager && GShaderCompilingManager->IsCompiling())
@@ -59,9 +75,7 @@ namespace UE::AssetValidation
 		SCProxy->GetOpenedFiles(FileStates);
 
 		// Step 2: Group Source Control Files by Type
-		TArray ChangedPackages{TArray<FString>{}, static_cast<int32>(FileStates.Num() * 0.5)};
-		TArray DeletedPackages{TArray<FString>{}, static_cast<int32>(FileStates.Num() * 0.5)};
-		TArray SourceFiles{TArray<FString>{}, static_cast<int32>(FileStates.Num() * 0.5)};
+		TArray<FString> ModifiedPackages, DeletedPackages, ModifiedFiles, DeletedFiles;
 		for (const FSourceControlStateRef& FileState: FileStates)
 		{
 			FString Filename = FileState->GetFilename();
@@ -78,69 +92,122 @@ namespace UE::AssetValidation
 					}
 					else
 					{
-						ChangedPackages.Add(PackageName);
+						ModifiedPackages.Add(PackageName);
 					}
 				}
 			}
 			else if (IsCppFile(Filename))
 			{
-				// file state 
-				SourceFiles.Add(Filename); // @todo: handle source files
+				if (FileState->IsDeleted())
+				{
+					DeletedFiles.Add(Filename);
+				}
+				else
+				{
+					ModifiedFiles.Add(Filename);	
+				}
+				// @todo: handle source files
 			}
 		}
 
-		// Step 2: Validate Dirty Files
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
+		// Step 3: Validate Dirty Files
 		ValidateDirtyFiles(FileStates, OutWarnings, OutErrors);
 	
-		// Step 3: Validate World Partition Actors
+		// Step 4: Validate World Partition Actors
 		{
 			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckWorldPartition", "Checking World Partition..."));
 			SlowTask.MakeDialog();
 		
 			ValidateWorldPartitionActors(FileStates, OutWarnings, OutErrors);
 		}
-	
-		// Step 4: Validate Source Control Modified Packages
+#endif
+		
+		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+		DataValidationLog.NewPage(LOCTEXT("ValidatePackages", "Validate Packages"));
+		
+		// Step 5: Validate Source Control Modified Packages
 		{
 			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckContentTask", "Checking content..."));
 			SlowTask.MakeDialog();
 
-			ValidateModifiedPackages(ChangedPackages, ValidationUsecase, OutWarnings, OutErrors);
+			ValidatePackages(ModifiedPackages, DeletedPackages, InSettings, OutResults);
 		}
 
-		// Step 5: Validate Project Settings
+		// Step 6: Validate Project Settings
 		{
 			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
 			SlowTask.MakeDialog();
 		
-			ValidateProjectSettings(ValidationUsecase, OutWarnings, OutErrors);
+			ValidateProjectSettings(InSettings, OutResults);
 		}
-	
+		
 		if (bInteractive)
 		{
-			const bool bAnyMessages = OutErrors.Num() > 0  || OutWarnings.Num() > 0;
-			if (!bAnyMessages)
+			const bool bAnyFailures = OutResults.NumInvalid > 0 || OutResults.NumWarnings > 0;
+			if (!bAnyFailures)
 			{
 				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("SourceControl_Success", "Content validation completed for {0} files."),
 					FText::AsNumber(FileStates.Num())));
 			}
-			else if (OutErrors.Num() == 0)
+			else if (OutResults.NumWarnings > 0)
 			{
 				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("SourceControl_PartialFailure", "Content validation fount {0} warnings. Check output log for more details."),
-					FText::AsNumber(OutWarnings.Num())));
+					FText::AsNumber(OutResults.NumWarnings)));
 			}
 			{
 				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("SourceControl_Failure", "Content validation found {0} errors, {1} warnings. Check output log for more details."),
-					FText::AsNumber(OutErrors.Num()), FText::AsNumber(OutWarnings.Num())));
+					FText::AsNumber(OutResults.NumInvalid), FText::AsNumber(OutResults.NumWarnings)));
 			}
 		}
 		else
 		{
-			UE_LOG(LogAssetValidation, Display, TEXT("Content validation for source controlled files finished. Found %d warnings, %d errors for %d files."),
-				OutWarnings.Num(), OutErrors.Num(), FileStates.Num());
+			UE_LOG(LogAssetValidation, Display, TEXT("Content validation for source controlled files finished. Found %d warnings, %d errors for %d assets."),
+				OutResults.NumWarnings, OutResults.NumInvalid, OutResults.NumRequested);
 		}
+
+		return OutResults.NumInvalid + OutResults.NumWarnings;
+	}
+	
+	void ValidateProjectSettings(const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidateProjectSettings);
+		
+		TArray<UClass*> AllClasses;
+		GetDerivedClasses(UObject::StaticClass(), AllClasses, true);
+
+		TArray<FAssetData> Assets;
+		Assets.Reserve(AllClasses.Num());
+
+		// gather classes that have DefaultConfig class specifier and classes that derive from UDeveloperSettings
+		for (const UClass* Class: AllClasses)
+		{
+			if (Class->IsChildOf<UDeveloperSettings>())
+			{
+				// derives from UDeveloperSettings
+				FAssetData AssetData{Class->GetDefaultObject()};
+				Assets.Add(AssetData);
+			}
+			else if (Class->HasAnyClassFlags(EClassFlags::CLASS_DefaultConfig) && Class->ClassConfigName != TEXT("Input"))
+			{
+				// class is default config class
+				FAssetData AssetData{Class->GetDefaultObject()};
+				Assets.Add(AssetData);
+			}
+		}
+	
+		const UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
+		check(ValidatorSubsystem);
+
+#if 0
+		FLogMessageGatherer Gatherer; // @todo: it is an open question whether it works when multiple data validation logs are opened
+#endif
+		FValidateAssetsSettings Settings = InSettings;
+		ValidatorSubsystem->ValidateAssetsWithSettings(Assets, Settings, OutResults);
 	}
 
+
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 	void ValidateWorldPartitionActors(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
 	{
 		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
@@ -231,7 +298,6 @@ namespace UE::AssetValidation
 		}
 
 		// @todo: update to 5.4 asap
-#if 0
 		// For Each world
 		for (auto& [WorldAssetPath, AssetData]: WorldToActors)
 		{
@@ -285,7 +351,6 @@ namespace UE::AssetValidation
 			Params.ActorDescContainerCollection = &ContainerToValidate;
 			UWorldPartition::CheckForErrors(Params);
 		}
-#endif
 	}
 	
 	void ValidateDirtyFiles(const TArray<FSourceControlStateRef>& FileStates, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
@@ -305,40 +370,9 @@ namespace UE::AssetValidation
 			}
 		}
 	}
+#endif // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 
-	FString ValidateEmptyPackage(const FString& PackageName)
-	{
-		FString Message{};
-		if (FPackageName::DoesPackageExist(PackageName))
-		{
-			Message = FString::Printf(TEXT("Found no assets in package %s"), *PackageName);
-		}
-		else if (ISourceControlModule::Get().IsEnabled())
-		{
-			ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
-			FString PackageFilename = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
-			auto FileState = SCCProvider.GetState(PackageFilename, EStateCacheUsage::ForceUpdate);
-
-			if (FileState->IsAdded())
-			{
-				Message = FString::Printf(TEXT("Package '%s' is missing from disk. It is marked for add in perforce but missing from your hard drive."), *PackageName);
-			}
-
-			if (FileState->IsCheckedOut())
-			{
-				Message = FString::Printf(TEXT("Package '%s' is missing from disk. It is checked out in perforce but missing from your hard drive."), *PackageName);
-			}
-
-			if (Message.IsEmpty())
-			{
-				Message = FString::Printf(TEXT("Package '%s' is missing from disk."), *PackageName);
-			}
-		}
-		check(!Message.IsEmpty());
-
-		return Message;
-	}
-
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 	FString GetPackagePath(const UPackage* Package)
 	{
 		if (Package == nullptr)
@@ -376,6 +410,44 @@ namespace UE::AssetValidation
 		return FTopLevelAssetPath{};
 	}
 
+	// @todo: update to 5.4 asap
+	void RegisterActorContainer(UWorld* World, FName ContainerPackageName, FActorDescContainerCollection& RegisteredContainers)
+	{
+		if (RegisteredContainers.Contains(ContainerPackageName))
+		{
+			return;
+		}
+
+		TObjectPtr<UActorDescContainerInstance> ActorDescContainer = nullptr;
+		if (World != nullptr)
+		{
+			// World is Loaded reuse the ActorDescContainer of the Content Bundle
+			ActorDescContainer = World->GetWorldPartition()->FindContainer(ContainerPackageName);
+		}
+
+		// Even if world is valid, its world partition is not necessarily initialized
+		if (!ActorDescContainer)
+		{
+			// Find in memory failed, load the ActorDescContainer
+			ActorDescContainer = NewObject<UActorDescContainerInstance>();
+			ActorDescContainer->Initialize(UActorDescContainerInstance::FInitializeParams{ContainerPackageName});
+		}
+
+		RegisteredContainers.AddContainer(ActorDescContainer);
+	}
+
+	UClass* GetAssetNativeClass(const FAssetData& AssetData)
+	{
+		// Check that the asset is an actor
+		if (FWorldPartitionActorDescUtils::IsValidActorDescriptorFromAssetData(AssetData))
+		{
+			return FWorldPartitionActorDescUtils::GetActorNativeClassFromAssetData(AssetData);
+		}
+
+		return nullptr;
+	}
+#endif
+
 	bool IsCppFile(const FString& Filename)
 	{
 		return Filename.EndsWith(TEXT(".h")) || Filename.EndsWith(TEXT(".cpp")) || Filename.EndsWith(TEXT(".hpp"));
@@ -403,46 +475,7 @@ namespace UE::AssetValidation
 		}
 	}
 
-	// @todo: update to 5.4 asap
-#if 0
-	void RegisterActorContainer(UWorld* World, FName ContainerPackageName, FActorDescContainerCollection& RegisteredContainers)
-	{
-		if (RegisteredContainers.Contains(ContainerPackageName))
-		{
-			return;
-		}
-
-		TObjectPtr<UActorDescContainerInstance> ActorDescContainer = nullptr;
-		if (World != nullptr)
-		{
-			// World is Loaded reuse the ActorDescContainer of the Content Bundle
-			ActorDescContainer = World->GetWorldPartition()->FindContainer(ContainerPackageName);
-		}
-
-		// Even if world is valid, its world partition is not necessarily initialized
-		if (!ActorDescContainer)
-		{
-			// Find in memory failed, load the ActorDescContainer
-			ActorDescContainer = NewObject<UActorDescContainerInstance>();
-			ActorDescContainer->Initialize(UActorDescContainerInstance::FInitializeParams{ContainerPackageName});
-		}
-
-		RegisteredContainers.AddContainer(ActorDescContainer);
-	}
-#endif
-
-	UClass* GetAssetNativeClass(const FAssetData& AssetData)
-	{
-		// Check that the asset is an actor
-		if (FWorldPartitionActorDescUtils::IsValidActorDescriptorFromAssetData(AssetData))
-		{
-			return FWorldPartitionActorDescUtils::GetActorNativeClassFromAssetData(AssetData);
-		}
-
-		return nullptr;
-	}
-
-	void ValidateModifiedPackages(const TArray<FString>& PackagesToValidate, EDataValidationUsecase Usecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+	void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidatePackages);
 		
@@ -450,9 +483,26 @@ namespace UE::AssetValidation
 
 		FMessageLog ValidationLog("AssetCheck");
 		ValidationLog.NewPage(LOCTEXT("ValidatePackages", "Validate Packages"));
-	
+
+		TArray<FString> AllPackages{ModifiedPackages};
+		for (const FString& DeletedPackage: DeletedPackages)
+		{
+			// append referencer packages found from deleted packages
+			TArray<FName> Referencers;
+			AssetRegistry.GetReferencers(FName(DeletedPackage), Referencers, AssetRegistry::EDependencyCategory::Package, AssetRegistry::EDependencyQuery::Hard);
+			for (const FName& Referencer: Referencers)
+			{
+				const FString ReferenceStr{Referencer.ToString()};
+				if (!DeletedPackages.Contains(ReferenceStr) && ShouldValidatePackage(ReferenceStr))
+				{
+					UE_LOG(LogAssetValidation, Verbose, TEXT("%s: Deleted package %s references package %s, added to validation"), *FString(__FUNCTION__), *DeletedPackage, *ReferenceStr);
+					AllPackages.Add(ReferenceStr);
+				}
+			}
+		}
+		
 		TArray<FAssetData> AssetsToValidate;
-		for (const FString& PackageName: PackagesToValidate)
+		for (const FString& PackageName: AllPackages)
 		{
 			if (!FPackageName::IsValidLongPackageName(PackageName))
 			{
@@ -465,18 +515,22 @@ namespace UE::AssetValidation
 
 			if (Assets.IsEmpty())
 			{
-				FString WarningMessage = ValidateEmptyPackage(PackageName);
-				
-				UE_LOG(LogAssetValidation, Warning, TEXT("%s"), *WarningMessage);
-				OutWarnings.Add(WarningMessage);
-				ValidationLog.Warning(FText::FromString(WarningMessage));
+				if (FString WarningMessage = ValidateEmptyPackage(PackageName); !WarningMessage.IsEmpty())
+				{
+					UE_LOG(LogAssetValidation, Warning, TEXT("%s"), *WarningMessage);
+                    ValidationLog.Warning(FText::FromString(WarningMessage));
+				}
 			}
 			else
 			{
 				AssetsToValidate.Append(MoveTemp(Assets));
 			}
 		}
+#if WITH_DATA_VALIDATION_UPDATE // added in 5.4
+		ValidationLog.Flush();
+#endif
 
+#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 ValidateAssetsWithSettings loads assets
 		// Preload all assets to check, so load warnings can be handled separately from validation warnings
 		for (const FAssetData& Asset: AssetsToValidate)
 		{
@@ -485,18 +539,21 @@ namespace UE::AssetValidation
 				UPackage* Package = Asset.GetPackage();
 				if (Package->HasAnyPackageFlags(PKG_ContainsMap | PKG_ContainsMapData))
 				{
+					// ignore map packages
 					continue;
 				}
-			
+
+				
 				if (!IsWorldOrWorldExternalPackage(Package))
 				{
+					// ignore external actors
 					continue;
 				}
 			
 				UE_LOG(LogAssetValidation, Display, TEXT("Loading %s"), *Asset.GetObjectPathString());
 			
 				FLogMessageGatherer Gatherer;
-				(void)Asset.GetAsset();
+				(void)Asset.GetAsset(); // explicitly load asset
 
 				for (const FString& Warning: Gatherer.GetWarnings())
 				{
@@ -507,73 +564,78 @@ namespace UE::AssetValidation
 					UE_LOG(LogAssetValidation, Error, TEXT("%s"), *Error);
 				}
 
-				OutWarnings.Append(Gatherer.GetWarnings());
-				OutErrors.Append(Gatherer.GetErrors());
+				AppendValidationMessages(Context, Asset, Gatherer);
 			}
 		}
+#endif
 
-		FLogMessageGatherer Gatherer;
+#if 0
+		FLogMessageGatherer Gatherer; // @todo: it is an open question whether it works when multiple data validation logs are opened
+#endif
 	
-		FValidateAssetsSettings Settings;
-		Settings.bSkipExcludedDirectories = true;
-		Settings.bShowIfNoFailures = true;
-		Settings.ValidationUsecase = Usecase;
-		FValidateAssetsResults Results;
-	
+		FValidateAssetsSettings Settings = InSettings;
+		Settings.bCaptureAssetLoadLogs = false;		// do not capture asset load logs
+		Settings.bSkipExcludedDirectories = true;	// skip excluded directories
+		
 		UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
-		const int32 Failures = ValidatorSubsystem->ValidateAssetsWithSettings(AssetsToValidate, Settings, Results);
-
-		if (Failures > 0)
-		{
-			OutWarnings.Append(Gatherer.GetWarnings());
-			OutErrors.Append(Gatherer.GetErrors());
-		}
-	}
-
-	void ValidateProjectSettings(EDataValidationUsecase ValidationUsecase, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidateProjectSettings);
-		
-		TArray<UClass*> AllClasses;
-		GetDerivedClasses(UObject::StaticClass(), AllClasses, true);
-
-		TArray<FAssetData> Assets;
-		Assets.Reserve(AllClasses.Num());
-
-		// gather classes that have DefaultConfig class specifier and classes that derive from UDeveloperSettings
-		for (const UClass* Class: AllClasses)
-		{
-			if (Class->IsChildOf<UDeveloperSettings>())
-			{
-				// derives from UDeveloperSettings
-				FAssetData AssetData{Class->GetDefaultObject()};
-				Assets.Add(AssetData);
-			}
-			else if (Class->HasAnyClassFlags(EClassFlags::CLASS_DefaultConfig) && Class->ClassConfigName != TEXT("Input"))
-			{
-				// class is default config class
-				FAssetData AssetData{Class->GetDefaultObject()};
-				Assets.Add(AssetData);
-			}
-		}
-	
-		const UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
-		check(ValidatorSubsystem);
-
-		FValidateAssetsSettings Settings;
-		Settings.bSkipExcludedDirectories = true;
-		Settings.bShowIfNoFailures = false;
-		Settings.ValidationUsecase = ValidationUsecase;
-		
-		FLogMessageGatherer Gatherer;
-
 		FValidateAssetsResults Results;
-		ValidatorSubsystem->ValidateAssetsWithSettings(Assets, Settings, Results);
-
-		OutErrors.Append(Gatherer.GetErrors());
-		OutWarnings.Append(Gatherer.GetWarnings());
+		ValidatorSubsystem->ValidateAssetsWithSettings(AssetsToValidate, Settings, Results);
 	}
 
+	bool ShouldValidatePackage(const FString& PackageName)
+	{
+		const UProjectPackagingSettings* PackagingSettings = GetDefault<UProjectPackagingSettings>();
+
+		for (const FDirectoryPath& Directory: PackagingSettings->DirectoriesToNeverCook)
+		{
+			const FString& Folder = Directory.Path;
+			if (PackageName.StartsWith(Folder))
+			{
+				return false;
+			}
+		}
+
+		if (PackageName.StartsWith(TEXT("/Game/Developers/")))
+		{
+			return false;
+		}
+
+		return true;
+	}
+	
+	FString ValidateEmptyPackage(const FString& PackageName)
+	{
+		FString Message{};
+		if (FPackageName::DoesPackageExist(PackageName))
+		{
+			Message = FString::Printf(TEXT("Found no assets in package %s"), *PackageName);
+		}
+		else if (ISourceControlModule::Get().IsEnabled())
+		{
+			ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
+			FString PackageFilename = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+			auto FileState = SCCProvider.GetState(PackageFilename, EStateCacheUsage::ForceUpdate);
+
+			if (FileState->IsAdded())
+			{
+				Message = FString::Printf(TEXT("Package '%s' is missing from disk. It is marked for add in perforce but missing from your hard drive."), *PackageName);
+			}
+
+			if (FileState->IsCheckedOut())
+			{
+				Message = FString::Printf(TEXT("Package '%s' is missing from disk. It is checked out in perforce but missing from your hard drive."), *PackageName);
+			}
+
+			if (Message.IsEmpty())
+			{
+				Message = FString::Printf(TEXT("Package '%s' is missing from disk."), *PackageName);
+			}
+		}
+		check(!Message.IsEmpty());
+
+		return Message;
+	}
+	
 	bool IsWorldOrWorldExternalPackage(UPackage* Package)
 	{
 #if WITH_DATA_VALIDATION_UPDATE

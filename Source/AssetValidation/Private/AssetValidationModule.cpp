@@ -72,7 +72,6 @@ private:
 	
 	static void CheckContent();
 	static void CheckProjectSettings();
-	static void ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings);
 	static bool HasNoPlayWorld();
 	void RegisterMenus();
 };
@@ -107,14 +106,10 @@ void FAssetValidationModule::StartupModule()
 	}
 	
 	ISourceControlModule& SourceControl = ISourceControlModule::Get();
-	SourceControl.RegisterPreSubmitDataValidation(FSourceControlPreSubmitDataValidationDelegate::CreateStatic(&ThisClass::ValidateChangelistPreSubmit));
 	SCProviderChangedHandle = SourceControl.RegisterProviderChanged(FSourceControlProviderChanged::FDelegate::CreateRaw(this, &ThisClass::UpdateSourceControlProxy));
 
-	if (SourceControl.IsEnabled())
-	{
-		ISourceControlProvider& SCCProvider = SourceControl.GetProvider();
-		UpdateSourceControlProxy(SCCProvider, SCCProvider);
-	}
+	ISourceControlProvider& SCCProvider = SourceControl.GetProvider();
+	UpdateSourceControlProxy(SCCProvider, SCCProvider);
 	
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyEditor.RegisterCustomClassLayout("PropertyValidationSettings", FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
@@ -189,7 +184,6 @@ void FAssetValidationModule::ShutdownModule()
 	FAssetValidationStyle::Shutdown();
 	
 	ISourceControlModule& SourceControl = ISourceControlModule::Get();
-	SourceControl.UnregisterPreSubmitDataValidation();
 	SourceControl.UnregisterProviderChanged(SCProviderChangedHandle);
 }
 
@@ -201,8 +195,13 @@ void FAssetValidationModule::CheckContent()
 		return;
 	}
 
-	TArray<FString> Warnings, Errors;
-	UE::AssetValidation::ValidateCheckedOutAssets(true, EDataValidationUsecase::Manual, Warnings, Errors);
+	FValidateAssetsSettings Settings;
+	Settings.ValidationUsecase = EDataValidationUsecase::Manual;
+	Settings.bSkipExcludedDirectories = true;
+	Settings.bShowIfNoFailures = true;
+	
+	FValidateAssetsResults Results;
+	UE::AssetValidation::ValidateCheckedOutAssets(true, Settings, Results);
 }
 
 void FAssetValidationModule::CheckProjectSettings()
@@ -210,20 +209,13 @@ void FAssetValidationModule::CheckProjectSettings()
 	FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
 	SlowTask.MakeDialog();
 		
-	TArray<FString> Warnings, Errors;
-	UE::AssetValidation::ValidateProjectSettings(EDataValidationUsecase::Manual, Warnings, Errors);
-}
-
-void FAssetValidationModule::ValidateChangelistPreSubmit(FSourceControlChangelistPtr Changelist, EDataValidationResult& OutResult, TArray<FText>& ValidationErrors, TArray<FText>& ValidationWarnings)
-{
-	TArray<FString> Warnings, Errors;
-	UE::AssetValidation::ValidateCheckedOutAssets(true, EDataValidationUsecase::PreSubmit, Warnings, Errors);
-
-	OutResult = Errors.Num() > 0 ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
-
-	auto Trans = [](const FString& Str) { return FText::FromString(Str); };
-	Algo::Transform(Errors, ValidationErrors, Trans);
-	Algo::Transform(Warnings, ValidationWarnings, Trans);
+	FValidateAssetsSettings Settings;
+	Settings.ValidationUsecase = EDataValidationUsecase::Manual;
+	Settings.bSkipExcludedDirectories = true;
+	Settings.bShowIfNoFailures = true;
+	
+	FValidateAssetsResults Results;
+	UE::AssetValidation::ValidateProjectSettings(Settings, Results);
 }
 
 bool FAssetValidationModule::HasNoPlayWorld()
