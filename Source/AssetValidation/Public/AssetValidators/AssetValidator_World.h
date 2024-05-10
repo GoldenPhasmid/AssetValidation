@@ -4,12 +4,12 @@
 #include "DataValidationModule.h"
 #include "AssetValidators/AssetValidator.h"
 
-#include "AssetValidator_WorldActors.generated.h"
+#include "AssetValidator_World.generated.h"
 
 class UAssetValidationSubsystem;
 
 UCLASS()
-class UAssetValidator_WorldActors: public UAssetValidator
+class UAssetValidator_World: public UAssetValidator
 {
 	GENERATED_BODY()
 public:

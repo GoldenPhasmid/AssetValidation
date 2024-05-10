@@ -1,4 +1,4 @@
-#include "AssetValidators/AssetValidator_WorldActors.h"
+#include "AssetValidators/AssetValidator_World.h"
 
 #include "EditorValidatorSubsystem.h"
 #include "EditorWorldUtils.h"
@@ -13,11 +13,12 @@
 #include "EngineUtils.h"
 #include "PackageTools.h"
 
-bool UAssetValidator_WorldActors::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	EDataValidationUsecase Usecase = InContext.GetValidationUsecase();
 	if (Usecase == EDataValidationUsecase::Save)
 	{
+		// saving WP actors would result in this validator attempting to run with world asset
 		// don't validate on save, wait until PreSubmit or Manual
 		return false;
 	}
@@ -29,7 +30,7 @@ bool UAssetValidator_WorldActors::CanValidateAsset_Implementation(const FAssetDa
 	return true;
 }
 
-EDataValidationResult UAssetValidator_WorldActors::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
 {
 	check(AssetData.IsValid());
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_WorldActors, AssetValidationChannel);
@@ -72,7 +73,7 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateAsset_Implementation(
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_WorldActors::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)
+EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)
 {
 	check(bRecursiveGuard == false);
 	check(InAsset);
@@ -119,7 +120,7 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateLoadedAsset_Implement
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateWorld(UWorld* World, FDataValidationContext& Context)
 {
 	TUniquePtr<FLoaderAdapterShape> AllActors;
 	
@@ -187,7 +188,7 @@ EDataValidationResult UAssetValidator_WorldActors::ValidateWorld(UWorld* World, 
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_WorldActors::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
 {
 #if WITH_DATA_VALIDATION_UPDATE // actor validation is fixed in 5.4
 	FAssetData AssetData{Asset};

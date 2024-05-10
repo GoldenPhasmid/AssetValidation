@@ -18,6 +18,9 @@ public:
 	{
 		return GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
 	}
+
+	static void MarkPackageLoaded(const FName& PackageName);
+	static bool IsPackageAlreadyLoaded(const FName& PackageName);
 	
 	//~Begin EditorValidatorSubsystem interface
 #if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
@@ -52,12 +55,15 @@ protected:
 
 	/** */
 	void ResetValidationState() const;
+	void ResetValidationState();
 	/** */
 	mutable int32 CheckedAssetsCount = 0;
 	/** */
 	mutable TStaticArray<int32, 3> ValidationResults{InPlace, 0};
 	/** */
 	mutable bool bRecursiveCall = false;
+	/** Packages that are loaded as a part of running validation request */
+	TSet<FName> LoadedPackageNames;
 	
 #if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
 	/** */

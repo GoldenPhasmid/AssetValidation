@@ -32,12 +32,30 @@ UAssetValidationSubsystem::UAssetValidationSubsystem()
 #endif
 }
 
+void UAssetValidationSubsystem::MarkPackageLoaded(const FName& PackageName)
+{
+	check(!IsPackageAlreadyLoaded(PackageName));
+	
+	UAssetValidationSubsystem* ValidationSubsystem = Get();
+	check(ValidationSubsystem);
+	
+	ValidationSubsystem->LoadedPackageNames.Add(PackageName);
+}
+
+bool UAssetValidationSubsystem::IsPackageAlreadyLoaded(const FName& PackageName)
+{
+	UAssetValidationSubsystem* ValidationSubsystem = Get();
+	check(ValidationSubsystem);
+	return ValidationSubsystem->LoadedPackageNames.Contains(PackageName);
+}	
+
 #if WITH_DATA_VALIDATION_UPDATE
 int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidationSubsystem_ValidateAssetsWithSettings, AssetValidationChannel);
-	check(bRecursiveCall == false);
+	checkf(bRecursiveCall == false, TEXT("%s: can't handle recursive calls."), *FString(__FUNCTION__));
 	TGuardValue RecursionGuard{bRecursiveCall, true};
+
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidationSubsystem_ValidateAssetsWithSettings, AssetValidationChannel);
 	
 	ResetValidationState();
 	
@@ -93,8 +111,10 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelist(UDataValidat
 
 EDataValidationResult UAssetValidationSubsystem::ValidateChangelists(const TArray<UDataValidationChangelist*> InChangelists, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
-	check(bRecursiveCall == false);
+	checkf(bRecursiveCall == false, TEXT("%s: can't handle recursive calls."), *FString(__FUNCTION__));
 	TGuardValue RecursionGuard{bRecursiveCall, true};
+
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidationSubsystem_ValidateChangelists, AssetValidationChannel);
 	
 	ResetValidationState();
 
@@ -232,7 +252,13 @@ bool UAssetValidationSubsystem::ShouldLoadAsset(const FAssetData& AssetData) con
 
 void UAssetValidationSubsystem::ResetValidationState() const
 {
+	const_cast<UAssetValidationSubsystem&>(*this).ResetValidationState();
+}
+
+void UAssetValidationSubsystem::ResetValidationState()
+{
 	CheckedAssetsCount = 0;
+	LoadedPackageNames.Empty(32);
 	FMemory::Memzero(ValidationResults.GetData(), ValidationResults.Num() * sizeof(int32));
 }
 

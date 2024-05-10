@@ -3,6 +3,7 @@
 #include "AssetCompilingManager.h"
 #include "AssetValidationModule.h"
 #include "AssetValidationStatics.h"
+#include "AssetValidationSubsystem.h"
 #include "DataValidationModule.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -10,6 +11,13 @@
 bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(LoadPackage_GetErrors, AssetValidationChannel);
+
+	if (UAssetValidationSubsystem::IsPackageAlreadyLoaded(FName{PackageName}))
+	{
+		return true;
+	}
+
+	UAssetValidationSubsystem::MarkPackageLoaded(FName{PackageName});
 	
 	check(GEngine);
 	check(!PackageName.IsEmpty());
@@ -139,9 +147,8 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 				}
 				TempObject->MarkAsGarbage();
 			}
-
-			// GEngine->ForceGarbageCollection(true);
-			CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, false);
+			
+			GEngine->ForceGarbageCollection(true);
 		}
 	}
 
