@@ -3,6 +3,7 @@
 #include <mutex>
 
 #include "AssetValidationDefines.h"
+#include "EditorValidatorHelpers.h"
 
 struct FValidateAssetsResults;
 struct FValidateAssetsSettings;
@@ -67,7 +68,7 @@ struct FAssetValidationMessageGatherer: public FOutputDevice
 	}
 
 private:
-	std::mutex CriticalSection;
+	std::recursive_mutex CriticalSection;
 	
 	TArray<FString> Warnings;
 	TArray<FString> Errors;
@@ -147,6 +148,16 @@ namespace UE::AssetValidation
 	bool IsCppFile(const FString& Filename);
 
 	/** Add validation messages to validation context in "data validation format" */
-	ASSETVALIDATION_API void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FLogMessageGatherer& Gatherer);
-	ASSETVALIDATION_API void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FLogMessageGatherer& Gatherer);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
+	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
+	/** @return correctly tokenized message */
+	ASSETVALIDATION_API TSharedRef<FTokenizedMessage> CreateAssetMessage(const FText& Message, const FAssetData& AssetData, EMessageSeverity::Type Severity);
+	/** @return asset token that describes asset data */
+	ASSETVALIDATION_API TSharedRef<IMessageToken> CreateAssetToken(const FAssetData& AssetData);
+
 } // UE::AssetValidation

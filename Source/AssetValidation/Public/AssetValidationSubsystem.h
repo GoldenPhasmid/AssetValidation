@@ -47,11 +47,28 @@ public:
 protected:
 	
 	bool IsEmptyChangelist(UDataValidationChangelist* Changelist) const;
+
+	void ValidateAssetsResolverInternal(
+		FMessageLog& 					DataValidationLog,
+		const TArray<FAssetData>&		AssetDataList,
+		const FValidateAssetsSettings& 	InSettings,
+		FValidateAssetsResults& 		OutResults
+	) const;
+	
+	void ValidateAssetsInternal(
+		FMessageLog& 					DataValidationLog,
+		TArray<FAssetData>				AssetDataList,
+		const FValidateAssetsSettings& 	InSettings,
+		FValidateAssetsResults& 		OutResults
+	) const;
 	
 	/** @return true if asset not excluded from validation */
 	virtual bool ShouldValidateAsset(const FAssetData& Asset, const FValidateAssetsSettings& Settings, FDataValidationContext& InContext) const override;
 	/** @return true if asset should be pre loaded for validation */
 	bool ShouldLoadAsset(const FAssetData& AssetData) const;
+
+	UPROPERTY(Config)
+	bool bLogEveryAssetBecauseYouWantYourLogThrashed = false;
 
 	/** */
 	void ResetValidationState() const;
@@ -60,8 +77,10 @@ protected:
 	mutable int32 CheckedAssetsCount = 0;
 	/** */
 	mutable TStaticArray<int32, 3> ValidationResults{InPlace, 0};
-	/** */
+	/** guard for recursive validation requests to this subsystem */
 	mutable bool bRecursiveCall = false;
+	/** Settings for running validation request */
+	mutable TOptional<FValidateAssetsSettings> CurrentSettings;
 	/** Packages that are loaded as a part of running validation request */
 	TSet<FName> LoadedPackageNames;
 	

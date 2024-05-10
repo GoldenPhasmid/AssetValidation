@@ -1,6 +1,5 @@
 #include "WorldPartitionSourceControlValidator.h"
 
-#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 #include "WorldPartition/WorldPartitionActorDescView.h"
 #include "WorldPartition/DataLayer/DataLayerInstanceWithAsset.h"
 
@@ -211,4 +210,3 @@ void FWorldPartitionSourceControlValidator::OnInvalidActorFilterReference(const 
 }
 
 #undef LOCTEXT_NAMESPACE
-#endif

@@ -1,5 +1,6 @@
 #include "AssetValidators/AssetValidator_Properties.h"
 
+#include "AssetValidationStatics.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
@@ -24,27 +25,14 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 		Class = Blueprint->GeneratedClass;
 		Object = Class->GetDefaultObject();
 	}
-	
+
 	check(Class && Object);
-	
+
+	using namespace UE::AssetValidation;
 	FPropertyValidationResult Result = PropertyValidators->ValidateObject(Object);
-	for (const FText& Warning: Result.Warnings)
-	{
-		AssetMessage(InAssetData, EMessageSeverity::Warning, Warning);
-	}
 	
-	if (Result.ValidationResult == EDataValidationResult::Invalid)
-	{
-		check(Result.Errors.Num() > 0);
-		for (const FText& Error: Result.Errors)
-		{
-			AssetMessage(InAssetData, EMessageSeverity::Error, Error);
-		}
-	}
-	else
-	{
-		AssetPasses(Object);
-	}
+	AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, Result.Errors);
+	AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, Result.Warnings);
 	
 	return Result.ValidationResult;
 }

@@ -22,7 +22,7 @@ public:
 	
 protected:
 
-	EDataValidationResult ValidateWorld(UWorld* World, FDataValidationContext& Context);
+	EDataValidationResult ValidateWorld(const FAssetData& AssetData, UWorld* World, FDataValidationContext& Context);
 	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context);
 	
 	bool bRecursiveGuard = false;

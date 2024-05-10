@@ -16,9 +16,14 @@ class UAssetValidator_ExternalObjects: public UAssetValidator
 public:
 	//~Begin EditorValidatorBase interface
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const override;
+	virtual EDataValidationResult ValidateAsset_Implementation(const FAssetData& InAssetData, FDataValidationContext& InContext) override;
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) override;
 	//~End EditorValidatorBase interface
 
+protected:
+	
+	EDataValidationResult ValidateAssetInternal(const FAssetData& InAssetData, FDataValidationContext& InContext);
+	
 	UPROPERTY()
 	UObject* CurrentExternalAsset = nullptr;
 };

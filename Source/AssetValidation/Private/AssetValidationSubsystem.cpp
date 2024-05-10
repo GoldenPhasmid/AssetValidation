@@ -8,9 +8,13 @@
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlProxy.h"
+#include "Algo/AnyOf.h"
+#include "AssetRegistry/AssetDataToken.h"
+#include "AssetRegistry/IAssetRegistry.h"
 #include "AssetValidators/AssetValidator.h"
 #include "Misc/DataValidation.h"
 #include "Misc/ScopedSlowTask.h"
+#include "Misc/UObjectToken.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -57,19 +61,21 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidationSubsystem_ValidateAssetsWithSettings, AssetValidationChannel);
 	
+	// reset before validation in case of further IsAssetValid/IsObjectValid requests
 	ResetValidationState();
-	
+
+	FMessageLog DataValidationLog{UE::DataValidation::MessageLogName};
 	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save)
 	{
 		// epic's forgot to open a new page when validation is manual
 		// very useful "DataValidation refactor", thanks
-		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
 		DataValidationLog.NewPage(InSettings.MessageLogPageTitle);
 	}
 
+	CurrentSettings = TOptional{InSettings};
 	FValidateAssetsResults PrevResults = OutResults;
 	
-	Super::ValidateAssetsWithSettings(AssetDataList, InSettings, OutResults);
+	ValidateAssetsResolverInternal(DataValidationLog, AssetDataList, InSettings, OutResults);
 
 	// override asset count calculation to account for recursive validation
 	// also include previous results in case @OutResults was used more than once
@@ -78,26 +84,11 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 	OutResults.NumValid				= PrevResults.NumValid + ValidationResults[static_cast<uint8>(EDataValidationResult::Valid)];
 	OutResults.NumInvalid			= PrevResults.NumInvalid + ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
 	OutResults.NumUnableToValidate	= PrevResults.NumUnableToValidate + ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
+	
+	LogAssetValidationSummary(DataValidationLog, InSettings, OutResults);
 
-	// Why would you delete the summary? What's wrong with you?
-	// Yes, let's log EACH and EVERY asset that we're validating, and then log that they're valid,
-	// but omit the summary that tells HOW MANY assets where validated and HOW MANY are failed!
-	if (OutResults.NumInvalid > 0 || OutResults.NumWarnings > 0 || InSettings.bShowIfNoFailures)
-	{
-		FFormatNamedArguments Arguments;
-		Arguments.Add(TEXT("Result"), OutResults.NumInvalid > 0 ? LOCTEXT("Failed", "FAILED") : LOCTEXT("Succeeded", "SUCCEEDED"));
-		Arguments.Add(TEXT("NumChecked"), OutResults.NumChecked);
-		Arguments.Add(TEXT("NumValid"), OutResults.NumValid);
-		Arguments.Add(TEXT("NumInvalid"), OutResults.NumInvalid);
-		Arguments.Add(TEXT("NumSkipped"), OutResults.NumSkipped);
-		Arguments.Add(TEXT("NumUnableToValidate"), OutResults.NumUnableToValidate);
-
-		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
-		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("SuccessOrFailure", "Data validation {Result}."), Arguments)));
-		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("ResultsSummary", "Files Checked: {NumChecked}, Passed: {NumValid}, Failed: {NumInvalid}, Skipped: {NumSkipped}, Unable to validate: {NumUnableToValidate}"), Arguments)));
-
-		DataValidationLog.Open(EMessageSeverity::Info, true);
-	}
+	// reset after validation in case of further IsAssetValid/IsObjectValid requests
+	ResetValidationState();
 	
 	return OutResults.NumWarnings + OutResults.NumInvalid;
 }
@@ -134,25 +125,8 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelists(const TArra
 	OutResults.NumInvalid = ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
 	OutResults.NumUnableToValidate = ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
 
-	// Why would you delete the summary? What's wrong with you?
-	// Yes, let's log EACH and EVERY asset that we're validating, and then log that they're valid,
-	// but omit the summary that tells HOW MANY assets where validated and HOW MANY are failed!
-	if (!!(OutResults.NumInvalid & 0x0) || !!(OutResults.NumWarnings & 0x0) || InSettings.bShowIfNoFailures)
-	{
-		FFormatNamedArguments Arguments;
-		Arguments.Add(TEXT("Result"), !!(OutResults.NumInvalid & 0x0) ? LOCTEXT("Failed", "FAILED") : LOCTEXT("Succeeded", "SUCCEEDED"));
-		Arguments.Add(TEXT("NumChecked"), OutResults.NumChecked);
-		Arguments.Add(TEXT("NumValid"), OutResults.NumValid);
-		Arguments.Add(TEXT("NumInvalid"), OutResults.NumInvalid);
-		Arguments.Add(TEXT("NumSkipped"), OutResults.NumSkipped);
-		Arguments.Add(TEXT("NumUnableToValidate"), OutResults.NumUnableToValidate);
-
-		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
-		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("SuccessOrFailure", "Data validation {Result}."), Arguments)));
-		DataValidationLog.Info()->AddToken(FTextToken::Create(FText::Format(LOCTEXT("ResultsSummary", "Files Checked: {NumChecked}, Passed: {NumValid}, Failed: {NumInvalid}, Skipped: {NumSkipped}, Unable to validate: {NumUnableToValidate}"), Arguments)));
-
-		DataValidationLog.Open(EMessageSeverity::Info, true);
-	}
+	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+	LogAssetValidationSummary(DataValidationLog, InSettings, OutResults);
 	
 	return Result;
 }
@@ -191,6 +165,226 @@ bool UAssetValidationSubsystem::IsEmptyChangelist(UDataValidationChangelist* Cha
 	return bEmpty;
 }
 
+void UAssetValidationSubsystem::ValidateAssetsResolverInternal(FMessageLog& DataValidationLog,
+	const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings,
+	FValidateAssetsResults& OutResults) const
+{
+	bool bCustomValidateAssets = true;
+	if (bCustomValidateAssets)
+	{
+		ValidateAssetsInternal(DataValidationLog, AssetDataList, InSettings, OutResults);
+	}
+	else
+	{
+		Super::ValidateAssetsInternal(DataValidationLog, TSet<FAssetData>{AssetDataList}, InSettings, OutResults);
+	}
+}
+
+void UAssetValidationSubsystem::ValidateAssetsInternal(
+	FMessageLog& DataValidationLog,
+	TArray<FAssetData> AssetDataList,
+	const FValidateAssetsSettings& InSettings,
+	FValidateAssetsResults& OutResults) const
+{
+	/**
+	 *	This function is a copy of a UEditorValidatorSubsystem::ValidateAssetsInternal, but fixes several things
+	 *  that were poorly implemented in the original:
+	 *  1.	New abysmal logging. Before, each error/warning was logged using separate tokenized message. In new implementation,
+	 *		all errors/warnings produced by (unrelated) validators are crammed into one message.
+	 *		This results with error message being bloated and inproperly aligned in asset check window.
+	 *		
+	 *	5.	AssetDataList is TSet instead of TArray. However, original iterates twice over its members and doesn't use
+	 *		TSet features like fast search.
+	 *	
+	 *
+	 *	Unfortunately, I can't override ValidateAssetsInternal.
+	 *	Thankfully, all usages of UEditorValidatorSubsystem::ValidateAssetsInternal can be overriden.
+	 *	All changes are highlighted with ASSET VALIDATION BEGIN/END scope comments with purpose stated below or
+	 *	as a part of scope comment.
+	 *
+	 *	P.S.: at this point I'm wondering if it would be easier to drop DataValidation completely
+	 *	and implement everything from scratch. Let's see if next update can push me to this decision.
+	 */
+	
+	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
+
+	FScopedSlowTask SlowTask(AssetDataList.Num(), LOCTEXT("ValidateAssetsTask", "Validating Assets"));
+	SlowTask.MakeDialog();
+	
+	UE_LOG(LogAssetValidation, Display, TEXT("Starting to validate %d assets"), AssetDataList.Num());
+	UE_LOG(LogAssetValidation, Log, TEXT("Enabled validators:"));
+	ForEachEnabledValidator([](UEditorValidatorBase* Validator)
+	{
+		UE_LOG(LogAssetValidation, Log, TEXT("\t%s"), *Validator->GetClass()->GetClassPathName().ToString());
+		return true;
+	});
+	
+	// Broadcast the Editor event before we start validating. This lets other systems (such as Sequencer) restore the state
+	// of the level to what is actually saved on disk before performing validation.
+	if (FEditorDelegates::OnPreAssetValidation.IsBound())
+	{
+		FEditorDelegates::OnPreAssetValidation.Broadcast();
+	}
+	
+	// Filter external objects out from the asset data list to be validated indirectly via their outers
+	// ASSET VALIDATION BEGIN replace set iteration with array iteration
+	TMap<FAssetData, TArray<FAssetData>> AssetsToExternalObjects;
+	for (int32 Index = AssetDataList.Num() - 1; Index >= 0; --Index)
+	{
+		const FAssetData& AssetData = AssetDataList[Index];
+		if (!AssetData.GetOptionalOuterPathName().IsNone())
+		{
+			FSoftObjectPath Path = AssetData.ToSoftObjectPath();
+			FAssetData OuterAsset = AssetRegistry.GetAssetByObjectPath(Path.GetWithoutSubPath(), true);
+			if (OuterAsset.IsValid())
+			{
+				AssetsToExternalObjects.FindOrAdd(OuterAsset).Add(AssetData);
+			}
+			AssetDataList.RemoveAtSwap(Index);
+		}
+	}
+	// ASSET VALIDATION END
+	
+	// Add any packages which contain those external objects to be validated
+	{
+		FDataValidationContext ValidationContext(false, InSettings.ValidationUsecase, {});
+		for (const TPair<FAssetData, TArray<FAssetData>>& Pair : AssetsToExternalObjects)
+		{
+			if (ShouldValidateAsset(Pair.Key, InSettings, ValidationContext))
+			{
+				AssetDataList.Add(Pair.Key);
+			}
+		}
+		UE::AssetValidation::AppendAssetValidationMessages(DataValidationLog, ValidationContext);
+		DataValidationLog.Flush();
+	}
+
+	// Dont let other async compilation warnings be attributed incorrectly to the package that is loading.
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidation_WaitAssetCompilation, AssetValidationChannel);
+		WaitForAssetCompilationIfNecessary(InSettings.ValidationUsecase);
+	}
+	
+	OutResults.NumRequested = AssetDataList.Num();
+	
+	// Now add to map or update as needed
+	for (const FAssetData& AssetData : AssetDataList)
+	{
+		ensure(AssetData.IsValid());
+
+		SlowTask.EnterProgressFrame(1.0f, FText::Format(LOCTEXT("ValidatingFilename", "Validating {0}"), FText::FromString(AssetData.GetFullName())));
+		
+		if (OutResults.NumChecked >= InSettings.MaxAssetsToValidate)
+		{
+			OutResults.bAssetLimitReached = true;
+			DataValidationLog.Info(FText::Format(LOCTEXT("AssetLimitReached", "MaxAssetsToValidate count {0} reached."), InSettings.MaxAssetsToValidate));
+			break;
+		}
+
+		if (AssetData.HasAnyPackageFlags(PKG_Cooked))
+		{
+			++OutResults.NumSkipped;
+			continue;
+		}
+
+		// Check exclusion path
+		if (InSettings.bSkipExcludedDirectories && IsPathExcludedFromValidation(AssetData.PackageName.ToString()))
+		{
+			++OutResults.NumSkipped;
+			continue;
+		}
+
+		const bool bLoadAsset = false;
+		if (!InSettings.bLoadAssetsForValidation && !AssetData.FastGetAsset(bLoadAsset))
+		{
+			++OutResults.NumSkipped;
+			continue;
+		}
+
+// ASSET VALIDATION BEGIN remove this god forsaken logging ALWAYS for EVERY asset
+		if (bLogEveryAssetBecauseYouWantYourLogThrashed)
+		{
+			DataValidationLog.Info()
+			->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+			->AddToken(FTextToken::Create(LOCTEXT("ValidatingAsset", "Validating asset")));
+			UE_LOG(LogAssetValidation, Display, TEXT("Validating asset %s"), *AssetData.ToSoftObjectPath().ToString());
+		}
+// ASSET VALIDATION END
+		
+		UObject* LoadedAsset = AssetData.FastGetAsset(false);
+		const bool bAlreadyLoaded = LoadedAsset != nullptr;
+
+		TConstArrayView<FAssetData> ValidationExternalObjects;
+		if (const TArray<FAssetData>* ValidationExternalObjectsPtr = AssetsToExternalObjects.Find(AssetData))
+		{
+			ValidationExternalObjects = *ValidationExternalObjectsPtr;
+		}
+
+// ASSET VALIDATION BEGIN fix epic's bug that bWasAssetLoadedForValidation == bAlreadyLoaded. Should be the opposite
+		FDataValidationContext ValidationContext(!bAlreadyLoaded, InSettings.ValidationUsecase, ValidationExternalObjects);
+// ASSET VALIDATION END
+
+// ASSET VALIDATION BEGIN move asset load functionality to IsAssetValidWithContext
+		EDataValidationResult Result = IsAssetValidWithContext(AssetData, ValidationContext);
+// ASSET VALIDATION END
+		
+		// Don't add more messages to ValidationContext after this point because we will no longer add them to the message log
+		UE::AssetValidation::AppendAssetValidationMessages(DataValidationLog, AssetData, ValidationContext);
+
+		const bool bAnyWarnings = ValidationContext.GetNumWarnings() > 0;
+
+		if (Result == EDataValidationResult::Valid)
+		{
+			if (bAnyWarnings)
+			{
+				DataValidationLog.Info()
+				->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+				->AddToken(FTextToken::Create(LOCTEXT("ContainsWarningsResult", "contains valid data, but has warnings.")));
+			}
+		}
+		else if (Result == EDataValidationResult::Invalid)
+		{
+			DataValidationLog.Info()
+			->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+			->AddToken(FTextToken::Create(LOCTEXT("InvalidDataResult", "contains invalid data.")));
+		}
+		else if (Result == EDataValidationResult::NotValidated)
+		{
+			if (InSettings.bShowIfNoFailures)
+			{
+				DataValidationLog.Info()
+				->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+				->AddToken(FTextToken::Create(LOCTEXT("NotValidatedDataResult", "has no data validation.")));
+			}
+		}
+		
+		if (InSettings.bCollectPerAssetDetails)
+		{
+			FValidateAssetsDetails& Details = OutResults.AssetsDetails.Emplace(AssetData.GetObjectPathString());
+			Details.PackageName = AssetData.PackageName;
+			Details.AssetName = AssetData.AssetName;
+			Details.Result = Result;
+			ValidationContext.SplitIssues(Details.ValidationWarnings, Details.ValidationErrors);
+
+			Details.ExternalObjects.Reserve(ValidationExternalObjects.Num());
+			for (const FAssetData& ExtData : ValidationExternalObjects)
+			{
+				FValidateAssetsExternalObject& ExtDetails = Details.ExternalObjects.Emplace_GetRef();
+				ExtDetails.PackageName = ExtData.PackageName;
+				ExtDetails.AssetName = ExtData.AssetName;
+			}
+		}
+		
+		DataValidationLog.Flush();
+	}
+
+	// Broadcast now that we're complete so other systems can go back to their previous state.
+	if (FEditorDelegates::OnPostAssetValidation.IsBound())
+	{
+		FEditorDelegates::OnPostAssetValidation.Broadcast();
+	}
+}
+
 EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const FAssetData& AssetData, FDataValidationContext& InContext) const
 {
 	EDataValidationResult Result = EDataValidationResult::NotValidated;
@@ -198,12 +392,40 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	{
 		return Result;
 	}
+	
+	if (!CurrentSettings.IsSet())
+	{
+		// @todo: use settings from AssetValidationSettings
+		CurrentSettings = TOptional{FValidateAssetsSettings{}};
+	}
 
-	++CheckedAssetsCount; // explicitly increase validated assets count
-	if (AssetData.FastGetAsset() != nullptr || ShouldLoadAsset(AssetData))
+	// explicitly increase validated assets count
+	++CheckedAssetsCount; 
+	
+	const UObject* Asset = AssetData.FastGetAsset(false);
+	if (Asset == nullptr && ShouldLoadAsset(Asset))
+	{
+		UE_LOG(LogAssetValidation, Verbose, TEXT("Loading asset %s for validation"), *AssetData.ToSoftObjectPath().ToString());
+		UE::DataValidation::FScopedLogMessageGatherer LogGatherer{CurrentSettings->bCaptureAssetLoadLogs};
+		Asset = AssetData.GetAsset(); // Do not load external objects, validators should load external objects that they want via GetAssociatedExternalObjects in the validation context 
+
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidation_WaitAssetCompilation, AssetValidationChannel);
+			WaitForAssetCompilationIfNecessary(InContext.GetValidationUsecase());
+		}
+
+		// make a human readable append to data validation context. @see UEditorValidatorSubsystem.cpp 504
+		// Associate any load errors with this asset in the message log
+		UE::AssetValidation::AppendAssetValidationMessages(InContext, AssetData, LogGatherer);
+
+		MarkPackageLoaded(AssetData.PackageName);
+	}
+	
+	if (Asset)
 	{
 		// call default implementation that loads an asset and calls IsObjectValid
-		Result = Super::IsAssetValidWithContext(AssetData, InContext);
+		UE::DataValidation::FScopedLogMessageGatherer LogGatherer(CurrentSettings->bCaptureLogsDuringValidation);
+		Result &= Super::IsAssetValidWithContext(AssetData, InContext);
 	}
 	else
 	{
@@ -260,6 +482,8 @@ void UAssetValidationSubsystem::ResetValidationState()
 	CheckedAssetsCount = 0;
 	LoadedPackageNames.Empty(32);
 	FMemory::Memzero(ValidationResults.GetData(), ValidationResults.Num() * sizeof(int32));
+
+	CurrentSettings.Reset();
 }
 
 #if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
@@ -394,13 +618,13 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 		TArray<FText> ValidationErrors;
 		TArray<FText> ValidationWarnings;
 
-		const int32 CachedValidatedAssetsCount = ValidatedAssetsCount;
+		const int32 CachedValidatedAssetsCount = CheckedAssetsCount;
 		auto CachedValidationResults = ValidationResults;
 		EDataValidationResult Result = IsAssetValid(AssetData, ValidationErrors, ValidationWarnings, InSettings.ValidationUsecase);
 
 		// ASSET VALIDATION BEGIN
 		// updated Checked, Valid, Invalid and Not Validated counters
-		NumFilesChecked += ValidatedAssetsCount - CachedValidatedAssetsCount;
+		NumFilesChecked += CheckedAssetsCount - CachedValidatedAssetsCount;
 		NumInvalidFiles += ValidationResults[0] - CachedValidationResults[0];
 		NumValidFiles += ValidationResults[1] - CachedValidationResults[1];
 		NumFilesUnableToValidate += ValidationResults[2] - CachedValidationResults[2];

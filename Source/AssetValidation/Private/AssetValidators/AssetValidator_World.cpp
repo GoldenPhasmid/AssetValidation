@@ -12,6 +12,7 @@
 #include "AssetValidationSubsystem.h"
 #include "EngineUtils.h"
 #include "PackageTools.h"
+#include "WorldPartitionSourceControlValidator.h"
 
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
@@ -105,7 +106,7 @@ EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(
 	}
 	
 	const uint32 NumValidationErrors = InContext.GetNumErrors();
-	const EDataValidationResult Result = ValidateWorld(World, InContext);
+	const EDataValidationResult Result = ValidateWorld(InAssetData, World, InContext);
 	if (Result == EDataValidationResult::Valid)
 	{
 		AssetPasses(World);
@@ -113,40 +114,40 @@ EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(
 	else
 	{
 		check(InContext.GetNumErrors() > NumValidationErrors);
-		FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "WorldActors_Failed_AssetCheck", "{0} is not valid. See AssetCheck log for more details."), FText::FromString(World->GetName()));
+		FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromString(World->GetName()));
 		AssetFails(World, FailReason);
 	}
 	
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_World::ValidateWorld(UWorld* World, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& AssetData, UWorld* World, FDataValidationContext& Context)
 {
 	TUniquePtr<FLoaderAdapterShape> AllActors;
 	
 	if (UWorld::IsPartitionedWorld(World))
 	{
-		if (UWorldPartition* WorldPartition = World->GetWorldPartition())
+		const UWorldPartition* WorldPartition = World->GetWorldPartition();
+		// load all data layers
+		UDataLayerManager* DataLayerManager = WorldPartition->GetDataLayerManager();
+		DataLayerManager->ForEachDataLayerInstance([](UDataLayerInstance* DataLayer)
 		{
-			UDataLayerManager* DataLayerManager = WorldPartition->GetDataLayerManager();
-			DataLayerManager->ForEachDataLayerInstance([](UDataLayerInstance* DataLayer)
+				
+			DataLayer->SetIsLoadedInEditor(true, false);
+			if (!IsRunningCommandlet() || IsAllowCommandletRendering())
 			{
-				// load all data layers
-				DataLayer->SetIsLoadedInEditor(true, false);
-				if (!IsRunningCommandlet() || IsAllowCommandletRendering())
-				{
-					DataLayer->SetIsInitiallyVisible(true);
-				}
+				DataLayer->SetIsInitiallyVisible(true);
+			}
 
-				return true;
-			});
+			return true;
+		});
 
-			// notify editor cells: don't ask me how this works
-			FDataLayersEditorBroadcast::StaticOnActorDataLayersEditorLoadingStateChanged(false);
-		}
+		// notify editor cells: don't ask me how this works
+		FDataLayersEditorBroadcast::StaticOnActorDataLayersEditorLoadingStateChanged(false);
 
+		// load all world partition actors
 		AllActors = MakeUnique<FLoaderAdapterShape>(World, FBox{FVector{-HALF_WORLD_MAX}, FVector{HALF_WORLD_MAX}}, TEXT("Loaded Region"));
-        AllActors->Load();
+		AllActors->Load();
 	}
 	else
 	{
@@ -161,22 +162,32 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(UWorld* World, FDataV
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->GetLevelScriptActor(), Context);
 	
-	if (!UWorld::IsPartitionedWorld(World))
+	if (UWorld::IsPartitionedWorld(World))
+	{
+		const UWorldPartition* WorldPartition = World->GetWorldPartition();
+		
+		// FWorldPartitionSourceControlValidator ErrorHandler;
+		// UWorldPartition::CheckForErrors(&ErrorHandler);
+	}
+	else
 	{
 		// validate sublevel level blueprints
-		for (const ULevelStreaming* LevelStreaming: World->GetStreamingLevels())
-		{
-			if (const ULevel* Level = LevelStreaming->GetLoadedLevel())
-			{
-				Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
-				Result &= ValidateAssetInternal(*Subsystem, Level->GetLevelScriptActor(), Context);
-			}
-		}
+        for (const ULevelStreaming* LevelStreaming: World->GetStreamingLevels())
+        {
+        	if (const ULevel* Level = LevelStreaming->GetLoadedLevel())
+        	{
+        		Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
+        		Result &= ValidateAssetInternal(*Subsystem, Level->GetLevelScriptActor(), Context);
+        	}
+        }
 	}
 
-#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 world calls IsDataValid on actor using FActorIterator
+	// starting from 5.4 world calls IsDataValid on actor using FActorIterator, so we don't call it.
+	// Otherwise we would be calling AActor::IsDataValid twice
+#if !WITH_DATA_VALIDATION_UPDATE 
 	Result &= World->IsDataValid(Context);
 #endif
+	
 	for (FActorIterator It{World, AActor::StaticClass(), EActorIteratorFlags::AllActors}; It; ++It)
 	{
 		AActor* Actor = *It;

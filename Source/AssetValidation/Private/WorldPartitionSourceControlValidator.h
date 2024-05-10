@@ -2,7 +2,6 @@
 
 #include "AssetValidationDefines.h"
 
-#if !WITH_DATA_VALIDATION_UPDATE // starting from 5.4 asset validation utilizes WP validators that previously worked for perforce only
 #include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationErrorHandler.h"
 
 struct FWorldPartitionValidatorParams
@@ -48,4 +47,4 @@ public:
 	virtual void OnInvalidActorFilterReference(const FWorldPartitionActorDescView& ActorDescView, const FWorldPartitionActorDescView& ReferenceActorDescView) override;
 	//~End IStreamingGenerationErrorHandler
 };
-#endif
+

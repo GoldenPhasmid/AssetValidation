@@ -14,6 +14,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Logging/MessageLog.h"
 #include "Misc/ScopedSlowTask.h"
+#include "Misc/UObjectToken.h"
 #include "Settings/ProjectPackagingSettings.h"
 #if !WITH_DATA_VALIDATION_UPDATE
 #include "WorldPartition/WorldPartition.h"
@@ -453,26 +454,167 @@ namespace UE::AssetValidation
 		return Filename.EndsWith(TEXT(".h")) || Filename.EndsWith(TEXT(".cpp")) || Filename.EndsWith(TEXT(".hpp"));
 	}
 
-	void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, FLogMessageGatherer& Gatherer)
+	void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext)
+	{
+		for (const FDataValidationContext::FIssue& Issue : ValidationContext.GetIssues())
+		{
+			if (Issue.TokenizedMessage.IsValid())
+			{
+				MessageLog.AddMessage(Issue.TokenizedMessage.ToSharedRef());
+			}
+			else
+			{
+				MessageLog.Message(Issue.Severity, Issue.Message);
+			}
+		}
+	}
+
+	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
+	{
+		for (const FDataValidationContext::FIssue& Issue : ValidationContext.GetIssues())
+		{
+			if (Issue.TokenizedMessage.IsValid())
+			{
+				MessageLog.AddMessage(Issue.TokenizedMessage.ToSharedRef());
+			}
+			else
+			{
+				AppendAssetValidationMessages(MessageLog, AssetData, Issue.Severity, { Issue.Message });
+			}
+		}
+#if 0
+		TArray<FText> Warnings, Errors;
+		Warnings.Reserve(ValidationContext.GetNumWarnings());
+		Errors.Reserve(ValidationContext.GetNumErrors());
+		
+		ValidationContext.SplitIssues(Warnings, Errors);
+
+		AppendAssetValidationMessages(MessageLog, AssetData, EMessageSeverity::Error, Errors);
+		AppendAssetValidationMessages(MessageLog, AssetData, EMessageSeverity::Warning, Warnings);
+#endif
+	}
+
+	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
+	{
+		// use object name if working with external package
+		const UObject* Asset = AssetData.FastGetAsset(false);
+		const bool bExternalPackage = Asset && Asset->IsPackageExternal();
+		const FString PackageName = bExternalPackage ? Asset->GetName() : AssetData.PackageName.ToString();
+		
+		for (const FText& Msg: Messages)
+		{
+			MessageLog.AddMessage(CreateAssetMessage(Msg, AssetData, Severity));
+		}
+	}
+
+	TSharedRef<FTokenizedMessage> CreateAssetMessage(const FText& Message, const FAssetData& AssetData, EMessageSeverity::Type Severity)
+	{
+		// @todo: optimize for loops
+		const UObject* Asset = AssetData.FastGetAsset(false);
+		const bool bExternalPackage = Asset && Asset->IsPackageExternal();
+		const FString PackageName = bExternalPackage ? Asset->GetName() : AssetData.PackageName.ToString();
+		
+		if (bExternalPackage)
+		{
+			return FTokenizedMessage::Create(Severity)
+			// asset log prefix
+			->AddToken(FTextToken::Create(FText::FromString(TEXT("[AssetLog]")))) 
+			// asset token
+			->AddToken(FAssetDataToken::Create(Asset)) 
+			// colon after object token to separate error message
+			->AddToken(FTextToken::Create(FText::FromString(TEXT(":"))))
+			// actual error message
+			->AddToken(FTextToken::Create(Message));
+		}
+		else
+		{
+			const FString FormattedPath		= FAssetMsg::FormatPathForAssetLog(*PackageName);
+			const FString AssetLogString	= FAssetMsg::GetAssetLogString(*PackageName, Message.ToString());
+				
+			FString BeforeAsset{}, AfterAsset{};
+			TSharedRef<FTokenizedMessage> TokenizedMessage = FTokenizedMessage::Create(Severity);
+			if (AssetLogString.Split(FormattedPath, &BeforeAsset, &AfterAsset))
+			{
+				if (!BeforeAsset.IsEmpty())
+				{
+					TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(BeforeAsset)));
+				}
+				
+				TokenizedMessage->AddToken(CreateAssetToken(AssetData));
+					
+				// add asset name to AfterAsset for cases like default object validation and asset validation that are not yet on disk
+				FString AssetNameString = AssetData.AssetName.ToString();
+				AssetNameString.RemoveFromStart(TEXT("Default__"));
+				AfterAsset.InsertAt(0, AssetNameString);
+				
+				if (!AfterAsset.IsEmpty())
+				{
+					TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(AfterAsset)));
+				}
+			}
+			else
+			{
+				TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(AssetLogString)));
+			}
+
+			return TokenizedMessage;
+		}
+	}
+
+	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer)
+	{
+		TArray<FString> Warnings{}, Errors{};
+		Gatherer.Stop(Warnings, Errors);
+
+		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
+		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
+	}
+
+	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, FLogMessageGatherer& Gatherer)
 	{
 		TArray<FString> Warnings{}, Errors{};
 		Gatherer.Release(Warnings, Errors);
 
-		AppendValidationMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
-		AppendValidationMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
+		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
+		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
 	}
-	
-	void AppendValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages)
-	{
-		if (Messages.Num())
-		{
-			TStringBuilder<2048> Buffer;
-			Buffer.Join(Messages, LINE_TERMINATOR);
 
-			ValidationContext.AddMessage(Severity)
-			->AddToken(FAssetDataToken::Create(AssetData))
-			->AddText(LOCTEXT("DataValidation.LoadWarnings", "Warnings loading asset {0}"), FText::FromStringView(Buffer.ToView()));
+	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
+	{
+		for (const FText& Msg: Messages)
+		{
+			ValidationContext.AddMessage(CreateAssetMessage(Msg, AssetData, Severity));
 		}
+	}
+
+	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages)
+	{
+		for (const FString& Msg: Messages)
+		{
+			ValidationContext.AddMessage(CreateAssetMessage(FText::FromString(Msg), AssetData, Severity));
+		}
+	}
+
+	TSharedRef<IMessageToken> CreateAssetToken(const FAssetData& AssetData)
+	{
+		const UObject* Asset = AssetData.FastGetAsset(false);
+#if 0
+		if (Asset && Asset->IsPackageExternal())
+		{
+			return FUObjectToken::Create(Asset); // @todo: open related map as well
+		}
+#endif
+		if (Asset == nullptr || !Asset->HasAnyFlags(RF_ClassDefaultObject))
+		{
+			return FAssetDataToken::Create(AssetData);
+		}
+
+		FString AssetName = AssetData.AssetName.ToString();
+		AssetName.RemoveFromStart(TEXT("Default__"));
+		return FAssetNameToken::Create(AssetName)->OnMessageTokenActivated(FOnMessageTokenActivated::CreateLambda([AssetData](const TSharedRef<IMessageToken>& Token)
+		{
+			// @todo: open project settings and focus respective settings page
+		}));
 	}
 
 	void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
