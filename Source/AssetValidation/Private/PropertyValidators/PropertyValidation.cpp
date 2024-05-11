@@ -32,7 +32,7 @@ bool ApplyToNonContainerProperty(const FProperty* Property, TPropPred&& Func)
 	}
 	if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
 	{
-		return Func(MapProperty->KeyProp) && Func(MapProperty->ValueProp);
+		return Func(MapProperty->KeyProp) || Func(MapProperty->ValueProp);
 	}
 
 	return Func(Property);
