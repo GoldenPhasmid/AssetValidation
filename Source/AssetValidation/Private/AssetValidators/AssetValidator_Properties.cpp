@@ -27,12 +27,11 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	}
 
 	check(Class && Object);
-
-	using namespace UE::AssetValidation;
+	
 	FPropertyValidationResult Result = PropertyValidators->ValidateObject(Object);
 	
-	AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, Result.Errors);
-	AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, Result.Warnings);
+	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, Result.Errors);
+	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, Result.Warnings);
 	
 	return Result.ValidationResult;
 }

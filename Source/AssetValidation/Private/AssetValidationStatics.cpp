@@ -33,6 +33,55 @@
 
 namespace UE::AssetValidation
 {
+	
+FScopedLogMessageGatherer::FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext)
+	: FOutputDevice()
+    , AssetData(InAssetData)
+    , Context(InContext)
+{
+    GLog->AddOutputDevice(this);
+}
+
+FScopedLogMessageGatherer::FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext, TFunction<FString(const FString&)> InLogConverter)
+	: FScopedLogMessageGatherer(InAssetData, InContext)
+{
+	LogConverter = InLogConverter;
+}
+
+FScopedLogMessageGatherer::~FScopedLogMessageGatherer()
+{
+    std::scoped_lock Lock{CriticalSection};
+    GLog->RemoveOutputDevice(this);
+}
+
+void FScopedLogMessageGatherer::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
+{
+    std::scoped_lock Lock{CriticalSection};
+
+	FString Message{V};
+	if (LogConverter)
+	{
+		Message = LogConverter(Message);
+	}
+	
+    const FText MessageText = FText::FromString(Message);
+    switch (Verbosity)
+    {
+    case ELogVerbosity::Warning:
+    	Context.AddMessage(AssetData, EMessageSeverity::Warning, MessageText);
+    	break;
+    case ELogVerbosity::Error:
+    	Context.AddMessage(AssetData, EMessageSeverity::Error, MessageText);
+    	break;
+    default:
+    	break;
+    }
+}
+	
+} // UE::AssetValidation
+
+namespace UE::AssetValidation
+{
 	int32 ValidateCheckedOutAssets(bool bInteractive, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidateCheckedOutAssets);
@@ -471,6 +520,8 @@ namespace UE::AssetValidation
 
 	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 	{
+		UE::DataValidation::AddAssetValidationMessages(AssetData, MessageLog, ValidationContext);
+#if 0
 		for (const FDataValidationContext::FIssue& Issue : ValidationContext.GetIssues())
 		{
 			if (Issue.TokenizedMessage.IsValid())
@@ -479,9 +530,11 @@ namespace UE::AssetValidation
 			}
 			else
 			{
+				
 				AppendAssetValidationMessages(MessageLog, AssetData, Issue.Severity, { Issue.Message });
 			}
 		}
+#endif
 #if 0
 		TArray<FText> Warnings, Errors;
 		Warnings.Reserve(ValidationContext.GetNumWarnings());
@@ -494,6 +547,7 @@ namespace UE::AssetValidation
 #endif
 	}
 
+#if 0
 	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
 	{
 		// use object name if working with external package
@@ -503,10 +557,14 @@ namespace UE::AssetValidation
 		
 		for (const FText& Msg: Messages)
 		{
+			MessageLog.AddMessage(AssetData, Severity, Msg);
+
 			MessageLog.AddMessage(CreateAssetMessage(Msg, AssetData, Severity));
 		}
 	}
+#endif
 
+#if 0
 	TSharedRef<FTokenizedMessage> CreateAssetMessage(const FText& Message, const FAssetData& AssetData, EMessageSeverity::Type Severity)
 	{
 		// @todo: optimize for loops
@@ -540,7 +598,7 @@ namespace UE::AssetValidation
 					TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(BeforeAsset)));
 				}
 				
-				TokenizedMessage->AddToken(CreateAssetToken(AssetData));
+				TokenizedMessage->AddToken(FAssetDataToken::Create);
 					
 				// add asset name to AfterAsset for cases like default object validation and asset validation that are not yet on disk
 				FString AssetNameString = AssetData.AssetName.ToString();
@@ -560,6 +618,7 @@ namespace UE::AssetValidation
 			return TokenizedMessage;
 		}
 	}
+#endif
 
 	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer)
 	{
@@ -569,21 +628,17 @@ namespace UE::AssetValidation
 		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
 		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
 	}
-
-	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, FLogMessageGatherer& Gatherer)
-	{
-		TArray<FString> Warnings{}, Errors{};
-		Gatherer.Release(Warnings, Errors);
-
-		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
-		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
-	}
+	
 
 	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
 	{
 		for (const FText& Msg: Messages)
 		{
+			ValidationContext.AddMessage(AssetData, Severity, Msg);
+#if 0
 			ValidationContext.AddMessage(CreateAssetMessage(Msg, AssetData, Severity));
+#endif
+			
 		}
 	}
 
@@ -591,32 +646,13 @@ namespace UE::AssetValidation
 	{
 		for (const FString& Msg: Messages)
 		{
-			ValidationContext.AddMessage(CreateAssetMessage(FText::FromString(Msg), AssetData, Severity));
-		}
-	}
-
-	TSharedRef<IMessageToken> CreateAssetToken(const FAssetData& AssetData)
-	{
-		const UObject* Asset = AssetData.FastGetAsset(false);
+			ValidationContext.AddMessage(AssetData, Severity, FText::FromString(Msg));
 #if 0
-		if (Asset && Asset->IsPackageExternal())
-		{
-			return FUObjectToken::Create(Asset); // @todo: open related map as well
-		}
+			ValidationContext.AddMessage(CreateAssetMessage(FText::FromString(Msg), AssetData, Severity));
 #endif
-		if (Asset == nullptr || !Asset->HasAnyFlags(RF_ClassDefaultObject))
-		{
-			return FAssetDataToken::Create(AssetData);
 		}
-
-		FString AssetName = AssetData.AssetName.ToString();
-		AssetName.RemoveFromStart(TEXT("Default__"));
-		return FAssetNameToken::Create(AssetName)->OnMessageTokenActivated(FOnMessageTokenActivated::CreateLambda([AssetData](const TSharedRef<IMessageToken>& Token)
-		{
-			// @todo: open project settings and focus respective settings page
-		}));
 	}
-
+	
 	void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidatePackages);
@@ -786,7 +822,6 @@ namespace UE::AssetValidation
 		return UWorld::IsWorldOrExternalActorPackage(Package);
 #endif
 	}
-	
 } // UE::AssetValidation
 
 #undef LOCTEXT_NAMESPACE

@@ -10,9 +10,14 @@
 #include "SourceControlProxy.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
+#include "UnrealEdGlobals.h"
+#include "AssetRegistry/AssetDataToken.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor/PropertyExternalValidationDataCustomization.h"
 #include "Editor/PropertyValidationSettingsDetails.h"
+#include "Editor/UnrealEdEngine.h"
 #include "Misc/ScopedSlowTask.h"
+#include "WorldPartition/WorldPartitionActorDescUtils.h"
 
 #define LOCTEXT_NAMESPACE "FAssetValidationModule"
 
@@ -34,6 +39,9 @@ public:
 	}
 
 private:
+
+	void OnAssetDataTokenActivated(const TSharedRef<class IMessageToken>& InToken);
+	FText OnGetAssetDataTokenDisplayName(const FAssetData& AssetData, const bool bFullPath);
 
 	void UpdateSourceControlProxy(ISourceControlProvider& OldProvider, ISourceControlProvider& NewProvider);
 
@@ -112,6 +120,12 @@ void FAssetValidationModule::StartupModule()
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyEditor.RegisterCustomClassLayout("PropertyValidationSettings", FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
 	PropertyEditor.RegisterCustomPropertyTypeLayout("PropertyExternalValidationData", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FPropertyExternalValidationDataCustomization::MakeInstance));
+
+	FEditorDelegates::OnEditorInitialized.AddLambda([this](double Duration)
+	{
+		FAssetDataToken::DefaultOnMessageTokenActivated().BindRaw(this, &ThisClass::OnAssetDataTokenActivated);
+		FAssetDataToken::DefaultOnGetAssetDisplayName().BindRaw(this, &ThisClass::OnGetAssetDataTokenDisplayName);
+	});
 }
 
 void FAssetValidationModule::RegisterMenus()
@@ -175,6 +189,7 @@ void FAssetValidationModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+	FEditorDelegates::OnEditorInitialized.RemoveAll(this);
 
 	UToolMenus::UnRegisterStartupCallback(this);
 	UToolMenus::UnregisterOwner(this);
@@ -183,6 +198,105 @@ void FAssetValidationModule::ShutdownModule()
 	
 	ISourceControlModule& SourceControl = ISourceControlModule::Get();
 	SourceControl.UnregisterProviderChanged(SCProviderChangedHandle);
+}
+
+void FAssetValidationModule::OnAssetDataTokenActivated(const TSharedRef<IMessageToken>& InToken)
+{
+	if (InToken->GetType() != EMessageToken::AssetData)
+	{
+		return;
+	}
+	
+	const TSharedRef<FAssetDataToken> Token = StaticCastSharedRef<FAssetDataToken>(InToken);
+	const FAssetData& AssetData = Token->GetAssetData();
+	// If this is a standalone asset, jump to it in the content browser
+	if (AssetData.GetOptionalOuterPathName().IsNone())
+	{
+		GEditor->SyncBrowserToObjects({ AssetData });
+	}
+	// If this is a loaded actor, resolve the pointer and select it
+	else if (AActor* Actor = Cast<AActor>(AssetData.GetSoftObjectPath().ResolveObject()))
+	{
+		// copy from FUnrealEdMisc::SelectActorFromMessageToken
+		// Select the actor
+		GEditor->SelectNone(false, true);
+		GEditor->SelectActor(Actor, /*InSelected=*/true, /*bNotify=*/false, /*bSelectEvenIfHidden=*/true);
+		GEditor->NoteSelectionChange();
+		GEditor->MoveViewportCamerasToActor(*Actor, false);
+
+		// Update the property windows and create one if necessary
+		GUnrealEd->ShowActorProperties();
+		GUnrealEd->UpdateFloatingPropertyWindows();
+	}
+	else
+	{
+		FName PackageName = FName(FPackageName::ObjectPathToPackageName(WriteToString<FName::StringBufferSize>(AssetData.GetOptionalOuterPathName()).ToView()));
+		UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+		// If this is an unloaded actor in the currently loaded level, select it as an unloaded actor
+		if (EditorWorld && EditorWorld->GetPackage()->GetFName() == PackageName)
+		{
+			TUniquePtr<FWorldPartitionActorDesc> Desc = FWorldPartitionActorDescUtils::GetActorDescriptorFromAssetData(AssetData);
+			if (Desc.IsValid())
+			{
+				GEditor->BroadcastSelectUnloadedActors({ Desc->GetGuid() });
+			}
+		}
+		// If this is an actor in an unloaded level, jump to the level in the content browser
+		else 
+		{
+			FAssetRegistryModule& AssetRegistryModule = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry");
+			IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+			TArray<FAssetData> OutAssets;
+			AssetRegistry.GetAssetsByPackageName(PackageName, OutAssets);
+			GEditor->SyncBrowserToObjects(OutAssets);
+		}
+	}
+}
+
+FText FAssetValidationModule::OnGetAssetDataTokenDisplayName(const FAssetData& AssetData, const bool bFullPath)
+{
+	static FName NAME_ActorLabel("ActorLabel");
+
+	UObject* Asset = AssetData.FastGetAsset(false);
+	
+	FString DisplayName;
+	TStringBuilder<FName::StringBufferSize> Buffer;
+	if (AssetData.GetTagValue(NAME_ActorLabel, DisplayName) || 
+		AssetData.GetTagValue(FPrimaryAssetId::PrimaryAssetDisplayNameTag, DisplayName))
+	{
+		// handles WP actors because of ActorLabel asset tag and primary assets
+		Buffer << DisplayName << TEXT(" (");
+		AssetData.AppendObjectPath(Buffer);
+		Buffer << TEXT(")");
+		return FText::FromStringView(Buffer.ToView());
+	}
+	else if (AActor* Actor = Cast<AActor>(Asset))
+	{
+		// handles usual loaded actors
+		Buffer << Actor->GetActorNameOrLabel() << TEXT(".") << AssetData.AssetName;
+		return FText::FromStringView(Buffer.ToView());
+	}
+	else if (!AssetData.GetOptionalOuterPathName().IsNone())
+	{
+		// handles usual unloaded actors
+		AssetData.AppendObjectPath(Buffer);
+		return FText::FromStringView(Buffer.ToView());
+	}
+	else if (Asset && Asset->HasAnyFlags(RF_ClassDefaultObject))
+	{
+		// handles default objects like project settings
+		FString AssetName = AssetData.AssetName.ToString();
+		AssetName.RemoveFromStart(TEXT("Default__"));
+
+		Buffer << AssetName;
+		return FText::FromStringView(Buffer.ToView());
+	}
+	else if (bFullPath)
+	{
+		AssetData.AppendObjectPath(Buffer);
+		return FText::FromStringView(Buffer.ToView());
+	}
+	return FText::FromName(AssetData.PackageName);
 }
 
 void FAssetValidationModule::CheckContent()

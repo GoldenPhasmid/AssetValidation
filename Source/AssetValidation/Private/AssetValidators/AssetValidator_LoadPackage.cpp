@@ -8,18 +8,18 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 
-bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(LoadPackage_GetErrors, AssetValidationChannel);
-
-	if (UAssetValidationSubsystem::IsPackageAlreadyLoaded(FName{PackageName}))
+	
+	if (UAssetValidationSubsystem::IsPackageAlreadyLoaded(AssetData.PackageName))
 	{
 		return true;
 	}
 
-	UAssetValidationSubsystem::MarkPackageLoaded(FName{PackageName});
-	
-	check(GEngine);
+	UAssetValidationSubsystem::MarkPackageLoaded(AssetData.PackageName);
+
+	const FString PackageName = AssetData.PackageName.ToString();
 	check(!PackageName.IsEmpty());
 
 	UPackage* Package = FindPackage(nullptr, *PackageName);
@@ -56,11 +56,8 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	if (Package == nullptr)
 	{
 		// Not in memory, just load it
-		UE::AssetValidation::FLogMessageGatherer Gatherer;
+		UE::AssetValidation::FScopedLogMessageGatherer Gatherer{AssetData, ValidationContext};
 		Package = LoadPackage(nullptr, *PackageName, LOAD_None);
-
-		OutWarnings.Append(Gatherer.GetWarnings());
-		OutErrors.Append(Gatherer.GetErrors());
 		return true;
 	}
 
@@ -100,7 +97,16 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 #endif
 	
 	{
-		UE::AssetValidation::FLogMessageGatherer Gatherer;
+		auto ConvertMessage = [&DestFilename, &DestPackageName, &SourceFilename, &PackageName](const FString& Message)
+		{
+			// correct messages with real package name, remove the temp one
+			FString Msg{Message};
+			Msg = Msg.Replace(*DestFilename, *SourceFilename);
+			Msg = Msg.Replace(*DestPackageName, *PackageName);
+
+			return MoveTemp(Msg);
+		};
+		UE::AssetValidation::FScopedLogMessageGatherer Gatherer{AssetData, ValidationContext, ConvertMessage};
 
 		const int32 LoadFlags = LOAD_ForDiff | LOAD_DisableCompileOnLoad;
 		UPackage* DestPackage = LoadPackage(nullptr, *DestPackageName, LoadFlags);
@@ -109,19 +115,6 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 		
 		if (DestPackage)
 		{
-			auto FixupAndCopyMessages = [&](const TArray<FString>& Input, TArray<FString>& Output)
-			{
-				for (FString Msg: Input)
-				{
-					Msg = Msg.Replace(*DestFilename, *SourceFilename);
-					Msg = Msg.Replace(*DestPackageName, *PackageName);
-					Output.Add(MoveTemp(Msg));
-				}
-			};
-			// correct messages with real package name, remove the temp one
-			FixupAndCopyMessages(Gatherer.GetWarnings(), OutWarnings);
-			FixupAndCopyMessages(Gatherer.GetErrors(), OutErrors);
-			
 			ResetLoaders(DestPackage);
 			IFileManager::Get().Delete(*DestFilename);
 
@@ -135,7 +128,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 				if (TempObject->IsRooted())
 				{
 					check(false);
-					continue;;
+					continue;
 				}
 				
 				TempObject->ClearFlags(RF_Public | RF_Standalone);
@@ -175,26 +168,17 @@ EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implement
 	{
 		PackageName = InAsset ? InAsset->GetPackage()->GetName() : TEXT("");
 	}
-	
-	TArray<FString> Warnings, Errors;
-	if (GetPackageLoadErrors(InAssetData.PackageName.ToString(), Warnings, Errors))
-	{
-		for (const FString& Warning: Warnings)
-		{
-			AssetWarning(InAsset, FText::FromString(Warning));
-		}
 
-		for (const FString& Error: Errors)
+	const uint32 NumErrors = Context.GetNumErrors();
+	if (GetPackageLoadErrors(InAssetData, Context))
+	{
+		if (Context.GetNumErrors() > NumErrors)
 		{
-			AssetFails(InAsset, FText::FromString(Error));
+			return EDataValidationResult::Invalid;
 		}
 	}
 
-	if (GetValidationResult() != EDataValidationResult::Invalid)
-	{
-		AssetPasses(InAsset);
-	}
-	
-	return GetValidationResult();
+	AssetPasses(InAsset);
+	return  EDataValidationResult::Valid;
 }
 

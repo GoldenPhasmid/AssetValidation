@@ -17,7 +17,7 @@
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	EDataValidationUsecase Usecase = InContext.GetValidationUsecase();
-	if (Usecase == EDataValidationUsecase::Save)
+	if (InContext.GetAssociatedExternalObjects().Num() > 0 && Usecase == EDataValidationUsecase::Save)
 	{
 		// saving WP actors would result in this validator attempting to run with world asset
 		// don't validate on save, wait until PreSubmit or Manual
@@ -34,32 +34,7 @@ bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& In
 EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
 {
 	check(AssetData.IsValid());
-	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_WorldActors, AssetValidationChannel);
 	
-#if 0
-	const FString WorldPackageName = InAsset->GetPackage()->GetName();
-	// @todo: this doesn't actually work, package does not get reset
-	// currently the only way I see from the engine code is to iterate all package objects, 
-	// remove GARBAGE_COLLECTION_KEEPFLAGS and call garbage collection. Which can take a while
-	InAsset->GetPackage()->MarkAsUnloaded();
-#endif
-
-#if 0
-    UWorld::WorldTypePreLoadMap.FindOrAdd(FName(WorldPackageName)) = EWorldType::Editor;
-
-
-    UPackage* WorldPackage = CreatePackage(*FString{TEXT("TEMP_") + WorldPackageName});
-    check(WorldPackage);
-
-    WorldPackage->MarkAsUnloaded();
-
-    WorldPackage->SetPackageFlags(PKG_ContainsMap);
-    WorldPackage->SetLoadedPath(InAsset->GetPackage()->GetLoadedPath());
-    WorldPackage->FullyLoad();
-    
-    UWorld::WorldTypePreLoadMap.Remove(FName(WorldPackageName));
-#endif
-
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	if (UPackage* WorldPackage = LoadWorldPackageForEditor(AssetData.PackageName.ToString(), EWorldType::Editor))
 	{
@@ -78,6 +53,8 @@ EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(
 {
 	check(bRecursiveGuard == false);
 	check(InAsset);
+
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_ValidateWorld, AssetValidationChannel);
 
 	// guard against recursive world validation. We're not safe 
 	TGuardValue RecursiveGuard{bRecursiveGuard, true};
@@ -107,15 +84,12 @@ EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(
 	
 	const uint32 NumValidationErrors = InContext.GetNumErrors();
 	const EDataValidationResult Result = ValidateWorld(InAssetData, World, InContext);
-	if (Result == EDataValidationResult::Valid)
-	{
-		AssetPasses(World);
-	}
-	else
+
+	if (Result == EDataValidationResult::Invalid)
 	{
 		check(InContext.GetNumErrors() > NumValidationErrors);
-		FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromString(World->GetName()));
-		AssetFails(World, FailReason);
+		const FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromString(World->GetName()));
+		InContext.AddMessage(InAssetData, EMessageSeverity::Error, FailReason);
 	}
 	
 	return Result;

@@ -16,6 +16,9 @@ public:
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 	//~End EditorValidatorBase interface
 
-	/** Load package */
-	static bool GetPackageLoadErrors(const FString& PackageName, TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+	/**
+	 * Load package defined by @AssetData and catch any load associated errors and warnings, write them directly to @ValidationContext
+	 * @return true if package was loaded, false otherwise
+	 */
+	static bool GetPackageLoadErrors(const FAssetData& AssetData, FDataValidationContext& ValidationContext);
 };

@@ -33,7 +33,7 @@ EDataValidationResult UAssetValidator_ExternalObjects::ValidateAssetInternal(con
 	for (const FAssetData& AssetData: InContext.GetAssociatedExternalObjects())
 	{
 		// gather error and warning messages produced by loading an external asset
-		FLogMessageGatherer Gatherer;
+		FScopedLogMessageGatherer Gatherer{AssetData, InContext};
 		if (UObject* Asset = AssetData.GetAsset({ULevel::LoadAllExternalObjectsTag}))
 		{
 			TGuardValue AssetGuard{CurrentExternalAsset, Asset};
@@ -45,8 +45,6 @@ EDataValidationResult UAssetValidator_ExternalObjects::ValidateAssetInternal(con
 		{
 			AppendAssetValidationMessages(InContext, AssetData, EMessageSeverity::Error, {TEXT("Failed to load object")});
 		}
-
-		AppendAssetValidationMessages(InContext, AssetData, Gatherer);
 	}
 
 	if (Result == EDataValidationResult::Invalid)

@@ -2,6 +2,7 @@
 
 #include "Misc/DataValidation.h"
 #include "AssetValidationModule.h"
+#include "AssetValidationSettings.h"
 #include "AssetRegistry/AssetDataToken.h"
 
 UAssetValidator::UAssetValidator()
@@ -29,14 +30,9 @@ EDataValidationResult UAssetValidator::ValidateAsset(const FAssetData& InAssetDa
 
 void UAssetValidator::LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context)
 {
-	if (bLogValidatingAssetMessage == false || !AssetData.IsValid())
+	if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging && AssetData.IsValid())
 	{
-		return;
+		// can't use UEditorValidator::AssetMessage because AssetValidator resets its validation state when doing recursive validation
+		Context.AddMessage(AssetData, EMessageSeverity::Info, NSLOCTEXT("AssetValidation", "ValidatingAsset", "Validating asset"));
 	}
-	// can't use AssetMessage because AssetValidator resets its validation state when doing recursive validation
-	TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(EMessageSeverity::Info)
-	->AddToken(FAssetDataToken::Create(AssetData))
-	->AddToken(FTextToken::Create(NSLOCTEXT("AssetValidation", "ValidatingAsset", "Validating asset")));
-	
-	Context.AddMessage(Message);
 }

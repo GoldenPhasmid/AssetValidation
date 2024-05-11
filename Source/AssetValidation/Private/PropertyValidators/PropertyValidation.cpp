@@ -53,39 +53,44 @@ bool UE::AssetValidation::CheckPropertyMetaData(const FProperty* Property, const
 
 	bool bPropertyValid = true;
 	{
+		const FName MetaName = UE::AssetValidation::Validate;
 		// check "Validate" meta specifier
 		const bool bUsedOnStructProperty = ApplyToNonContainerProperty(Property, [](const FProperty* Property) { return Property->IsA<FStructProperty>(); });
 		// struct properties can have "Validate" meta all they want, even if struct value validator doesn't exist
-		const bool bMetaAllowed = !MetaData.HasMetaData(Validate) || bUsedOnStructProperty || CanApplyMeta_Validate(Property);
-		UE_CLOG(!bMetaAllowed, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		const bool bMetaAllowed = !MetaData.HasMetaData(MetaName) || bUsedOnStructProperty || CanApplyMeta_Validate(Property);
+		UE_CLOG(!bMetaAllowed, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, MetaName.ToString()}));
 		bPropertyValid &= bMetaAllowed;
 	}
 
 	{
+		const FName MetaName = UE::AssetValidation::ValidateKey;
 		// check "ValidateKey" meta specifier
-		const bool bMetaAllowed = !MetaData.HasMetaData(ValidateKey) || CanApplyMeta_ValidateKey(Property);
-		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		const bool bMetaAllowed = !MetaData.HasMetaData(MetaName) || CanApplyMeta_ValidateKey(Property);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, MetaName.ToString()}));
 		bPropertyValid &= bMetaAllowed;
 	}
 
 	{
+		const FName MetaName = UE::AssetValidation::ValidateValue;
 		// check "ValidateValue" meta specifier
-		const bool bMetaAllowed = !MetaData.HasMetaData(ValidateValue) || CanApplyMeta_ValidateValue(Property);
-		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		const bool bMetaAllowed = !MetaData.HasMetaData(MetaName) || CanApplyMeta_ValidateValue(Property);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, MetaName.ToString()}));
 		bPropertyValid &= bMetaAllowed;
 	}
 
 	{
+		const FName MetaName = UE::AssetValidation::ValidateRecursive;
 		// check "ValidateRecursive" meta specifier
-		const bool bMetaAllowed = !MetaData.HasMetaData(ValidateRecursive) || CanApplyMeta_ValidateRecursive(Property);
-		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, Validate.ToString()}));
+		const bool bMetaAllowed = !MetaData.HasMetaData(MetaName) || CanApplyMeta_ValidateRecursive(Property);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, MetaName.ToString()}));
 		bPropertyValid &= bMetaAllowed;
 	}
 
 	{
+		const FName MetaName = UE::AssetValidation::FailureMessage;
 		// check "FailureMessage" meta specifier
-		const bool bMetaAllowed = !MetaData.HasMetaData(FailureMessage) || CanApplyMeta(Property, FailureMessage);
-		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, FailureMessage.ToString()}));
+		const bool bMetaAllowed = !MetaData.HasMetaData(MetaName) || CanApplyMeta(Property, MetaName);
+		UE_CLOG(!bMetaAllowed && bLoggingEnabled, LogAssetValidation, Error, TEXT("%s"), *FString::Format(*Pattern, {CppPropertyName, CppType, MetaName.ToString()}));
 		bPropertyValid &= bMetaAllowed;
 	}
 

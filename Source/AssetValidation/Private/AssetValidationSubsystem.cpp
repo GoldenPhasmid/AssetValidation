@@ -1,6 +1,7 @@
 #include "AssetValidationSubsystem.h"
 
 #include "AssetValidationModule.h"
+#include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "DataValidationChangelist.h"
 #include "EditorValidatorBase.h"
@@ -8,13 +9,11 @@
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlProxy.h"
-#include "Algo/AnyOf.h"
 #include "AssetRegistry/AssetDataToken.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "AssetValidators/AssetValidator.h"
 #include "Misc/DataValidation.h"
 #include "Misc/ScopedSlowTask.h"
-#include "Misc/UObjectToken.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -189,11 +188,13 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 	/**
 	 *	This function is a copy of a UEditorValidatorSubsystem::ValidateAssetsInternal, but fixes several things
 	 *  that were poorly implemented in the original:
-	 *  1.	New abysmal logging. Before, each error/warning was logged using separate tokenized message. In new implementation,
-	 *		all errors/warnings produced by (unrelated) validators are crammed into one message.
+	 *  1.	New logging choice is questionable. Before, each error/warning was logged using separate tokenized message.
+	 *		In new implementation, all errors/warnings produced by (unrelated) validators are crammed into one message.
 	 *		This results with error message being bloated and inproperly aligned in asset check window.
-	 *		
-	 *	5.	AssetDataList is TSet instead of TArray. However, original iterates twice over its members and doesn't use
+	 *		Excessive logging is also an issue, I don't understand the reason behind logging every asset that is being validated.
+	 *	2.	Unable to control which assets should be loaded before validtors or should be loaded as part of actual validation.
+	 *		Now, IsAssetValidWithContext controls whether asset should be loaded beforehand or passed as asset data.
+	 *	3.	AssetDataList is TSet instead of TArray. Original implementation iterates twice over its members and doesn't use
 	 *		TSet features like fast search.
 	 *	
 	 *
@@ -301,15 +302,14 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 			continue;
 		}
 
-// ASSET VALIDATION BEGIN remove this god forsaken logging ALWAYS for EVERY asset
-		if (bLogEveryAssetBecauseYouWantYourLogThrashed)
+		// do not log detailed info for every asset unless asked to
+		if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging)
 		{
 			DataValidationLog.Info()
-			->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+			->AddToken(FAssetDataToken::Create(AssetData))
 			->AddToken(FTextToken::Create(LOCTEXT("ValidatingAsset", "Validating asset")));
 			UE_LOG(LogAssetValidation, Display, TEXT("Validating asset %s"), *AssetData.ToSoftObjectPath().ToString());
 		}
-// ASSET VALIDATION END
 		
 		UObject* LoadedAsset = AssetData.FastGetAsset(false);
 		const bool bAlreadyLoaded = LoadedAsset != nullptr;
@@ -337,15 +337,15 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 		{
 			if (bAnyWarnings)
 			{
-				DataValidationLog.Info()
-				->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+				DataValidationLog.Warning()
+				->AddToken(FAssetDataToken::Create(AssetData))
 				->AddToken(FTextToken::Create(LOCTEXT("ContainsWarningsResult", "contains valid data, but has warnings.")));
 			}
 		}
 		else if (Result == EDataValidationResult::Invalid)
 		{
-			DataValidationLog.Info()
-			->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+			DataValidationLog.Error()
+			->AddToken(FAssetDataToken::Create(AssetData))
 			->AddToken(FTextToken::Create(LOCTEXT("InvalidDataResult", "contains invalid data.")));
 		}
 		else if (Result == EDataValidationResult::NotValidated)
@@ -353,7 +353,7 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 			if (InSettings.bShowIfNoFailures)
 			{
 				DataValidationLog.Info()
-				->AddToken(UE::AssetValidation::CreateAssetToken(AssetData))
+				->AddToken(FAssetDataToken::Create(AssetData))
 				->AddToken(FTextToken::Create(LOCTEXT("NotValidatedDataResult", "has no data validation.")));
 			}
 		}
@@ -396,7 +396,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	if (!CurrentSettings.IsSet())
 	{
 		// @todo: use settings from AssetValidationSettings
-		CurrentSettings = TOptional{FValidateAssetsSettings{}};
+		CurrentSettings = UAssetValidationSettings::Get()->DefaultSettings;
 	}
 
 	// explicitly increase validated assets count
@@ -426,6 +426,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 		// call default implementation that loads an asset and calls IsObjectValid
 		UE::DataValidation::FScopedLogMessageGatherer LogGatherer(CurrentSettings->bCaptureLogsDuringValidation);
 		Result &= Super::IsAssetValidWithContext(AssetData, InContext);
+		UE::AssetValidation::AppendAssetValidationMessages(InContext, AssetData, LogGatherer);
 	}
 	else
 	{

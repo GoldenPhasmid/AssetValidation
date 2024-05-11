@@ -67,9 +67,6 @@ protected:
 	/** @return true if asset should be pre loaded for validation */
 	bool ShouldLoadAsset(const FAssetData& AssetData) const;
 
-	UPROPERTY(Config)
-	bool bLogEveryAssetBecauseYouWantYourLogThrashed = false;
-
 	/** */
 	void ResetValidationState() const;
 	void ResetValidationState();

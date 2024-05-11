@@ -4,6 +4,7 @@
 
 #include "AssetValidationDefines.h"
 #include "EditorValidatorHelpers.h"
+#include "Misc/DataValidation.h"
 
 struct FValidateAssetsResults;
 struct FValidateAssetsSettings;
@@ -21,61 +22,21 @@ using FActorDescContainerCollection = TActorDescContainerCollection<TObjectPtr<U
 namespace UE::AssetValidation
 {
 
-struct FAssetValidationMessageGatherer: public FOutputDevice
+struct FScopedLogMessageGatherer: public FOutputDevice
 {
-	FAssetValidationMessageGatherer()
-		: FOutputDevice()
-	{
-		GLog->AddOutputDevice(this);
-	}
+	FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext);
+	FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext, TFunction<FString(const FString&)> InLogConverter);
 
-	virtual ~FAssetValidationMessageGatherer() override
-	{
-		std::scoped_lock Lock{CriticalSection};
-		GLog->RemoveOutputDevice(this);
-	}
+	virtual ~FScopedLogMessageGatherer() override;
 
-	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
-	{
-		std::scoped_lock Lock{CriticalSection};
-		
-		const FString Message(V);
-		if (Verbosity == ELogVerbosity::Warning)
-		{
-			Warnings.Add(Message);
-		}
-		else if (Verbosity == ELogVerbosity::Error)
-		{
-			Errors.Add(Message);
-		}
-	}
-
-	TArray<FString> GetErrors() const
-	{
-		return Errors;
-	}
-
-	TArray<FString> GetWarnings() const
-	{
-		return Warnings;
-	}
-
-	void Release(TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
-	{
-		std::scoped_lock Lock{CriticalSection};
-		OutWarnings.Append(Warnings);
-		OutErrors.Append(Errors);
-	}
+	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override;
 
 private:
 	std::recursive_mutex CriticalSection;
-	
-	TArray<FString> Warnings;
-	TArray<FString> Errors;
+	FAssetData AssetData;
+	FDataValidationContext& Context;
+	TFunction<FString(const FString&)> LogConverter;
 };
-
-// @todo: refactor
-struct ASSETVALIDATION_API FLogMessageGatherer: public FAssetValidationMessageGatherer {};
 	
 } // UE::AssetValidation
 
@@ -150,14 +111,11 @@ namespace UE::AssetValidation
 	/** Add validation messages to validation context in "data validation format" */
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FLogMessageGatherer& Gatherer);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
 	/** @return correctly tokenized message */
+#if 0
 	ASSETVALIDATION_API TSharedRef<FTokenizedMessage> CreateAssetMessage(const FText& Message, const FAssetData& AssetData, EMessageSeverity::Type Severity);
-	/** @return asset token that describes asset data */
-	ASSETVALIDATION_API TSharedRef<IMessageToken> CreateAssetToken(const FAssetData& AssetData);
-
+#endif
 } // UE::AssetValidation
