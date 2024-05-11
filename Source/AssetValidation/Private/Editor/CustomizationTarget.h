@@ -46,6 +46,10 @@ public:
 	}
 
 	virtual ~ICustomizationTarget() {}
+
+protected:
+	/** shared implementation of whether property meta should be visible */
+	bool IsPropertyMetaVisible(const FProperty* Property, const FName& MetaKey) const;
 private:
 
 	virtual bool HandleIsMetaVisible(const FName& MetaKey) const = 0;

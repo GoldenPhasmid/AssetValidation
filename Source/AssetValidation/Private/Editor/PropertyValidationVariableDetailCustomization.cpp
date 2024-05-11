@@ -16,12 +16,7 @@ bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::Handl
 	{
 		if (const FProperty* Property = Customization.Pin()->CachedProperty.Get())
 		{
-			if (Property->IsA<FMapProperty>() && MetaKey == UE::AssetValidation::Validate)
-			{
-				// don't should all "Validate", "ValidateKey" and "ValidateValue" for map properties
-				return false;
-			}
-			return UE::AssetValidation::CanApplyMeta(Property, MetaKey);
+			return IsPropertyMetaVisible(Property, MetaKey);
 		}
 	}
 	

@@ -2,6 +2,7 @@
 
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
+#include "PropertyValidationSettings.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
@@ -105,6 +106,22 @@ void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE
 		.OnTextCommitted(Target.Get(), &ICustomizationTarget::SetMetaValue, UE::AssetValidation::FailureMessage)
 		.Font(DetailFont)
 	];
+}
+
+bool UE::AssetValidation::ICustomizationTarget::IsPropertyMetaVisible(const FProperty* Property, const FName& MetaKey) const
+{
+	if (Property->IsA<FMapProperty>() && MetaKey == UE::AssetValidation::Validate)
+	{
+		// should "ValidateKey" and "ValidateValue" for map properties, hide "Validate"
+		return false;
+	}
+	if (Property->IsA<FStructProperty>() && MetaKey == UE::AssetValidation::ValidateRecursive && UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties)
+	{
+		// don't should "ValidateRecursive" for struct properties if auto validation is enabled
+		return false;
+	}
+	
+	return UE::AssetValidation::CanApplyMeta(Property, MetaKey);
 }
 
 #undef LOCTEXT_NAMESPACE
