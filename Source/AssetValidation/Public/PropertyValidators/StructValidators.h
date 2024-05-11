@@ -41,6 +41,19 @@ public:
 };
 
 UCLASS()
+class ASSETVALIDATION_API UStructValidator_SoftClassPath: public UStructValidator
+{
+	GENERATED_BODY()
+public:
+	UStructValidator_SoftClassPath();
+	
+	//~Begin PropertyValidatorBase
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
+	//~End PropertyValidatorBase
+};
+
+
+UCLASS()
 class ASSETVALIDATION_API UStructValidator_GameplayTag: public UStructValidator
 {
 	GENERATED_BODY()

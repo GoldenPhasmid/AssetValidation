@@ -32,16 +32,39 @@ UStructValidator_SoftObjectPath::UStructValidator_SoftObjectPath()
 
 void UStructValidator_SoftObjectPath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
-	const FSoftObjectPath* SoftObjectPath = ConvertStructMemory<FSoftObjectPath>(PropertyMemory);
-	check(SoftObjectPath);
+	const FSoftObjectPath* ObjectPath = ConvertStructMemory<FSoftObjectPath>(PropertyMemory);
+	check(ObjectPath);
 	
-	if (SoftObjectPath->IsNull())
+	if (ObjectPath->IsNull())
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("SoftObjectPath_Null", "Soft object path not set."));
 	}
-	else if (const FString PackageName = SoftObjectPath->GetLongPackageName(); !FPackageName::DoesPackageExist(PackageName))
+	else if (ObjectPath->IsAsset())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("SoftObjectPath_NotExists", "Soft object path: package doesn't exist on disk."));
+		if (const FString PackageName = ObjectPath->GetLongPackageName(); !FPackageName::DoesPackageExist(PackageName))
+		{
+			ValidationContext.PropertyFails(Property, LOCTEXT("SoftObjectPath_NotExists", "Soft object path: package doesn't exist on disk."));
+		}
+	}
+}
+
+UStructValidator_SoftClassPath::UStructValidator_SoftClassPath()
+{
+	CppType = GetNativeScriptStruct(TEXT("SoftClassPath"))->GetStructCPPName();
+}
+
+void UStructValidator_SoftClassPath::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
+	const FSoftClassPath* ClassPath = ConvertStructMemory<FSoftClassPath>(PropertyMemory);
+	check(ClassPath);
+	
+	if (ClassPath->IsNull())
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("SoftClassPath_Null", "Soft class path not set."));
+	}
+	else if (UObject* Class = ClassPath->TryLoadClass<UObject>(); Class == nullptr)
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("SoftClassPath_NotExists", "Soft class path: failed to load class."));
 	}
 }
 

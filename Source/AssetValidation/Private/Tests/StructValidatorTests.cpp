@@ -117,6 +117,22 @@ bool FAutomationTest_SoftObjectPath::RunTest(const FString& Parameters)
 	return ValidateObject<UValidationTestObject_SoftObjectPath>(5);
 }
 
+UValidationTestObject_SoftClassPath::UValidationTestObject_SoftClassPath()
+{
+	EmptyPathArray.AddDefaulted();
+	BadPath			= FString{TEXT("/Script/Class/That/Doesnt/Exist.Name")};
+	Struct.BadPath	= FString{TEXT("/Script/Class/That/Doesnt/Exist.Name")};
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_SoftClassPath, FStructValidatorAutomationTest,
+										"PropertyValidation.StructValidators.SoftClassPath", AutomationFlags)
+
+bool FAutomationTest_SoftClassPath::RunTest(const FString& Parameters)
+{
+	// SoftObjectPath struct value should be validated
+	return ValidateObject<UValidationTestObject_SoftClassPath>(5);
+}
+
 FGameplayTag CreateInvalidTag()
 {
 	FGameplayTag Result;

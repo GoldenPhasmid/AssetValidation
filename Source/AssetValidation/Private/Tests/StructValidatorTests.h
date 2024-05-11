@@ -82,6 +82,39 @@ class UValidationTestObject_SoftObjectPath: public UObject
 };
 
 USTRUCT()
+struct FSoftClassPathStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftClassPath EmptyPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftClassPath BadPath;
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_SoftClassPath: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_SoftClassPath();
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftClassPath EmptyPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftClassPath BadPath;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FSoftClassPath> EmptyPathArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FSoftClassPathStruct Struct;
+};
+
+
+USTRUCT()
 struct FGameplayTagStruct
 {
 	GENERATED_BODY()
