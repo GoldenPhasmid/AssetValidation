@@ -1,4 +1,4 @@
-#include "UserDefinedStructValidationDetails.h"
+#include "UserDefinedStructValidationTabLayout.h"
 
 #include "AssetValidationDefines.h"
 #include "DetailCategoryBuilder.h"
@@ -9,7 +9,7 @@
 #include "Engine/UserDefinedStruct.h"
 #include "PropertyValidators/PropertyValidation.h"
 
-bool FStructPropertyDetailBuilder::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
+bool FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
 {
 	if (const FProperty* Property = WeakProperty.Get())
 	{
@@ -24,7 +24,7 @@ bool FStructPropertyDetailBuilder::FCustomizationTarget::HandleIsMetaVisible(con
 	return false;
 }
 
-bool FStructPropertyDetailBuilder::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
+bool FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
 	if (FProperty* Property = WeakProperty.Get())
 	{
@@ -42,7 +42,7 @@ bool FStructPropertyDetailBuilder::FCustomizationTarget::HandleIsMetaEditable(FN
 	return false;
 }
 
-bool FStructPropertyDetailBuilder::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
+bool FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
 {
 	if (WeakProperty.IsValid())
 	{
@@ -59,7 +59,7 @@ bool FStructPropertyDetailBuilder::FCustomizationTarget::HandleGetMetaState(cons
 	return false;
 }
 
-void FStructPropertyDetailBuilder::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
+void FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
 {
 	if (WeakProperty.IsValid())
 	{
@@ -77,53 +77,7 @@ void FStructPropertyDetailBuilder::FCustomizationTarget::HandleMetaStateChanged(
 	}
 }
 
-void SValidationTabWidget::Construct(const FArguments& Args)
-{
-	UserDefinedStruct = Args._Struct;
-
-	StructScope = MakeShared<FStructOnScope>(UserDefinedStruct.Get());
-	UserDefinedStruct->InitializeDefaultValue(StructScope->GetStructMemory());
-	StructScope->SetPackage(UserDefinedStruct->GetOutermost());
-
-	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	FDetailsViewArgs DetailsViewArgs;
-	DetailsViewArgs.bAllowSearch = false;
-	DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
-	DetailsViewArgs.bHideSelectionTip = true;
-	DetailsViewArgs.bShowOptions = false;
-	
-	DetailsView = PropertyEditor.CreateDetailView(DetailsViewArgs);
-	DetailsView->RegisterInstancedCustomPropertyLayout(UUserDefinedStruct::StaticClass(), FOnGetDetailCustomizationInstance::CreateStatic(&FUserDefinedStructValidationDetails::MakeInstance, StructScope));
-	DetailsView->SetObject(UserDefinedStruct.Get());
-	
-	ChildSlot
-	[
-		DetailsView.ToSharedRef()
-	];
-}
-
-void SValidationTabWidget::PreChange(const UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info)
-{
-	if (Info != FStructureEditorUtils::DefaultValueChanged)
-	{
-		StructScope->Destroy();
-		DetailsView->SetObject(nullptr);
-	}
-}
-
-void SValidationTabWidget::PostChange(const UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info)
-{
-	if (Info != FStructureEditorUtils::DefaultValueChanged)
-	{
-		StructScope->Initialize(UserDefinedStruct.Get());
-		// Force the set object call because we may be called multiple times in a row if more than one struct was changed at the same time
-		DetailsView->SetObject(UserDefinedStruct.Get(), true);
-	}
-
-	UserDefinedStruct.Get()->InitializeDefaultValue(StructScope->GetStructMemory());
-}
-
-void FUserDefinedStructValidationDetails::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
+void FUserDefinedStructValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 {
 	TArray<TWeakObjectPtr<UObject>> Objects;
 	DetailLayout.GetObjectsBeingCustomized(Objects);
@@ -143,30 +97,30 @@ void FUserDefinedStructValidationDetails::CustomizeDetails(IDetailLayoutBuilder&
 		if (UE::AssetValidation::CanValidatePropertyValue(Property) || UE::AssetValidation::CanValidatePropertyRecursively(Property))
 		{
 			TSharedPtr<IPropertyHandle> PropertyHandle = DetailLayout.AddStructurePropertyData(StructScope, Property->GetFName());
-			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FStructPropertyDetailBuilder>(UserDefinedStruct.Get(), PropertyHandle);
+			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(UserDefinedStruct.Get(), PropertyHandle);
 			Category.AddCustomBuilder(PropertyBuilder);
 		}
 	}
 }
 
-FUserDefinedStructValidationDetails::~FUserDefinedStructValidationDetails()
+FUserDefinedStructValidationTabLayout::~FUserDefinedStructValidationTabLayout()
 {
 	UE_LOG(LogAssetValidation, Verbose, TEXT("FUserDefinedStructValidationDetails has been destroyed."));
 }
 
-FStructPropertyDetailBuilder::FStructPropertyDetailBuilder(UUserDefinedStruct* InEditedStruct, TSharedPtr<IPropertyHandle> InPropertyHandle)
+FPropertyValidationDetailsBuilder::FPropertyValidationDetailsBuilder(UUserDefinedStruct* InEditedStruct, TSharedPtr<IPropertyHandle> InPropertyHandle)
 	: UserDefinedStruct(InEditedStruct)
 	, PropertyHandle(InPropertyHandle)
 {
 	
 }
 
-FStructPropertyDetailBuilder::~FStructPropertyDetailBuilder()
+FPropertyValidationDetailsBuilder::~FPropertyValidationDetailsBuilder()
 {
 	CustomizationTarget.Reset();
 }
 
-void FStructPropertyDetailBuilder::GenerateHeaderRowContent(FDetailWidgetRow& NodeRow)
+void FPropertyValidationDetailsBuilder::GenerateHeaderRowContent(FDetailWidgetRow& NodeRow)
 {
 	NodeRow
 	.ShouldAutoExpand(true)
@@ -176,7 +130,7 @@ void FStructPropertyDetailBuilder::GenerateHeaderRowContent(FDetailWidgetRow& No
 	];
 }
 
-void FStructPropertyDetailBuilder::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
+void FPropertyValidationDetailsBuilder::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
 {
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this, PropertyHandle->GetProperty());
 	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
@@ -185,7 +139,7 @@ void FStructPropertyDetailBuilder::GenerateChildContent(IDetailChildrenBuilder& 
 	});
 }
 
-FPropertyExternalValidationData* FStructPropertyDetailBuilder::GetPropertyData(FProperty* Property) const
+FPropertyExternalValidationData* FPropertyValidationDetailsBuilder::GetPropertyData(FProperty* Property) const
 {
 	if (!UserDefinedStruct.IsValid())
 	{
@@ -207,7 +161,7 @@ FPropertyExternalValidationData* FStructPropertyDetailBuilder::GetPropertyData(F
 	return FoundData;
 }
 
-FSoftObjectPath FStructPropertyDetailBuilder::GetEditedStructPath() const
+FSoftObjectPath FPropertyValidationDetailsBuilder::GetEditedStructPath() const
 {
 	return TSoftObjectPtr<UUserDefinedStruct>{UserDefinedStruct.Get()}.ToSoftObjectPath();
 }

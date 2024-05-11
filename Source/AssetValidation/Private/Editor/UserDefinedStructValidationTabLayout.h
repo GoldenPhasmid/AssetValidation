@@ -10,47 +10,25 @@ class UUserDefinedStruct;
 class IUserDefinedStructureEditor;
 class FUDSValidationInfoLayout;
 
-class SValidationTabWidget: public SCompoundWidget, public FStructureEditorUtils::INotifyOnStructChanged
-{
-public:
-	SLATE_BEGIN_ARGS(SValidationTabWidget)
-	{}
-	SLATE_ARGUMENT(UUserDefinedStruct*, Struct)
-	SLATE_END_ARGS()
-
-	void Construct(const FArguments& Args);
-	
-	virtual void PreChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
-	virtual void PostChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
-
-private:
-	/** Struct that widget represents */
-	TWeakObjectPtr<UUserDefinedStruct> UserDefinedStruct;
-	/** Struct scope */
-    TSharedPtr<FStructOnScope> StructScope;
-	/** Details view */
-	TSharedPtr<IDetailsView> DetailsView;
-};
-
 /**
  * Represents validation dock tab in UDS editor
  */
-class FUserDefinedStructValidationDetails: public IDetailCustomization
+class FUserDefinedStructValidationTabLayout: public IDetailCustomization
 {
-	using ThisClass = FUserDefinedStructValidationDetails;
+	using ThisClass = FUserDefinedStructValidationTabLayout;
 public:
 
-	FUserDefinedStructValidationDetails(TSharedPtr<FStructOnScope> InStructScope)
+	FUserDefinedStructValidationTabLayout(TSharedPtr<FStructOnScope> InStructScope)
 		: StructScope(InStructScope)
 	{}
 
 	static TSharedRef<IDetailCustomization> MakeInstance(TSharedPtr<FStructOnScope> StructScope)
 	{
-		return MakeShared<FUserDefinedStructValidationDetails>(StructScope);
+		return MakeShared<FUserDefinedStructValidationTabLayout>(StructScope);
 	}
 	
 	virtual void CustomizeDetails(class IDetailLayoutBuilder& DetailLayout) override;
-	virtual ~FUserDefinedStructValidationDetails() override;
+	virtual ~FUserDefinedStructValidationTabLayout() override;
 private:
 	
 	/** Customized user defined struct */
@@ -59,13 +37,13 @@ private:
 	TSharedPtr<FStructOnScope> StructScope;
 };
 
-class FStructPropertyDetailBuilder: public IDetailCustomNodeBuilder
+class FPropertyValidationDetailsBuilder: public IDetailCustomNodeBuilder
 {
 public:
-	FStructPropertyDetailBuilder(UUserDefinedStruct* InEditedStruct, TSharedPtr<IPropertyHandle> InPropertyHandle);
+	FPropertyValidationDetailsBuilder(UUserDefinedStruct* InEditedStruct, TSharedPtr<IPropertyHandle> InPropertyHandle);
 	
 	//~Begin IDetailCustomNodeBuilder interface
-	virtual ~FStructPropertyDetailBuilder() override;
+	virtual ~FPropertyValidationDetailsBuilder() override;
 	virtual void GenerateHeaderRowContent( FDetailWidgetRow& NodeRow ) override;
 	virtual void GenerateChildContent( IDetailChildrenBuilder& ChildrenBuilder ) override;
 	virtual void SetOnRebuildChildren( FSimpleDelegate InOnRebuildChildren  ) override { OnRebuildChildren = InOnRebuildChildren; } 
@@ -83,7 +61,7 @@ private:
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FStructPropertyDetailBuilder& InCustomization, FProperty* Property)
+		FCustomizationTarget(FPropertyValidationDetailsBuilder& InCustomization, FProperty* Property)
 			: Customization(InCustomization)
 			, WeakProperty(Property)
 		{}
@@ -94,7 +72,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 		
-		FStructPropertyDetailBuilder& Customization;
+		FPropertyValidationDetailsBuilder& Customization;
 		TWeakFieldPtr<FProperty> WeakProperty;
 	};
 	

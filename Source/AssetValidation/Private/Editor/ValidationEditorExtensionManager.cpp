@@ -3,11 +3,10 @@
 #include "BlueprintEditorModule.h"
 #include "BlueprintEditorTabs.h"
 #include "PropertyValidationSettings.h"
-#include "PropertyValidationTabSummoner.h"
+#include "ValidationTabSummoner.h"
 #include "PropertyValidationVariableDetailCustomization.h"
 #include "SubobjectData.h"
 #include "SubobjectDataSubsystem.h"
-#include "UserDefinedStructValidationDetails.h"
 #include "Framework/Docking/LayoutExtender.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
@@ -163,7 +162,7 @@ void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBluepri
 
 void UValidationEditorExtensionManager::RegisterValidationTab(FWorkflowAllowedTabSet& TabFactory, FName ModeName, TSharedPtr<FBlueprintEditor> BlueprintEditor)
 {
-	TabFactory.RegisterFactory(MakeShared<UE::AssetValidation::FPropertyValidationTabSummoner>(BlueprintEditor));
+	TabFactory.RegisterFactory(MakeShared<UE::AssetValidation::FValidationTabSummoner>(BlueprintEditor));
 }
 
 void UValidationEditorExtensionManager::RegisterBlueprintEditorLayout(FLayoutExtender& Extender)
@@ -211,7 +210,7 @@ TSharedRef<SDockTab> UValidationEditorExtensionManager::SpawnValidationTab(const
 	.Label(NSLOCTEXT("AssetValidation", "ValidationTabLabel", "Validation"))
 	.TabColorScale(FLinearColor{ForceInitToZero})
 	[
-		SNew(SValidationTabWidget)
+		SNew(UE::AssetValidation::SUserDefinedStructValidationTab)
 		.Struct(EditedStruct)
 	];
 }
