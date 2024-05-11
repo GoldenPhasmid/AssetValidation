@@ -5,7 +5,7 @@
 
 #include "BytePropertyValidator.generated.h"
 
-UCLASS()
+UCLASS(Abstract) //disabled because there's no single "invalid" value for enums. ECollisionChannel has 0 as a valid value
 class UBytePropertyValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()
