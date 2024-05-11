@@ -22,5 +22,8 @@ public:
 
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bEnabledDetailedAssetLogging = false;
-	
+
+	// @todo: implement
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	bool bOpenEditorWorldForUnloadedActors = true;
 };

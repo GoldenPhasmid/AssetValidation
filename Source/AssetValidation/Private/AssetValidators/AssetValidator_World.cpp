@@ -88,7 +88,7 @@ EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(
 	if (Result == EDataValidationResult::Invalid)
 	{
 		check(InContext.GetNumErrors() > NumValidationErrors);
-		const FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromString(World->GetName()));
+		const FText FailReason = FText::Format(NSLOCTEXT("AssetValidation", "AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details."), FText::FromString(World->GetName()));
 		InContext.AddMessage(InAssetData, EMessageSeverity::Error, FailReason);
 	}
 	

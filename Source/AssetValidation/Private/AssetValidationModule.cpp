@@ -5,6 +5,7 @@
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
 #include "EditorValidatorSubsystem.h"
+#include "ISettingsModule.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlProxy.h"
@@ -209,13 +210,31 @@ void FAssetValidationModule::OnAssetDataTokenActivated(const TSharedRef<IMessage
 	
 	const TSharedRef<FAssetDataToken> Token = StaticCastSharedRef<FAssetDataToken>(InToken);
 	const FAssetData& AssetData = Token->GetAssetData();
+	UObject* Asset = AssetData.FastGetAsset(false);
+
+	// If this is a project settings default object, jump to respective project settings section
+	if (Asset && Asset->HasAnyFlags(RF_ClassDefaultObject))
+	{
+		static const FName ContainerName = TEXT("Project");
+		
+		FName CategoryName	= Asset->GetClass()->ClassConfigName;
+		FName SectionName	= Asset->GetClass()->GetFName();
+		if (UDeveloperSettings* DeveloperSettings = Cast<UDeveloperSettings>(Asset))
+		{
+			CategoryName	= DeveloperSettings->GetCategoryName();
+			SectionName		= DeveloperSettings->GetSectionName();
+		}
+		
+		ISettingsModule& Settings = FModuleManager::LoadModuleChecked<ISettingsModule>("Settings");
+		Settings.ShowViewer(ContainerName, CategoryName, SectionName);
+	}
 	// If this is a standalone asset, jump to it in the content browser
-	if (AssetData.GetOptionalOuterPathName().IsNone())
+	else if (AssetData.GetOptionalOuterPathName().IsNone())
 	{
 		GEditor->SyncBrowserToObjects({ AssetData });
 	}
 	// If this is a loaded actor, resolve the pointer and select it
-	else if (AActor* Actor = Cast<AActor>(AssetData.GetSoftObjectPath().ResolveObject()))
+	else if (AActor* Actor = Cast<AActor>(Asset))
 	{
 		// copy from FUnrealEdMisc::SelectActorFromMessageToken
 		// Select the actor
