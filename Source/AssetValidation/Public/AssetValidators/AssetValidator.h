@@ -23,7 +23,7 @@ public:
 protected:
 
 	void LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context);
-
+	
 	UPROPERTY()
 	bool bLogValidatingAssetMessage = false;
 };

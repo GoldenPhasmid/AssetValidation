@@ -1,5 +1,6 @@
 #include "WorldPartitionSourceControlValidator.h"
 
+#if !WITH_DATA_VALIDATION_UPDATE
 #include "WorldPartition/WorldPartitionActorDescView.h"
 #include "WorldPartition/DataLayer/DataLayerInstanceWithAsset.h"
 
@@ -210,3 +211,4 @@ void FWorldPartitionSourceControlValidator::OnInvalidActorFilterReference(const 
 }
 
 #undef LOCTEXT_NAMESPACE
+#endif

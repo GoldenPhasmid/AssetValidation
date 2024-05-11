@@ -2,7 +2,9 @@
 
 #include "AssetValidationDefines.h"
 
-#include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationErrorHandler.h"
+#if !WITH_DATA_VALIDATION_UPDATE
+
+#include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationTokenizedMessageErrorHandler.h"
 
 struct FWorldPartitionValidatorParams
 {
@@ -47,4 +49,5 @@ public:
 	virtual void OnInvalidActorFilterReference(const FWorldPartitionActorDescView& ActorDescView, const FWorldPartitionActorDescView& ReferenceActorDescView) override;
 	//~End IStreamingGenerationErrorHandler
 };
+#endif
 

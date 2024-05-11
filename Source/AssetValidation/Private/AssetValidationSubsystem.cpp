@@ -9,6 +9,7 @@
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlProxy.h"
+#include "Algo/RemoveIf.h"
 #include "AssetRegistry/AssetDataToken.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "AssetValidators/AssetValidator.h"
@@ -74,7 +75,7 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 	CurrentSettings = TOptional{InSettings};
 	FValidateAssetsResults PrevResults = OutResults;
 	
-	ValidateAssetsResolverInternal(DataValidationLog, AssetDataList, InSettings, OutResults);
+	ValidateAssetsInternalResolver(DataValidationLog, AssetDataList, InSettings, OutResults);
 
 	// override asset count calculation to account for recursive validation
 	// also include previous results in case @OutResults was used more than once
@@ -85,6 +86,9 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 	OutResults.NumUnableToValidate	= PrevResults.NumUnableToValidate + ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
 	
 	LogAssetValidationSummary(DataValidationLog, InSettings, OutResults);
+
+	// request garbage collection, as some validators do very heavy lifting
+	GEngine->ForceGarbageCollection(true);
 
 	// reset after validation in case of further IsAssetValid/IsObjectValid requests
 	ResetValidationState();
@@ -108,24 +112,30 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelists(const TArra
 	
 	ResetValidationState();
 
-	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save)
-	{
-		// epic's forgot to open a new page when validation is manual
-		// very useful "DataValidation refactor", thanks
-		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
-		DataValidationLog.SetCurrentPage(InSettings.MessageLogPageTitle);
-	}
+	// Choose a specific message log page for this output, flushing in case other recursive calls also write to this log 
+	FMessageLog DataValidationLog{UE::DataValidation::MessageLogName};
+	DataValidationLog.SetCurrentPage(InSettings.MessageLogPageTitle);
+
+	CurrentSettings = TOptional{InSettings};
+	FValidateAssetsResults PrevResults = OutResults;
 	
-	EDataValidationResult Result = Super::ValidateChangelists(InChangelists, InSettings, OutResults);
+	EDataValidationResult Result = ValidateChangelistsInternal(DataValidationLog, InChangelists, InSettings, OutResults);
 
 	// override asset count calculation to account for recursive validation
-	OutResults.NumChecked = CheckedAssetsCount;
-	OutResults.NumValid = ValidationResults[static_cast<uint8>(EDataValidationResult::Valid)];
-	OutResults.NumInvalid = ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
-	OutResults.NumUnableToValidate = ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
-
-	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+	// also include previous results in case @OutResults was used more than once
+	OutResults.NumRequested			= PrevResults.NumRequested + InChangelists.Num();
+	OutResults.NumChecked			= PrevResults.NumChecked + CheckedAssetsCount;
+	OutResults.NumValid				= PrevResults.NumValid + ValidationResults[static_cast<uint8>(EDataValidationResult::Valid)];
+	OutResults.NumInvalid			= PrevResults.NumInvalid + ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
+	OutResults.NumUnableToValidate	= PrevResults.NumUnableToValidate + ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
+	
 	LogAssetValidationSummary(DataValidationLog, InSettings, OutResults);
+	
+	// request garbage collection, as some validators do very heavy lifting
+	GEngine->ForceGarbageCollection(true);
+
+	// reset after validation in case of further IsAssetValid/IsObjectValid requests
+	ResetValidationState();
 	
 	return Result;
 }
@@ -134,6 +144,7 @@ void UAssetValidationSubsystem::GatherAssetsToValidateFromChangelist(UDataValida
 {
 	if (IsEmptyChangelist(InChangelist))
 	{
+		// fixup for git source control as git doesn't have changelists
 		auto SCProxy = IAssetValidationModule::Get().GetSourceControlProxy();
 
 		TArray<FSourceControlStateRef> OpenedFiles;
@@ -157,29 +168,27 @@ bool UAssetValidationSubsystem::IsEmptyChangelist(UDataValidationChangelist* Cha
 		return ChangelistStatePtr.IsValid();
 	}
 
-	bool bEmpty = Changelist->ModifiedPackageNames.Num() & 0x01;
-	bEmpty &= Changelist->DeletedPackageNames.Num() & 0x01;
-	bEmpty &= Changelist->ModifiedFiles.Num() & 0x01;
-	bEmpty &= Changelist->DeletedFiles.Num() & 0x01;
+	bool bEmpty = Changelist->ModifiedPackageNames.IsEmpty();
+	bEmpty &= Changelist->DeletedPackageNames.IsEmpty();
+	bEmpty &= Changelist->ModifiedFiles.IsEmpty();
+	bEmpty &= Changelist->DeletedFiles.IsEmpty();
 	return bEmpty;
 }
 
-void UAssetValidationSubsystem::ValidateAssetsResolverInternal(FMessageLog& DataValidationLog,
+EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternalResolver(FMessageLog& DataValidationLog,
 	const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings,
 	FValidateAssetsResults& OutResults) const
 {
 	bool bCustomValidateAssets = true;
 	if (bCustomValidateAssets)
 	{
-		ValidateAssetsInternal(DataValidationLog, AssetDataList, InSettings, OutResults);
+		return ValidateAssetsInternal(DataValidationLog, AssetDataList, InSettings, OutResults);
 	}
-	else
-	{
-		Super::ValidateAssetsInternal(DataValidationLog, TSet<FAssetData>{AssetDataList}, InSettings, OutResults);
-	}
+	
+	return Super::ValidateAssetsInternal(DataValidationLog, TSet<FAssetData>{AssetDataList}, InSettings, OutResults);
 }
 
-void UAssetValidationSubsystem::ValidateAssetsInternal(
+EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 	FMessageLog& DataValidationLog,
 	TArray<FAssetData> AssetDataList,
 	const FValidateAssetsSettings& InSettings,
@@ -196,7 +205,6 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 	 *		Now, IsAssetValidWithContext controls whether asset should be loaded beforehand or passed as asset data.
 	 *	3.	AssetDataList is TSet instead of TArray. Original implementation iterates twice over its members and doesn't use
 	 *		TSet features like fast search.
-	 *	
 	 *
 	 *	Unfortunately, I can't override ValidateAssetsInternal.
 	 *	Thankfully, all usages of UEditorValidatorSubsystem::ValidateAssetsInternal can be overriden.
@@ -265,7 +273,9 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(AssetValidation_WaitAssetCompilation, AssetValidationChannel);
 		WaitForAssetCompilationIfNecessary(InSettings.ValidationUsecase);
 	}
-	
+
+	int32 NumChecked	= OutResults.NumChecked;
+	int32 NumFailed		= OutResults.NumInvalid;
 	OutResults.NumRequested = AssetDataList.Num();
 	
 	// Now add to map or update as needed
@@ -325,7 +335,7 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 // ASSET VALIDATION END
 
 // ASSET VALIDATION BEGIN move asset load functionality to IsAssetValidWithContext
-		EDataValidationResult Result = IsAssetValidWithContext(AssetData, ValidationContext);
+		EDataValidationResult AssetResult = IsAssetValidWithContext(AssetData, ValidationContext);
 // ASSET VALIDATION END
 		
 		// Don't add more messages to ValidationContext after this point because we will no longer add them to the message log
@@ -333,7 +343,7 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 
 		const bool bAnyWarnings = ValidationContext.GetNumWarnings() > 0;
 
-		if (Result == EDataValidationResult::Valid)
+		if (AssetResult == EDataValidationResult::Valid)
 		{
 			if (bAnyWarnings)
 			{
@@ -342,13 +352,13 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 				->AddToken(FTextToken::Create(LOCTEXT("ContainsWarningsResult", "contains valid data, but has warnings.")));
 			}
 		}
-		else if (Result == EDataValidationResult::Invalid)
+		else if (AssetResult == EDataValidationResult::Invalid)
 		{
 			DataValidationLog.Error()
 			->AddToken(FAssetDataToken::Create(AssetData))
 			->AddToken(FTextToken::Create(LOCTEXT("InvalidDataResult", "contains invalid data.")));
 		}
-		else if (Result == EDataValidationResult::NotValidated)
+		else if (AssetResult == EDataValidationResult::NotValidated)
 		{
 			if (InSettings.bShowIfNoFailures)
 			{
@@ -363,7 +373,7 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 			FValidateAssetsDetails& Details = OutResults.AssetsDetails.Emplace(AssetData.GetObjectPathString());
 			Details.PackageName = AssetData.PackageName;
 			Details.AssetName = AssetData.AssetName;
-			Details.Result = Result;
+			Details.Result = AssetResult;
 			ValidationContext.SplitIssues(Details.ValidationWarnings, Details.ValidationErrors);
 
 			Details.ExternalObjects.Reserve(ValidationExternalObjects.Num());
@@ -383,6 +393,109 @@ void UAssetValidationSubsystem::ValidateAssetsInternal(
 	{
 		FEditorDelegates::OnPostAssetValidation.Broadcast();
 	}
+
+	// calculate and return validation result
+	if (OutResults.NumInvalid > NumFailed)
+	{
+		return EDataValidationResult::Invalid;
+	}
+	if (OutResults.NumChecked > NumChecked)
+	{
+		return EDataValidationResult::Valid;
+	}
+
+	return EDataValidationResult::NotValidated;;
+}
+
+EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(
+	FMessageLog& 								DataValidationLog,
+	TConstArrayView<UDataValidationChangelist*> Changelists,
+	const FValidateAssetsSettings& Settings,
+	FValidateAssetsResults& OutResults) const
+{
+	FScopedSlowTask SlowTask(Changelists.Num(), LOCTEXT("DataValidation.ValidatingChangelistTask", "Validating Changelists"));
+	SlowTask.Visibility = ESlowTaskVisibility::Invisible;
+	SlowTask.MakeDialog();
+
+	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
+	if (AssetRegistry.IsLoadingAssets())
+	{
+		UE_CLOG(FApp::IsUnattended(), LogAssetValidation, Fatal, TEXT("Unable to perform unattended content validation while asset registry scan is in progress. Callers just wait for asset registry scan to complete."));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("DataValidation.UnableToValidate_PendingAssetRegistry", "Unable to validate changelist while asset registry scan is in progress. Wait until asset discovery is complete."));
+		return EDataValidationResult::NotValidated;
+	}
+	
+	for (UDataValidationChangelist* CL : Changelists)
+	{
+		CL->AddToRoot();
+	}
+	
+	ON_SCOPE_EXIT {
+		for (UDataValidationChangelist* CL : Changelists)
+		{
+			CL->RemoveFromRoot();		
+		}
+	};
+
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	for (UDataValidationChangelist* Changelist : Changelists)
+	{
+		FText ValidationMessage = FText::Format(LOCTEXT("ValidatingChangelistMessage", "Validating changelist {0}"), Changelist->Description);
+		DataValidationLog.Info(ValidationMessage);
+		SlowTask.EnterProgressFrame(1.0f, ValidationMessage);
+
+		FDataValidationContext ValidationContext(false, Settings.ValidationUsecase, {}); // No associated objects for changelist
+		EDataValidationResult AssetResult = IsObjectValidWithContext(Changelist, ValidationContext);
+		Result &= AssetResult;
+
+// ASSET VALIDATION BEGIN fix warnings/errors not being added when PerAssetDetails is enabled
+		if (Settings.bCollectPerAssetDetails)
+		{
+			FValidateAssetsDetails& Details = OutResults.AssetsDetails.Emplace(Changelist->GetPathName());
+			Details.AssetName = FName{Changelist->Description.ToString()};
+			Details.Result = AssetResult;
+			ValidationContext.SplitIssues(Details.ValidationWarnings, Details.ValidationErrors);
+		}
+// ASSET VALIDATION END
+
+		UE::DataValidation::AddAssetValidationMessages(DataValidationLog, ValidationContext);
+		DataValidationLog.Flush();
+	}
+
+	TSet<FAssetData> AssetsToValidate;	
+	for (UDataValidationChangelist* Changelist : Changelists)
+	{
+		FDataValidationContext ValidationContext(false, Settings.ValidationUsecase, {}); // No associated objects for changelist
+		GatherAssetsToValidateFromChangelist(Changelist, Settings, AssetsToValidate, ValidationContext);
+		UE::DataValidation::AddAssetValidationMessages(DataValidationLog, ValidationContext);
+		DataValidationLog.Flush();
+	}
+
+// ASSET VALIDATION BEGIN replace TSet with TArray
+	// Filter out assets that we don't want to validate
+	TArray<FAssetData> Assets{AssetsToValidate.Array()};
+	{
+		// clear assets that we shouldn't validate
+		FDataValidationContext ValidationContext(false, Settings.ValidationUsecase, {});
+		Assets.SetNum(Algo::RemoveIf(Assets, [this, &Settings, &ValidationContext](const FAssetData& AssetData)
+		{
+			if (!ShouldValidateAsset(AssetData, Settings, ValidationContext))
+			{
+				UE_LOG(LogAssetValidation, Verbose, TEXT("Excluding asset %s from validation"), *AssetData.GetSoftObjectPath().ToString());
+				return true;
+			}
+
+			return false;
+		}));
+// ASSET VALIDATION END
+		UE::DataValidation::AddAssetValidationMessages(DataValidationLog, ValidationContext);
+		DataValidationLog.Flush();
+	}
+
+	// Validate assets from all changelists
+	Result &= ValidateAssetsInternalResolver(DataValidationLog, Assets, Settings, OutResults);
+
+	return Result;
 }
 
 EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const FAssetData& AssetData, FDataValidationContext& InContext) const

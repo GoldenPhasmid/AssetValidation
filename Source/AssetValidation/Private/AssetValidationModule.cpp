@@ -2,6 +2,7 @@
 
 #include "AssetValidationModule.h"
 
+#include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
 #include "EditorValidatorSubsystem.h"
@@ -284,9 +285,13 @@ FText FAssetValidationModule::OnGetAssetDataTokenDisplayName(const FAssetData& A
 		AssetData.GetTagValue(FPrimaryAssetId::PrimaryAssetDisplayNameTag, DisplayName))
 	{
 		// handles WP actors because of ActorLabel asset tag and primary assets
-		Buffer << DisplayName << TEXT(" (");
-		AssetData.AppendObjectPath(Buffer);
-		Buffer << TEXT(")");
+		Buffer << DisplayName;
+		if (!UAssetValidationSettings::Get()->bUseShortActorNames)
+		{
+			Buffer << TEXT(" (");
+			AssetData.AppendObjectPath(Buffer);
+			Buffer << TEXT(")");
+		}
 		return FText::FromStringView(Buffer.ToView());
 	}
 	else if (AActor* Actor = Cast<AActor>(Asset))

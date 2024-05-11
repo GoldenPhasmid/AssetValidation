@@ -48,19 +48,26 @@ protected:
 	
 	bool IsEmptyChangelist(UDataValidationChangelist* Changelist) const;
 
-	void ValidateAssetsResolverInternal(
+	EDataValidationResult ValidateAssetsInternalResolver(
 		FMessageLog& 					DataValidationLog,
 		const TArray<FAssetData>&		AssetDataList,
 		const FValidateAssetsSettings& 	InSettings,
 		FValidateAssetsResults& 		OutResults
 	) const;
 	
-	void ValidateAssetsInternal(
+	EDataValidationResult ValidateAssetsInternal(
 		FMessageLog& 					DataValidationLog,
 		TArray<FAssetData>				AssetDataList,
 		const FValidateAssetsSettings& 	InSettings,
 		FValidateAssetsResults& 		OutResults
 	) const;
+
+	EDataValidationResult ValidateChangelistsInternal(
+	FMessageLog& 								DataValidationLog,
+	TConstArrayView<UDataValidationChangelist*> Changelists,
+	const FValidateAssetsSettings& 				Settings,
+	FValidateAssetsResults& 					OutResults) const;
+
 	
 	/** @return true if asset not excluded from validation */
 	virtual bool ShouldValidateAsset(const FAssetData& Asset, const FValidateAssetsSettings& Settings, FDataValidationContext& InContext) const override;

@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "PackageTools.h"
 #include "WorldPartitionSourceControlValidator.h"
+#include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationMapCheckErrorHandler.h"
 
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
@@ -136,12 +137,10 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->GetLevelScriptActor(), Context);
 	
-	if (UWorld::IsPartitionedWorld(World))
+	if (const UWorldPartition* WorldPartition = World->GetWorldPartition())
 	{
-		const UWorldPartition* WorldPartition = World->GetWorldPartition();
-		
-		// FWorldPartitionSourceControlValidator ErrorHandler;
-		// UWorldPartition::CheckForErrors(&ErrorHandler);
+		FStreamingGenerationMapCheckErrorHandler ErrorHandler;
+		WorldPartition->CheckForErrors(&ErrorHandler);
 	}
 	else
 	{

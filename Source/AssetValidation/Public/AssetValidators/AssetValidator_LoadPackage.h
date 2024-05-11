@@ -17,8 +17,11 @@ public:
 	//~End EditorValidatorBase interface
 
 	/**
-	 * Load package defined by @AssetData and catch any load associated errors and warnings, write them directly to @ValidationContext
+	 * Load package defined by @PackageName and catch any load associated errors and warnings
+	 * @param PackageName package to validate
+	 * @param AssetData asset data associated with check, can be invalid
+	 * @param ValidationContext validation context
 	 * @return true if package was loaded, false otherwise
 	 */
-	static bool GetPackageLoadErrors(const FAssetData& AssetData, FDataValidationContext& ValidationContext);
+	static bool GetPackageLoadErrors(const FString& PackageName, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
 };

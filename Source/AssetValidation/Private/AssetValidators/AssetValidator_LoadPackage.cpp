@@ -1,26 +1,24 @@
 #include "AssetValidators/AssetValidator_LoadPackage.h"
 
 #include "AssetCompilingManager.h"
-#include "AssetValidationModule.h"
+#include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationSubsystem.h"
 #include "DataValidationModule.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 
-bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FAssetData& AssetData, FDataValidationContext& ValidationContext)
+bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(LoadPackage_GetErrors, AssetValidationChannel);
+	check(!PackageName.IsEmpty());
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(GetPackageLoadErrors, AssetValidationChannel);
 	
-	if (UAssetValidationSubsystem::IsPackageAlreadyLoaded(AssetData.PackageName))
+	if (UAssetValidationSubsystem::IsPackageAlreadyLoaded(FName{PackageName}))
 	{
 		return true;
 	}
 
-	UAssetValidationSubsystem::MarkPackageLoaded(AssetData.PackageName);
-
-	const FString PackageName = AssetData.PackageName.ToString();
-	check(!PackageName.IsEmpty());
+	UAssetValidationSubsystem::MarkPackageLoaded(FName{PackageName});
 
 	UPackage* Package = FindPackage(nullptr, *PackageName);
 	if (Package == GetTransientPackage())
@@ -65,14 +63,11 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FAssetData& AssetDa
 	const FString DestPackageName = FString::Printf(TEXT("/Temp/%s_%d"), *FPackageName::GetLongPackageAssetName(PackageName), ++PackageIdentifier);
 	const FString DestFilename = FPackageName::LongPackageNameToFilename(DestPackageName, FPaths::GetExtension(SourceFilename, true));
 
+	const uint32 CopyResult = IFileManager::Get().Copy(*DestFilename, *SourceFilename);
+	if (!ensure(CopyResult == COPY_OK))
 	{
-		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(LoadPackage_CopyFile, AssetValidationChannel);
-		const uint32 CopyResult = IFileManager::Get().Copy(*DestFilename, *SourceFilename);
-		if (!ensure(CopyResult == COPY_OK))
-		{
-			UE_LOG(LogAssetValidation, Error, TEXT("Failed to copy package in editor, source [%s], destination [%s]"), *SourceFilename, *DestFilename);
-			return false;
-		}
+		UE_LOG(LogAssetValidation, Error, TEXT("Failed to copy package in editor, source [%s], destination [%s]"), *SourceFilename, *DestFilename);
+		return false;
 	}
 
 	// @todo: this crashes because GetObjectsWithPackage returns some garbage object as a last element
@@ -140,8 +135,6 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FAssetData& AssetDa
 				}
 				TempObject->MarkAsGarbage();
 			}
-			
-			GEngine->ForceGarbageCollection(true);
 		}
 	}
 
@@ -151,11 +144,16 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FAssetData& AssetDa
 bool UAssetValidator_LoadPackage::IsEnabled() const
 {
 	// Commandlets do not need this validation step as they loaded the content while running.
-	return false && !IsRunningCommandlet() && Super::IsEnabled();
+	return !IsRunningCommandlet() && UAssetValidationSettings::Get()->bReloadPackages && Super::IsEnabled();
 }
 
 bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
+	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save)
+	{
+		return false;
+	}
+	
 	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext);
 }
 
@@ -170,7 +168,7 @@ EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implement
 	}
 
 	const uint32 NumErrors = Context.GetNumErrors();
-	if (GetPackageLoadErrors(InAssetData, Context))
+	if (GetPackageLoadErrors(PackageName, InAssetData, Context))
 	{
 		if (Context.GetNumErrors() > NumErrors)
 		{

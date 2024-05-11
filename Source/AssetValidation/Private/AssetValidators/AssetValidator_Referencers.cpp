@@ -103,8 +103,7 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 	for (const FName& PackageName: AllReferencers)
 	{
 		// load referencer packages and gather errors
-		// @todo: fixme
-		// UAssetValidator_LoadPackage::GetPackageLoadErrors(PackageName.ToString(), Context);
+		UAssetValidator_LoadPackage::GetPackageLoadErrors(PackageName.ToString(), FAssetData{}, Context);
 	}
 
 	if (Errors.Num() == 0)
