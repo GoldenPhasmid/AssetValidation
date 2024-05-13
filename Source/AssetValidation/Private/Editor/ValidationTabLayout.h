@@ -5,11 +5,32 @@
 #include "IDetailCustomNodeBuilder.h"
 #include "Kismet2/StructureEditorUtils.h"
 
+class FBlueprintEditor;
 struct FPropertyExternalValidationData;
 class UUserDefinedStruct;
 class IUserDefinedStructureEditor;
 class FUDSValidationInfoLayout;
 
+
+class FBlueprintEditorValidationTabLayout: public IDetailCustomization
+{
+	using ThisClass = FBlueprintEditorValidationTabLayout;
+public:
+	FBlueprintEditorValidationTabLayout(TWeakPtr<FBlueprintEditor> InBlueprintEditor)
+		: BlueprintEditor(InBlueprintEditor)
+	{}
+	
+	static TSharedRef<IDetailCustomization> MakeInstance(TWeakPtr<FBlueprintEditor> InBlueprintEditor)
+	{
+		return MakeShared<ThisClass>(InBlueprintEditor);
+	}
+
+	virtual void CustomizeDetails(class IDetailLayoutBuilder& DetailLayout) override;
+	
+protected:
+	TWeakPtr<FBlueprintEditor> BlueprintEditor;
+	TWeakObjectPtr<UBlueprint> WeakBlueprint;
+};
 /**
  * Represents validation dock tab in UDS editor
  */
@@ -24,7 +45,7 @@ public:
 
 	static TSharedRef<IDetailCustomization> MakeInstance(TSharedPtr<FStructOnScope> StructScope)
 	{
-		return MakeShared<FUserDefinedStructValidationTabLayout>(StructScope);
+		return MakeShared<ThisClass>(StructScope);
 	}
 	
 	virtual void CustomizeDetails(class IDetailLayoutBuilder& DetailLayout) override;
@@ -40,7 +61,7 @@ private:
 class FPropertyValidationDetailsBuilder: public IDetailCustomNodeBuilder
 {
 public:
-	FPropertyValidationDetailsBuilder(UUserDefinedStruct* InEditedStruct, TSharedPtr<IPropertyHandle> InPropertyHandle);
+	FPropertyValidationDetailsBuilder(UObject* InEditedObject, TSharedRef<IPropertyHandle> InPropertyHandle);
 	
 	//~Begin IDetailCustomNodeBuilder interface
 	virtual ~FPropertyValidationDetailsBuilder() override;
@@ -55,6 +76,7 @@ public:
 
 private:
 
+	UStruct* GetEditedStruct() const;
 	FSoftObjectPath GetEditedStructPath() const;
 	FPropertyExternalValidationData* GetPropertyData(FProperty* Property) const;
 	
@@ -79,8 +101,8 @@ private:
 	/** Customization target */
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;
 
-	TWeakObjectPtr<UUserDefinedStruct> UserDefinedStruct;
-	TSharedPtr<IPropertyHandle> PropertyHandle;
+	TWeakObjectPtr<UObject> EditedObject;
+	TSharedRef<IPropertyHandle> PropertyHandle;
 
 	FSimpleDelegate OnRebuildChildren;
 };

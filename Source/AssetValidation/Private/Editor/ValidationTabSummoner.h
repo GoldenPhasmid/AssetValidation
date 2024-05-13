@@ -21,6 +21,31 @@ public:
 protected:
 	TWeakPtr<FBlueprintEditor> BlueprintEditor;
 };
+
+class SBlueprintEditorValidationTab: public SCompoundWidget, public FNotifyHook
+{
+public:
+	SLATE_BEGIN_ARGS(SBlueprintEditorValidationTab)
+	{}
+	SLATE_ARGUMENT(TWeakPtr<FBlueprintEditor>, BlueprintEditor)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& Args);
+	
+	//~Begin NotifyHook interface
+	virtual void NotifyPreChange(FProperty* PropertyAboutToChange) override;
+	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged) override;
+	//~EndNotifyHook interface
+	
+protected:
+	/** owning blueprint editor */
+	TWeakPtr<FBlueprintEditor> BlueprintEditor;
+	/** owning blueprint */
+	TWeakObjectPtr<UBlueprint> Blueprint;
+	/** Property viewing widget */
+	TSharedPtr<IDetailsView> DetailsView;
+};
+	
 	
 /**
  * Validation tab used for UDS editor
@@ -35,9 +60,10 @@ public:
 
 	void Construct(const FArguments& Args);
 
+	//~Begin INotifyOnStructChanged
 	virtual void PreChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
 	virtual void PostChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
-
+	//~End INotifyOnStructChanged
 private:
 	/** Struct that widget represents */
 	TWeakObjectPtr<UUserDefinedStruct> UserDefinedStruct;

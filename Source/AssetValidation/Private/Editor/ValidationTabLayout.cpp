@@ -1,4 +1,4 @@
-#include "UserDefinedStructValidationTabLayout.h"
+#include "ValidationTabLayout.h"
 
 #include "AssetValidationDefines.h"
 #include "DetailCategoryBuilder.h"
@@ -7,6 +7,7 @@
 #include "IDetailChildrenBuilder.h"
 #include "PropertyValidationSettings.h"
 #include "Engine/UserDefinedStruct.h"
+#include "Engine/Blueprint.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 bool FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
@@ -77,6 +78,38 @@ void FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleMetaStateCha
 	}
 }
 
+void FBlueprintEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
+{
+	TArray<TWeakObjectPtr<UObject>> Objects;
+	DetailLayout.GetObjectsBeingCustomized(Objects);
+	
+	if (Objects.Num() == 0)
+	{
+		return;
+	}
+
+	UBlueprint* Blueprint = CastChecked<UBlueprint>(Objects[0].Get());
+	WeakBlueprint = Blueprint;
+
+#if 1
+	IDetailCategoryBuilder& Category = DetailLayout.EditCategory("Validation",
+NSLOCTEXT("AssetValidation", "ValidationDetailsCategory", "Validation"), ECategoryPriority::Default).InitiallyCollapsed(false);
+#else
+	IDetailCategoryBuilder& Category = DetailLayout.EditCategoryAllowNone(NAME_None);
+#endif
+	
+	UObject* DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
+	for (const FProperty* Property: TFieldRange<FProperty>{Blueprint->GetClass(), EFieldIterationFlags::None})
+	{
+		if (UE::AssetValidation::CanValidatePropertyValue(Property) || UE::AssetValidation::CanValidatePropertyRecursively(Property))
+		{
+			TSharedRef<IPropertyHandle> PropertyHandle = DetailLayout.GetProperty(Property->GetFName());
+			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(Blueprint, PropertyHandle);
+			Category.AddCustomBuilder(PropertyBuilder);
+		}
+	}
+}
+
 void FUserDefinedStructValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 {
 	TArray<TWeakObjectPtr<UObject>> Objects;
@@ -97,7 +130,9 @@ void FUserDefinedStructValidationTabLayout::CustomizeDetails(IDetailLayoutBuilde
 		if (UE::AssetValidation::CanValidatePropertyValue(Property) || UE::AssetValidation::CanValidatePropertyRecursively(Property))
 		{
 			TSharedPtr<IPropertyHandle> PropertyHandle = DetailLayout.AddStructurePropertyData(StructScope, Property->GetFName());
-			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(UserDefinedStruct.Get(), PropertyHandle);
+			check(PropertyHandle.IsValid());
+			
+			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(UserDefinedStruct.Get(), PropertyHandle.ToSharedRef());
 			Category.AddCustomBuilder(PropertyBuilder);
 		}
 	}
@@ -108,8 +143,8 @@ FUserDefinedStructValidationTabLayout::~FUserDefinedStructValidationTabLayout()
 	UE_LOG(LogAssetValidation, Verbose, TEXT("FUserDefinedStructValidationDetails has been destroyed."));
 }
 
-FPropertyValidationDetailsBuilder::FPropertyValidationDetailsBuilder(UUserDefinedStruct* InEditedStruct, TSharedPtr<IPropertyHandle> InPropertyHandle)
-	: UserDefinedStruct(InEditedStruct)
+FPropertyValidationDetailsBuilder::FPropertyValidationDetailsBuilder(UObject* InEditedObject, TSharedRef<IPropertyHandle> InPropertyHandle)
+	: EditedObject(InEditedObject)
 	, PropertyHandle(InPropertyHandle)
 {
 	
@@ -141,7 +176,7 @@ void FPropertyValidationDetailsBuilder::GenerateChildContent(IDetailChildrenBuil
 
 FPropertyExternalValidationData* FPropertyValidationDetailsBuilder::GetPropertyData(FProperty* Property) const
 {
-	if (!UserDefinedStruct.IsValid())
+	if (!EditedObject.IsValid())
 	{
 		return nullptr;
 	}
@@ -155,7 +190,8 @@ FPropertyExternalValidationData* FPropertyValidationDetailsBuilder::GetPropertyD
 	});
 	if (FoundData == nullptr)
 	{
-		FoundData = &StructData.Properties.Add_GetRef(FPropertyExternalValidationData{UserDefinedStruct.Get(), Property});
+		UStruct* EditedStruct = GetEditedStruct();
+		FoundData = &StructData.Properties.Add_GetRef(FPropertyExternalValidationData{EditedStruct, Property});
 	}
 
 	return FoundData;
@@ -163,6 +199,24 @@ FPropertyExternalValidationData* FPropertyValidationDetailsBuilder::GetPropertyD
 
 FSoftObjectPath FPropertyValidationDetailsBuilder::GetEditedStructPath() const
 {
-	return TSoftObjectPtr<UUserDefinedStruct>{UserDefinedStruct.Get()}.ToSoftObjectPath();
+	return TSoftObjectPtr<UStruct>{GetEditedStruct()}.ToSoftObjectPath();
+}
+
+UStruct* FPropertyValidationDetailsBuilder::GetEditedStruct() const
+{
+	if (EditedObject.IsValid())
+	{
+		if (UUserDefinedStruct* Struct = Cast<UUserDefinedStruct>(EditedObject.Get()))
+		{
+			return Struct;
+		}
+		else if (UBlueprint* Blueprint = Cast<UBlueprint>(EditedObject.Get()))
+		{
+			return Blueprint->GeneratedClass;
+		}
+	}
+
+	checkNoEntry();
+	return nullptr;
 }
 
