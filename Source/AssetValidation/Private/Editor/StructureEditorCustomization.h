@@ -1,45 +1,49 @@
-#pragma once
+﻿#pragma once
 
 #include "CustomizationTarget.h"
 #include "IDetailCustomization.h"
 #include "IDetailCustomNodeBuilder.h"
 #include "Kismet2/StructureEditorUtils.h"
 
-class FBlueprintEditor;
 struct FPropertyExternalValidationData;
 class UUserDefinedStruct;
-class IUserDefinedStructureEditor;
-class FUDSValidationInfoLayout;
 
-
-class FBlueprintEditorValidationTabLayout: public IDetailCustomization
+/**
+ * Validation tab used for UDS editor
+ */
+class SStructureEditorValidationTab: public SCompoundWidget, public FStructureEditorUtils::INotifyOnStructChanged
 {
-	using ThisClass = FBlueprintEditorValidationTabLayout;
 public:
-	FBlueprintEditorValidationTabLayout(TWeakPtr<FBlueprintEditor> InBlueprintEditor)
-		: BlueprintEditor(InBlueprintEditor)
+	SLATE_BEGIN_ARGS(SStructureEditorValidationTab)
 	{}
-	
-	static TSharedRef<IDetailCustomization> MakeInstance(TWeakPtr<FBlueprintEditor> InBlueprintEditor)
-	{
-		return MakeShared<ThisClass>(InBlueprintEditor);
-	}
+	SLATE_ARGUMENT(UUserDefinedStruct*, Struct)
+	SLATE_END_ARGS()
 
-	virtual void CustomizeDetails(class IDetailLayoutBuilder& DetailLayout) override;
-	
-protected:
-	TWeakPtr<FBlueprintEditor> BlueprintEditor;
-	TWeakObjectPtr<UBlueprint> WeakBlueprint;
+	void Construct(const FArguments& Args);
+
+	//~Begin INotifyOnStructChanged
+	virtual void PreChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
+	virtual void PostChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
+	//~End INotifyOnStructChanged
+private:
+	/** Struct that widget represents */
+	TWeakObjectPtr<UUserDefinedStruct> UserDefinedStruct;
+	/** Struct scope */
+	TSharedPtr<FStructOnScope> StructScope;
+	/** Details view */
+	TSharedPtr<IDetailsView> DetailsView;
 };
+
+
 /**
  * Represents validation dock tab in UDS editor
  */
-class FUserDefinedStructValidationTabLayout: public IDetailCustomization
+class FStructureEditorValidationTabLayout: public IDetailCustomization
 {
-	using ThisClass = FUserDefinedStructValidationTabLayout;
+	using ThisClass = FStructureEditorValidationTabLayout;
 public:
 
-	FUserDefinedStructValidationTabLayout(TSharedPtr<FStructOnScope> InStructScope)
+	FStructureEditorValidationTabLayout(TSharedPtr<FStructOnScope> InStructScope)
 		: StructScope(InStructScope)
 	{}
 
@@ -49,7 +53,7 @@ public:
 	}
 	
 	virtual void CustomizeDetails(class IDetailLayoutBuilder& DetailLayout) override;
-	virtual ~FUserDefinedStructValidationTabLayout() override;
+	virtual ~FStructureEditorValidationTabLayout() override;
 private:
 	
 	/** Customized user defined struct */
@@ -106,3 +110,4 @@ private:
 
 	FSimpleDelegate OnRebuildChildren;
 };
+
