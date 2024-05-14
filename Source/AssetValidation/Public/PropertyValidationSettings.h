@@ -145,15 +145,6 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToIterate;
-
-#if 0
-	/**
-	 * List of additional class external meta data, neatly grouped together
-	 * If adding external validation meta data for a particular class, consider using UClassExternalMetaData data asset
-	 */
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	TArray<TSoftObjectPtr<UClassExternalMetaData>> ExternalMetaData;
-#endif
 	
 	/**
 	 * if set to true, allows unwrapping and iterating over struct inner properties without "ValidateRecursive" meta specifier

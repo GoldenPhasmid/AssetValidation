@@ -182,7 +182,7 @@ bool UPropertyValidatorSubsystem::ShouldIgnorePackage(const UPackage* Package) c
 	}
 	
 #if WITH_ASSET_VALIDATION_TESTS
-	if (PackageName.StartsWith("/Script/AssetValidation"))
+	if (PackageName.StartsWith("/Script/AssetValidation") || PackageName.StartsWith("/AssetValidation"))
 	{
 		return false;
 	}
@@ -207,7 +207,7 @@ bool UPropertyValidatorSubsystem::ShouldIteratePackageProperties(const UPackage*
 	}
 	
 #if WITH_ASSET_VALIDATION_TESTS
-	if (PackageName.StartsWith("/Script/AssetValidation"))
+	if (PackageName.StartsWith("/Script/AssetValidation") || PackageName.StartsWith("/AssetValidation"))
 	{
 		return true;
 	}
@@ -262,15 +262,14 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 			Struct = Struct->GetSuperStruct();
 			continue;
 		}
-
-		TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>();
+		
 		if (ShouldIteratePackageProperties(Package))
 		{
 			// EFieldIterationFlags::None because we look only at Struct type properties
 			for (FProperty* Property: TFieldRange<FProperty>(Struct, EFieldIterationFlags::None))
 			{
-				MetaData->SetProperty(Property);
-				ValidatePropertyWithContext(ContainerMemory, Property, *MetaData, ValidationContext);
+				UE::AssetValidation::FMetaDataSource MetaData{Property};
+				ValidatePropertyWithContext(ContainerMemory, Property, MetaData, ValidationContext);
 			}
 		}
 
@@ -278,7 +277,7 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 #if 0
 		for (const FPropertyExternalValidationData& ExternalData: UPropertyValidationSettings::GetExternalValidationData(Struct))
 		{
-			MetaData->SetExternalData(ExternalData);
+			UE::AssetValidation::FMetaDataSource MetaData{ExternalData};
 			ValidatePropertyWithContext(ContainerMemory, ExternalData.GetProperty(), *MetaData, ValidationContext);
 		}
 #endif	

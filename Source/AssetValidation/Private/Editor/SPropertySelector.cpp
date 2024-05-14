@@ -2,6 +2,7 @@
 
 #include "DetailLayoutBuilder.h"
 #include "PropertyValidatorSubsystem.h"
+#include "PropertyValidators/PropertyValidation.h"
 #include "Widgets/PropertyViewer/SFieldName.h"
 #include "Widgets/PropertyViewer/SPropertyViewer.h"
 

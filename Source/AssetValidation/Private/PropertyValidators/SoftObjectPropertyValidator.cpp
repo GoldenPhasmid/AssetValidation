@@ -13,5 +13,5 @@ void USoftObjectPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> Pro
 	check(SoftObjectPtr);
 
 	// @todo: load soft object to verify it?
-	ValidationContext.FailOnCondition(SoftObjectPtr->IsNull(), Property, NSLOCTEXT("AssetValidation", "SoftObjectProperty", "Soft object property not set"));
+	ValidationContext.FailOnCondition(SoftObjectPtr->IsNull(), Property, NSLOCTEXT("AssetValidation", "SoftObjectProperty", "Soft object property not set."));
 }

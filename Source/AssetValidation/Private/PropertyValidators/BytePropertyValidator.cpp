@@ -23,5 +23,5 @@ void UBytePropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	const uint8* ValuePtr = GetPropertyValuePtr<FByteProperty>(PropertyMemory, Property);
 	check(ValuePtr);
 	
-	ValidationContext.FailOnCondition(*ValuePtr == 0, Property, NSLOCTEXT("AssetValidation", "ByteProperty", "Enum property not set"));
+	ValidationContext.FailOnCondition(*ValuePtr == 0, Property, NSLOCTEXT("AssetValidation", "ByteProperty", "Enum property not set."));
 }

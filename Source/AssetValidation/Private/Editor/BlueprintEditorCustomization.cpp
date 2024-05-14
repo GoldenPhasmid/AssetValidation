@@ -83,9 +83,11 @@ void FBlueprintEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder&
 		return;
 	}
 
-	IDetailCategoryBuilder& ComponentsCategory = DetailLayout.EditCategory("Components",
+	static const FName ComponentsCategoryName = TEXT("Components");
+	static const FName PropertiesCategoryName = TEXT("Properties");
+	IDetailCategoryBuilder& ComponentsCategory = DetailLayout.EditCategory(ComponentsCategoryName,
 		LOCTEXT("ComponentCategoryTitle", "Components"), ECategoryPriority::Important).InitiallyCollapsed(false);
-	IDetailCategoryBuilder& PropertiesCategory = DetailLayout.EditCategory("Properties",
+	IDetailCategoryBuilder& PropertiesCategory = DetailLayout.EditCategory(PropertiesCategoryName,
 		LOCTEXT("PropertyCategoryTitle", "Properties"), ECategoryPriority::Default).InitiallyCollapsed(false);
 
 	UObject* GeneratedObject = Blueprint->GeneratedClass->GetDefaultObject();
@@ -93,13 +95,22 @@ void FBlueprintEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder&
 	{
 		if (UE::AssetValidation::CanValidatePropertyValue(Property) || UE::AssetValidation::CanValidatePropertyRecursively(Property))
 		{
-			IDetailCategoryBuilder& Category = UE::AssetValidation::IsBlueprintComponentProperty(Property) ? ComponentsCategory : PropertiesCategory;
-			
 			TSharedPtr<IPropertyHandle> PropertyHandle = DetailLayout.AddObjectPropertyData({GeneratedObject}, Property->GetFName());
 			check(PropertyHandle.IsValid());
 			
-			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(GeneratedObject, PropertyHandle.ToSharedRef(), false);
-			Category.AddCustomBuilder(PropertyBuilder);
+			const bool bBlueprintComponent = UE::AssetValidation::IsBlueprintComponentProperty(Property);
+			
+			IDetailCategoryBuilder& Category = bBlueprintComponent ? ComponentsCategory : PropertiesCategory;
+			if (bBlueprintComponent)
+			{
+				TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(GeneratedObject, PropertyHandle.ToSharedRef());
+				Category.AddCustomBuilder(PropertyBuilder);
+			}
+			else
+			{
+				auto PropertyBuilder = UE::AssetValidation::FBlueprintVariableCustomization::MakeNodeBuilder(BlueprintEditor.Pin(), PropertyHandle.ToSharedRef(), PropertiesCategoryName);
+				Category.AddCustomBuilder(PropertyBuilder.ToSharedRef());
+			}
 		}
 	}
 }

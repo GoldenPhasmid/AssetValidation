@@ -12,6 +12,6 @@ void UStringPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> Propert
 	const FString* Str = GetPropertyValuePtr<FStrProperty>(PropertyMemory, Property);
 	check(Str);
 
-	ValidationContext.FailOnCondition(Str->IsEmpty(), Property, NSLOCTEXT("AssetValidation", "StrProperty", "String property not set"));
+	ValidationContext.FailOnCondition(Str->IsEmpty(), Property, NSLOCTEXT("AssetValidation", "StrProperty", "String property not set."));
 }
 

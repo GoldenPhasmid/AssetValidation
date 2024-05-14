@@ -14,5 +14,5 @@ void UObjectPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> Propert
 
 	const UObject* Object = ObjectPtr->Get();
 	const bool bObjectValid = Object != nullptr && Object->IsValidLowLevel();
-	ValidationContext.FailOnCondition(!bObjectValid, Property, NSLOCTEXT("AssetValidation", "ObjectProperty", "Object property not set"));
+	ValidationContext.FailOnCondition(!bObjectValid, Property, NSLOCTEXT("AssetValidation", "ObjectProperty", "Object property not set."));
 }

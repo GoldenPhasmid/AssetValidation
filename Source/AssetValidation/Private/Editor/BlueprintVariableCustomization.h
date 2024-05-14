@@ -2,8 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
+#include "IDetailCustomNodeBuilder.h"
 #include "Editor/CustomizationTarget.h"
-#include "PropertyValidators/PropertyValidation.h"
+
+class FBlueprintEditor;
 
 namespace UE::AssetValidation
 {
@@ -18,22 +20,42 @@ class UPropertyValidatorSubsystem;
 namespace UE::AssetValidation
 {
 	
-class FBlueprintVariableCustomization: public IDetailCustomization
+class FBlueprintVariableCustomization: public IDetailCustomization, public IDetailCustomNodeBuilder
 {
 	using ThisClass = FBlueprintVariableCustomization;
 public:
 
-	static TSharedPtr<IDetailCustomization> MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor);
+	static TSharedPtr<IDetailCustomization>		MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor);
+	static TSharedPtr<IDetailCustomNodeBuilder> MakeNodeBuilder(TSharedPtr<IBlueprintEditor> InBlueprintEditor, TSharedRef<IPropertyHandle> InPropertyHandle, FName CategoryName);
 
 	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint)
 		: BlueprintEditor(InBlueprintEditor)
 		, Blueprint(InBlueprint)
 	{}
+	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint, TSharedRef<IPropertyHandle> InPropertyHandle, FName InCategoryName)
+		: BlueprintEditor(InBlueprintEditor)
+		, Blueprint(InBlueprint)
+		, PropertyHandle(InPropertyHandle)
+		, CachedProperty(PropertyHandle->GetProperty())
+		, CategoryName(InCategoryName)
+	{}
 
 	// IDetailCustomization interface
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
 
+	// IDetailCustomNodeBuilder interface
+	virtual ~FBlueprintVariableCustomization() override;
+	virtual void GenerateHeaderRowContent( FDetailWidgetRow& NodeRow ) override;
+	virtual void GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder) override;
+	virtual void SetOnRebuildChildren(FSimpleDelegate InOnRebuildChildren) override { OnRebuildChildren = InOnRebuildChildren; } 
+	virtual bool InitiallyCollapsed() const override { return false; }
+	virtual bool RequiresTick() const override { return false; }
+	virtual void Tick( float DeltaTime ) override {}
+	virtual FName GetName() const override { return TEXT("BlueprintVariableCustomization"); }
+
 private:
+
+	void Initialize(UObject* EditedObject);
 
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
@@ -79,9 +101,18 @@ private:
 
 	/** blueprint of a currently displayed property. May differ from Blueprint, as property can be inherited from a parent blueprint */
 	TWeakObjectPtr<UBlueprint>	OwnerBlueprint;
-
+	
+	/** property handle that is being displayed, can be null */
+	TSharedPtr<IPropertyHandle> PropertyHandle;
+	
 	/** affected variable property that is being displayed */
 	TWeakFieldPtr<FProperty>	CachedProperty;
+
+	/** children rebuild delegate */
+	FSimpleDelegate OnRebuildChildren;
+	
+	/** Category name */
+	FName CategoryName = NAME_None;
 };
 	
 } // UE::AssetValidation

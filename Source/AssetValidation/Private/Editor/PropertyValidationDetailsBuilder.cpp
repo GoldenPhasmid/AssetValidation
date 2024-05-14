@@ -66,20 +66,23 @@ void FPropertyValidationDetailsBuilder::FCustomizationTarget::HandleMetaStateCha
 			{
 				MetaData.RemoveMetaData(MetaKey);
 			}
-			
+
+#if 0
 			// @todo: this doesn't do anything
 			if (Customization.bUseExternalMetaData)
 			{
 				FPropertyExternalValidationData PropertyData = MetaData.GetExternalData();
 			}
+#endif
 		}
+
+		Customization.OnRebuildChildren.ExecuteIfBound();
 	}
 }
 
-FPropertyValidationDetailsBuilder::FPropertyValidationDetailsBuilder(UObject* InEditedObject, TSharedRef<IPropertyHandle> InPropertyHandle, bool bInUseExternalMetaData)
+FPropertyValidationDetailsBuilder::FPropertyValidationDetailsBuilder(UObject* InEditedObject, TSharedRef<IPropertyHandle> InPropertyHandle)
 	: EditedObject(InEditedObject)
 	, PropertyHandle(InPropertyHandle)
-	, bUseExternalMetaData(bInUseExternalMetaData)
 {
 	
 }
@@ -113,10 +116,7 @@ UE::AssetValidation::FMetaDataSource FPropertyValidationDetailsBuilder::GetPrope
 	UE::AssetValidation::FMetaDataSource MetaData{};
 	if (EditedObject.IsValid())
 	{
-		if (!bUseExternalMetaData)
-		{
-			MetaData.SetProperty(Property);
-		}
+		MetaData.SetProperty(Property);
 #if 0
 		else
 		{

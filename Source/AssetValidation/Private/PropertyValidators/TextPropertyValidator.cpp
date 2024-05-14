@@ -12,5 +12,5 @@ void UTextPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	const FText* TextPtr = GetPropertyValuePtr<FTextProperty>(PropertyMemory, Property);
 	check(TextPtr);
 
-	ValidationContext.FailOnCondition(TextPtr->IsEmpty(), Property, NSLOCTEXT("AssetValidation", "TextProperty", "Text property is not set"));
+	ValidationContext.FailOnCondition(TextPtr->IsEmpty(), Property, NSLOCTEXT("AssetValidation", "TextProperty", "Text property is not set."));
 }

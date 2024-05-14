@@ -1,5 +1,6 @@
 #include "ValidationEditorExtensionManager.h"
 
+#include "AssetValidationSettings.h"
 #include "BlueprintEditor.h"
 #include "BlueprintEditorCustomization.h"
 #include "BlueprintEditorModule.h"
@@ -185,12 +186,12 @@ void UValidationEditorExtensionManager::HandleVariableAdded(UBlueprint* Blueprin
 		return;
 	}
 
-	UpdateBlueprintVariableMetaData(Blueprint, VarName, true);
+	UpdateBlueprintVariableMetaData(Blueprint, VarName, UPropertyValidationSettings::Get()->bAddMetaToNewBlueprintVariables);
 }
 
 void UValidationEditorExtensionManager::HandleVariableTypeChanged(UBlueprint* Blueprint, const FName& VarName, FEdGraphPinType OldPinType, FEdGraphPinType NewPinType)
 {
-	UpdateBlueprintVariableMetaData(Blueprint, VarName, false);
+	UpdateBlueprintVariableMetaData(Blueprint, VarName, UPropertyValidationSettings::Get()->bAddMetaToNewBlueprintVariables);
 }
 
 void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBlueprint* Blueprint, const FName& VarName, bool bAddIfPossible)

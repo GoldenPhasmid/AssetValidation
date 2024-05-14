@@ -76,7 +76,7 @@ void FStructureEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder&
 			TSharedPtr<IPropertyHandle> PropertyHandle = DetailLayout.AddStructurePropertyData(StructScope, Property->GetFName());
 			check(PropertyHandle.IsValid());
 			
-			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(UserDefinedStruct.Get(), PropertyHandle.ToSharedRef(), true);
+			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(UserDefinedStruct.Get(), PropertyHandle.ToSharedRef());
 			Category.AddCustomBuilder(PropertyBuilder);
 		}
 	}

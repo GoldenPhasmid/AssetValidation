@@ -4,14 +4,13 @@
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
+#include "IDetailChildrenBuilder.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
 
-#define LOCTEXT_NAMESPACE "AssetValidation"
-
 namespace UE::AssetValidation
 {
-	
+
 bool FBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
 {
 	if (Customization.IsValid())
@@ -58,7 +57,7 @@ void FBlueprintVariableCustomization::FCustomizationTarget::HandleMetaStateChang
 
 TSharedPtr<IDetailCustomization> FBlueprintVariableCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
 {
-	const TArray<UObject*>* Objects = InBlueprintEditor.IsValid() ? InBlueprintEditor->GetObjectsCurrentlyBeingEdited() : nullptr;
+	const TArray<UObject*>* Objects = InBlueprintEditor->GetObjectsCurrentlyBeingEdited();
 	if (Objects && Objects->Num() == 1)
 	{
 		if (UBlueprint* Blueprint = Cast<UBlueprint>((*Objects)[0]))
@@ -68,6 +67,40 @@ TSharedPtr<IDetailCustomization> FBlueprintVariableCustomization::MakeInstance(T
 	}
 
 	return nullptr;
+}
+
+TSharedPtr<IDetailCustomNodeBuilder> FBlueprintVariableCustomization::MakeNodeBuilder(TSharedPtr<IBlueprintEditor> InBlueprintEditor, TSharedRef<IPropertyHandle> InPropertyHandle, FName CategoryName)
+{
+	const TArray<UObject*>* Objects = InBlueprintEditor->GetObjectsCurrentlyBeingEdited();
+	if (Objects && Objects->Num() == 1)
+	{
+		if (UBlueprint* Blueprint = Cast<UBlueprint>((*Objects)[0]))
+		{
+			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint, InPropertyHandle, CategoryName);
+		}
+	}
+
+	return nullptr;
+}
+
+void FBlueprintVariableCustomization::Initialize(UObject* EditedObject)
+{
+	if (PropertyHandle.IsValid())
+	{
+		CachedProperty = PropertyHandle->GetProperty();
+	}
+	else if (UPropertyWrapper* PropertyWrapper = Cast<UPropertyWrapper>(EditedObject))
+	{
+		CachedProperty = PropertyWrapper->GetProperty();
+	}
+
+	if (CachedProperty.IsValid())
+	{
+		if (UBlueprintGeneratedClass* BlueprintClass = Cast<UBlueprintGeneratedClass>(CachedProperty->GetOwnerClass()))
+		{
+			OwnerBlueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy);
+		}	
+	}
 }
 
 void FBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
@@ -80,33 +113,53 @@ void FBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 		return;
 	}
 
-	UPropertyWrapper* PropertyWrapper = Cast<UPropertyWrapper>(Objects[0].Get());
-	if (PropertyWrapper == nullptr)
-	{
-		return;
-	}
+	Initialize(Objects[0].Get());
 
-	CachedProperty = PropertyWrapper->GetProperty();
-	if (!CachedProperty.IsValid())
+	if (CategoryName == NAME_None)
 	{
-		return;
-	}
-
-	if (UBlueprintGeneratedClass* BlueprintClass = Cast<UBlueprintGeneratedClass>(CachedProperty->GetOwnerClass()))
-	{
-		OwnerBlueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy);
-	}
-
-	IDetailCategoryBuilder& Category = DetailLayout.EditCategory(
-		"Validation",
-		LOCTEXT("ValidationCategoryTitle", "Validation"),
+		CategoryName = TEXT("Validation");
+		// this creates default category if it is not yet present
+		DetailLayout.EditCategory(
+		CategoryName,
+		NSLOCTEXT("AssetValidation", "ValidationCategoryTitle", "Validation"),
 		ECategoryPriority::Variable).InitiallyCollapsed(false);
+	}
 
+	IDetailCategoryBuilder& Category = DetailLayout.EditCategory(CategoryName);
+	
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
 	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return Category.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});	
+}
+
+FBlueprintVariableCustomization::~FBlueprintVariableCustomization()
+{
+	CustomizationTarget.Reset();
+}
+
+void FBlueprintVariableCustomization::GenerateHeaderRowContent(FDetailWidgetRow& NodeRow)
+{
+	TArray<UObject*> EditedObjects;
+	PropertyHandle->GetOuterObjects(EditedObjects);
+	Initialize(EditedObjects[0]);
+	
+	NodeRow
+	.ShouldAutoExpand(true)
+	.WholeRowContent()
+	[
+		PropertyHandle->CreatePropertyNameWidget()
+	];
+}
+
+void FBlueprintVariableCustomization::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
+{
+	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
+	{
+		return ChildrenBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
+	});
 }
 
 bool FBlueprintVariableCustomization::IsVariableInBlueprint() const
@@ -161,9 +214,13 @@ void FBlueprintVariableCustomization::SetMetaData(const FName& MetaName, bool bE
 		{
 			FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint.Get(), CachedProperty->GetFName(), nullptr, MetaName);
 		}
+
+		if (OnRebuildChildren.IsBound())
+		{
+			OnRebuildChildren.Execute();
+		}
 	}
 }
 	
 } // UE::AssetValidation
 
-#undef LOCTEXT_NAMESPACE

@@ -12,5 +12,5 @@ void UEnumPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	const uint8* ValuePtr = static_cast<const uint8*>(PropertyMemory);
 	check(ValuePtr);
 
-	ValidationContext.FailOnCondition(*ValuePtr == 0, Property, NSLOCTEXT("AssetValidation", "EnumProperty", "Enum property not set"));
+	ValidationContext.FailOnCondition(*ValuePtr == 0, Property, NSLOCTEXT("AssetValidation", "EnumProperty", "Enum property not set."));
 }

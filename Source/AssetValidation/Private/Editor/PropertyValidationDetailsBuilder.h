@@ -6,7 +6,7 @@
 class FPropertyValidationDetailsBuilder: public IDetailCustomNodeBuilder
 {
 public:
-	FPropertyValidationDetailsBuilder(UObject* InEditedObject, TSharedRef<IPropertyHandle> InPropertyHandle, bool bInUseExternalMetaData);
+	FPropertyValidationDetailsBuilder(UObject* InEditedObject, TSharedRef<IPropertyHandle> InPropertyHandle);
 	
 	//~Begin IDetailCustomNodeBuilder interface
 	virtual ~FPropertyValidationDetailsBuilder() override;
@@ -46,7 +46,6 @@ private:
 
 	TWeakObjectPtr<UObject> EditedObject;
 	TSharedRef<IPropertyHandle> PropertyHandle;
-	bool bUseExternalMetaData = false;
 
 	FSimpleDelegate OnRebuildChildren;
 };
