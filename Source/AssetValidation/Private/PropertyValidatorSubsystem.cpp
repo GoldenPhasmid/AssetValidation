@@ -273,13 +273,15 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 				ValidatePropertyWithContext(ContainerMemory, Property, *MetaData, ValidationContext);
 			}
 		}
-		
+
+		// @todo: fixme
+#if 0
 		for (const FPropertyExternalValidationData& ExternalData: UPropertyValidationSettings::GetExternalValidationData(Struct))
 		{
 			MetaData->SetExternalData(ExternalData);
 			ValidatePropertyWithContext(ContainerMemory, ExternalData.GetProperty(), *MetaData, ValidationContext);
 		}
-		
+#endif	
 		Struct = Struct->GetSuperStruct();
 		if (Struct)
 		{

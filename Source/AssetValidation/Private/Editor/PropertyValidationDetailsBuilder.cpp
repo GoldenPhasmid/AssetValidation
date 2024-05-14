@@ -117,12 +117,16 @@ UE::AssetValidation::FMetaDataSource FPropertyValidationDetailsBuilder::GetPrope
 		{
 			MetaData.SetProperty(Property);
 		}
+#if 0
 		else
 		{
+
+			// @todo: fixme for user defined structs
 			UUserDefinedStruct* EditedStruct = CastChecked<UUserDefinedStruct>(EditedObject.Get());
 			FPropertyExternalValidationData PropertyData = UPropertyValidationSettings::GetPropertyExternalValidationData(EditedStruct, Property);
 			MetaData.SetExternalData(PropertyData);
 		}
+#endif
 	}
 	
 	return MetaData;

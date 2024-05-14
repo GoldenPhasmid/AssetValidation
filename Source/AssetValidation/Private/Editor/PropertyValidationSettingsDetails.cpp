@@ -48,6 +48,7 @@ void FPropertyValidationSettingsDetails::CustomizeDetails(IDetailLayoutBuilder& 
 		return;
 	}
 
+#if 0
 	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory(TEXT("Settings"), LOCTEXT("SettingsCategoryLabel", "Settings"), ECategoryPriority::Important)
 	.InitiallyCollapsed(false);
 	
@@ -78,6 +79,7 @@ void FPropertyValidationSettingsDetails::CustomizeDetails(IDetailLayoutBuilder& 
 			]
 		]
 	];
+#endif
 }
 
 TSharedRef<SWidget> FPropertyValidationSettingsDetails::GetMenuContent() const
