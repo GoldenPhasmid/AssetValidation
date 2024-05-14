@@ -3,7 +3,7 @@
 #include "BlueprintEditor.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
-#include "StructureEditorCustomization.h"
+#include "PropertyValidationDetailsBuilder.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"

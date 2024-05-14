@@ -28,12 +28,18 @@ struct FBlueprintVariableData
 };
 
 UCLASS(Within = PropertyValidatorSubsystem)
-class ASSETVALIDATION_API UValidationEditorExtensionManager: public UObject
+class ASSETVALIDATION_API UValidationEditorExtensionManager: public UObject, public FTickableEditorObject
 {
 	GENERATED_BODY()
 public:
 
 	UValidationEditorExtensionManager();
+
+	//~Begin FTickableEditorObject interface
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UValidationEditorExtensionManager, STATGROUP_Tickables); }
+	virtual ETickableTickType GetTickableTickType() const override { return ETickableTickType::Always; }
+	//~End FTickableEditorObject interface
 
 	void Initialize();
 	void Cleanup();
@@ -62,6 +68,8 @@ private:
 	void HandleVariableRemoved(UBlueprint* Blueprint, const FName& VariableName) {};
 	void HandleVariableRenamed(UBlueprint* Blueprint, const FName& OldName, const FName& NewName) {};
 	void HandleVariableTypeChanged(UBlueprint* Blueprint, const FName& VarName, FEdGraphPinType OldPinType, FEdGraphPinType NewPinType);
+
+	TSharedRef<IDetailCustomization> HandleInspectorDefaultLayoutRequested(TSharedRef<FBlueprintEditor> BlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate);
 
 	/** Pre blueprint change callback */
 	void PreBlueprintChange(UObject* ModifiedObject);

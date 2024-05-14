@@ -1,10 +1,11 @@
 #include "ValidationEditorExtensionManager.h"
 
+#include "BlueprintEditor.h"
 #include "BlueprintEditorCustomization.h"
 #include "BlueprintEditorModule.h"
 #include "BlueprintEditorTabs.h"
+#include "PropertyValidationBlueprintComponentCustomization.h"
 #include "PropertyValidationSettings.h"
-#include "PropertyValidationBlueprintVariableCustomization.h"
 #include "StructureEditorCustomization.h"
 #include "SubobjectData.h"
 #include "SubobjectDataSubsystem.h"
@@ -19,6 +20,51 @@ const FName UValidationEditorExtensionManager::ValidationTabId{TEXT("ValidationT
 UValidationEditorExtensionManager::UValidationEditorExtensionManager()
 {
 
+}
+
+void UValidationEditorExtensionManager::Tick(float DeltaTime)
+{
+	if (HasAnyFlags(RF_ClassDefaultObject))
+	{
+		return;
+	}
+	const FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
+	for (TSharedRef<IBlueprintEditor> Editor: BlueprintEditorModule.GetBlueprintEditors())
+	{
+		TSharedRef<FBlueprintEditor> BlueprintEditor = StaticCastSharedRef<FBlueprintEditor>(Editor);
+		if (BlueprintEditor->CanAccessComponentsMode())
+		{
+			TSharedPtr<IDetailsView> PropertyView = BlueprintEditor->GetInspector()->GetPropertyView();
+
+			if (FOnGetDetailCustomizationInstance Delegate = PropertyView->GetGenericLayoutDetailsDelegate(); !Delegate.IsBoundToObject(this))
+			{
+				FOnGetDetailCustomizationInstance ProxyDelegate = FOnGetDetailCustomizationInstance::CreateUObject(this, &ThisClass::HandleInspectorDefaultLayoutRequested, BlueprintEditor, Delegate);
+				PropertyView->SetGenericLayoutDetailsDelegate(ProxyDelegate);
+			}
+		}
+	}
+}
+
+TSharedRef<IDetailCustomization> UValidationEditorExtensionManager::HandleInspectorDefaultLayoutRequested(TSharedRef<FBlueprintEditor> BlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate)
+{
+	struct FEmptyDetailCustomization: public IDetailCustomization
+	{
+		virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override {}
+	};
+	for (TWeakObjectPtr<UObject> SelectedObject: BlueprintEditor->GetInspector()->GetPropertyView()->GetSelectedObjects())
+	{
+		if (SelectedObject.IsValid() && SelectedObject->IsA<UActorComponent>())
+		{
+			return FPropertyValidationBlueprintComponentCustomization::MakeInstance(BlueprintEditor, ChildDelegate).ToSharedRef();
+		}
+	}
+	
+	if (ChildDelegate.IsBound())
+	{
+		return ChildDelegate.Execute();
+	}
+
+	return MakeShared<FEmptyDetailCustomization>();
 }
 
 void UValidationEditorExtensionManager::Initialize()

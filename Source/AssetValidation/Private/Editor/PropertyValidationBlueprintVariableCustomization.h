@@ -59,31 +59,7 @@ private:
 	 * @see FBlueprintVarActionDetails::IsVariableInheritedByBlueprint
 	 */
 	bool IsVariableInheritedByBlueprint() const;
-
-	/** @return return true if validation meta editing is enabled */
-	bool IsMetaEditingEnabled() const;
 	
-	EVisibility GetValidateVisibility() const;
-	ECheckBoxState GetValidateState() const;
-	void SetValidateState(ECheckBoxState NewState);
-
-	EVisibility GetValidateRecursiveVisibility() const;
-	ECheckBoxState GetValidateRecursiveState() const;
-	void SetValidateRecursiveState(ECheckBoxState NewState);
-	
-	EVisibility GetValidateKeyVisibility() const;
-	ECheckBoxState GetValidateKeyState() const;
-	void SetValidateKeyState(ECheckBoxState NewState);
-
-	EVisibility GetValidateValueVisibility() const;
-	ECheckBoxState GetValidateValueState() const;
-	void SetValidateValueState(ECheckBoxState NewState);
-
-	EVisibility IsFailureMessageVisible() const;
-	bool IsFailureMessageEnabled() const;
-	FText GetFailureMessage() const;
-	void SetFailureMessage(const FText& NewText, ETextCommit::Type CommitType);
-
 	bool HasMetaData(const FName& MetaName) const;
 	bool GetMetaData(const FName& MetaName, FString& OutValue) const;
 	void SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue = {});
@@ -93,20 +69,14 @@ private:
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;
 
 	/** blueprint editor customization is called for */
-	TWeakPtr<IBlueprintEditor> BlueprintEditor;
+	TWeakPtr<IBlueprintEditor>	BlueprintEditor;
 	
 	/** blueprint that is currently being edited */
-	TWeakObjectPtr<UBlueprint> Blueprint;
+	TWeakObjectPtr<UBlueprint>	Blueprint;
 
 	/** blueprint of a currently displayed property. May differ from Blueprint, as property can be inherited from a parent blueprint */
-	TWeakObjectPtr<UBlueprint> PropertyBlueprint;
+	TWeakObjectPtr<UBlueprint>	OwnerBlueprint;
 
 	/** affected variable property that is being displayed */
-	TWeakFieldPtr<FProperty> CachedProperty;
-	
-	/** affected variable cached name */
-	FName CachedVariableName = NAME_None;
-
-	/** cached validation subsystem */
-	TWeakObjectPtr<UPropertyValidatorSubsystem> CachedValidationSubsystem;
+	TWeakFieldPtr<FProperty>	CachedProperty;
 };

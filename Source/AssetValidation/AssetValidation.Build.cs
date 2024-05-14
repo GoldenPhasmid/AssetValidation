@@ -37,6 +37,7 @@ public class AssetValidation : ModuleRules
 				"DeveloperSettings",
 				"Kismet",
 				"SubobjectDataInterface", 
+				"SubobjectEditor",
 				"AdvancedWidgets", 
 				"StudioTelemetry",
 				"TraceLog",
