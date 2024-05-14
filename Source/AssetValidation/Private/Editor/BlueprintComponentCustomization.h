@@ -11,13 +11,16 @@ namespace UE::AssetValidation
 	class ICustomizationTarget;
 }
 
-class FPropertyValidationBlueprintComponentCustomization: public IDetailCustomization
+namespace UE::AssetValidation
 {
-	using ThisClass = FPropertyValidationBlueprintComponentCustomization;
+
+class FBlueprintComponentCustomization: public IDetailCustomization
+{
+	using ThisClass = FBlueprintComponentCustomization;
 public:
 	static TSharedPtr<IDetailCustomization> MakeInstance(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate);
 
-	FPropertyValidationBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate);
+	FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate);
 
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
 	
@@ -25,8 +28,8 @@ private:
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FPropertyValidationBlueprintComponentCustomization& InCustomization)
-			: Customization(StaticCastWeakPtr<FPropertyValidationBlueprintComponentCustomization>(InCustomization.AsWeak()))
+		FCustomizationTarget(FBlueprintComponentCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FBlueprintComponentCustomization>(InCustomization.AsWeak()))
 		{}
 		//~Begin ICustomizationTarget interface
 		virtual bool HandleIsMetaVisible(const FName& MetaKey) const override;
@@ -35,7 +38,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 
-		TWeakPtr<FPropertyValidationBlueprintComponentCustomization> Customization;
+		TWeakPtr<FBlueprintComponentCustomization> Customization;
 	};
 	
 	bool IsInheritedComponent() const;
@@ -58,3 +61,7 @@ private:
 	/** The cached tree Node we're editing */
 	TSharedPtr<FSubobjectEditorTreeNode> EditingNode;
 };
+	
+} // UE::AssetValidation
+
+

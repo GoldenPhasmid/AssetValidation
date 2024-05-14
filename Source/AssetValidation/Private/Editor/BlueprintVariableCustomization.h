@@ -15,18 +15,21 @@ class IBlueprintEditor;
 class UBlueprint;
 class UPropertyValidatorSubsystem;
 
-class FPropertyValidationBlueprintVariableCustomization: public IDetailCustomization
+namespace UE::AssetValidation
 {
-	using ThisClass = FPropertyValidationBlueprintVariableCustomization;
+	
+class FBlueprintVariableCustomization: public IDetailCustomization
+{
+	using ThisClass = FBlueprintVariableCustomization;
 public:
 
 	static TSharedPtr<IDetailCustomization> MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor);
 
-	FPropertyValidationBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint)
+	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint)
 		: BlueprintEditor(InBlueprintEditor)
 		, Blueprint(InBlueprint)
 	{}
-	
+
 	// IDetailCustomization interface
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
 
@@ -35,8 +38,8 @@ private:
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FPropertyValidationBlueprintVariableCustomization& InCustomization)
-			: Customization(StaticCastWeakPtr<FPropertyValidationBlueprintVariableCustomization>(InCustomization.AsWeak()))
+		FCustomizationTarget(FBlueprintVariableCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FBlueprintVariableCustomization>(InCustomization.AsWeak()))
 		{}
 		//~Begin ICustomizationTarget interface
 		virtual bool HandleIsMetaVisible(const FName& MetaKey) const override;
@@ -45,7 +48,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 
-		TWeakPtr<FPropertyValidationBlueprintVariableCustomization> Customization;
+		TWeakPtr<FBlueprintVariableCustomization> Customization;
 	};
 
 	/**
@@ -59,7 +62,7 @@ private:
 	 * @see FBlueprintVarActionDetails::IsVariableInheritedByBlueprint
 	 */
 	bool IsVariableInheritedByBlueprint() const;
-	
+
 	bool HasMetaData(const FName& MetaName) const;
 	bool GetMetaData(const FName& MetaName, FString& OutValue) const;
 	void SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue = {});
@@ -70,7 +73,7 @@ private:
 
 	/** blueprint editor customization is called for */
 	TWeakPtr<IBlueprintEditor>	BlueprintEditor;
-	
+
 	/** blueprint that is currently being edited */
 	TWeakObjectPtr<UBlueprint>	Blueprint;
 
@@ -80,3 +83,5 @@ private:
 	/** affected variable property that is being displayed */
 	TWeakFieldPtr<FProperty>	CachedProperty;
 };
+	
+} // UE::AssetValidation

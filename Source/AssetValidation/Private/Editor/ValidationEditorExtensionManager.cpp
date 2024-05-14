@@ -4,7 +4,8 @@
 #include "BlueprintEditorCustomization.h"
 #include "BlueprintEditorModule.h"
 #include "BlueprintEditorTabs.h"
-#include "PropertyValidationBlueprintComponentCustomization.h"
+#include "BlueprintComponentCustomization.h"
+#include "BlueprintVariableCustomization.h"
 #include "PropertyValidationSettings.h"
 #include "StructureEditorCustomization.h"
 #include "SubobjectData.h"
@@ -55,7 +56,7 @@ TSharedRef<IDetailCustomization> UValidationEditorExtensionManager::HandleInspec
 	{
 		if (SelectedObject.IsValid() && SelectedObject->IsA<UActorComponent>())
 		{
-			return FPropertyValidationBlueprintComponentCustomization::MakeInstance(BlueprintEditor, ChildDelegate).ToSharedRef();
+			return UE::AssetValidation::FBlueprintComponentCustomization::MakeInstance(BlueprintEditor, ChildDelegate).ToSharedRef();
 		}
 	}
 	
@@ -71,7 +72,8 @@ void UValidationEditorExtensionManager::Initialize()
 {
 	// Register bp variable customization
 	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
-	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationBlueprintVariableCustomization::MakeInstance));
+	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(),
+		FOnGetVariableCustomizationInstance::CreateStatic(&UE::AssetValidation::FBlueprintVariableCustomization::MakeInstance));
 	BlueprintTabSpawnerHandle = BlueprintEditorModule.OnRegisterTabsForEditor().AddUObject(this, &ThisClass::RegisterValidationTab);
 	BlueprintLayoutExtensionHandle = BlueprintEditorModule.OnRegisterLayoutExtensions().AddUObject(this, &ThisClass::RegisterBlueprintEditorLayout);
 	

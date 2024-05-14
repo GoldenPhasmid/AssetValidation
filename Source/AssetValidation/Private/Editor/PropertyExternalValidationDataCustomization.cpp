@@ -6,7 +6,7 @@
 #include "IPropertyUtilities.h"
 #include "SPropertySelector.h"
 #include "PropertyValidationSettings.h"
-#include "PropertyValidationBlueprintVariableCustomization.h"
+#include "BlueprintVariableCustomization.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 

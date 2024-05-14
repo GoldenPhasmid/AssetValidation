@@ -1,16 +1,18 @@
-#include "PropertyValidationBlueprintVariableCustomization.h"
+#include "BlueprintVariableCustomization.h"
 
 #include "BlueprintEditorModule.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
-#include "PropertyValidatorSubsystem.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
+namespace UE::AssetValidation
+{
+	
+bool FBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
 {
 	if (Customization.IsValid())
 	{
@@ -19,34 +21,34 @@ bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::Ha
 			return IsPropertyMetaVisible(Property, MetaKey);
 		}
 	}
-	
+
 	return false;
 }
 
-bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
+bool FBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
-    if (Customization.IsValid() && Customization.Pin()->IsVariableInBlueprint())
-    {
-        auto Shared = Customization.Pin();
-    	if (MetaKey == UE::AssetValidation::FailureMessage)
-    	{
-    		return	Shared->HasMetaData(UE::AssetValidation::Validate) ||
+	if (Customization.IsValid() && Customization.Pin()->IsVariableInBlueprint())
+	{
+		auto Shared = Customization.Pin();
+		if (MetaKey == UE::AssetValidation::FailureMessage)
+		{
+			return	Shared->HasMetaData(UE::AssetValidation::Validate) ||
 					Shared->HasMetaData(UE::AssetValidation::ValidateKey) ||
 					Shared->HasMetaData(UE::AssetValidation::ValidateValue);
-    	}
+		}
 
-    	return true;
-    }
-	
+		return true;
+	}
+
 	return false;
 }
 
-bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
+bool FBlueprintVariableCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
 {
 	return Customization.IsValid() && Customization.Pin()->GetMetaData(MetaKey, OutValue);
 }
 
-void FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
+void FBlueprintVariableCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
 {
 	if (Customization.IsValid())
 	{
@@ -54,7 +56,7 @@ void FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::Ha
 	}
 }
 
-TSharedPtr<IDetailCustomization> FPropertyValidationBlueprintVariableCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
+TSharedPtr<IDetailCustomization> FBlueprintVariableCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
 {
 	const TArray<UObject*>* Objects = InBlueprintEditor.IsValid() ? InBlueprintEditor->GetObjectsCurrentlyBeingEdited() : nullptr;
 	if (Objects && Objects->Num() == 1)
@@ -64,11 +66,11 @@ TSharedPtr<IDetailCustomization> FPropertyValidationBlueprintVariableCustomizati
 			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint);
 		}
 	}
-	
+
 	return nullptr;
 }
 
-void FPropertyValidationBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
+void FBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 {
 	TArray<TWeakObjectPtr<UObject>> Objects;
 	DetailLayout.GetObjectsBeingCustomized(Objects);
@@ -94,11 +96,11 @@ void FPropertyValidationBlueprintVariableCustomization::CustomizeDetails(IDetail
 	{
 		OwnerBlueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy);
 	}
-	
+
 	IDetailCategoryBuilder& Category = DetailLayout.EditCategory(
 		"Validation",
 		LOCTEXT("ValidationCategoryTitle", "Validation"),
-		ECategoryPriority::Default).InitiallyCollapsed(false);
+		ECategoryPriority::Variable).InitiallyCollapsed(false);
 
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
 	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
@@ -107,12 +109,12 @@ void FPropertyValidationBlueprintVariableCustomization::CustomizeDetails(IDetail
 	});	
 }
 
-bool FPropertyValidationBlueprintVariableCustomization::IsVariableInBlueprint() const
+bool FBlueprintVariableCustomization::IsVariableInBlueprint() const
 {
 	return Blueprint.Get() == OwnerBlueprint.Get();
 }
 
-bool FPropertyValidationBlueprintVariableCustomization::IsVariableInheritedByBlueprint() const
+bool FBlueprintVariableCustomization::IsVariableInheritedByBlueprint() const
 {
 	const UClass* PropertyOwnerClass = nullptr;
 	if (OwnerBlueprint.IsValid())
@@ -127,14 +129,14 @@ bool FPropertyValidationBlueprintVariableCustomization::IsVariableInheritedByBlu
 	return SkeletonGeneratedClass && SkeletonGeneratedClass->IsChildOf(PropertyOwnerClass);
 }
 
-bool FPropertyValidationBlueprintVariableCustomization::HasMetaData(const FName& MetaName) const
+bool FBlueprintVariableCustomization::HasMetaData(const FName& MetaName) const
 {
 	FString MetaValue{};
 	return GetMetaData(MetaName, MetaValue);
 }
 
 
-bool FPropertyValidationBlueprintVariableCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
+bool FBlueprintVariableCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
 {
 	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
@@ -147,7 +149,7 @@ bool FPropertyValidationBlueprintVariableCustomization::GetMetaData(const FName&
 	return false;
 }
 
-void FPropertyValidationBlueprintVariableCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
+void FBlueprintVariableCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
 {
 	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
@@ -161,5 +163,7 @@ void FPropertyValidationBlueprintVariableCustomization::SetMetaData(const FName&
 		}
 	}
 }
+	
+} // UE::AssetValidation
 
 #undef LOCTEXT_NAMESPACE

@@ -8,7 +8,13 @@ enum class ECheckBoxState : uint8;
 
 namespace UE::AssetValidation
 {
-class FMetaDataSource;
+	class FMetaDataSource;
+}
+
+
+namespace UE::AssetValidation
+{
+
 class ICustomizationTarget: public TSharedFromThis<ICustomizationTarget>
 {
 public:

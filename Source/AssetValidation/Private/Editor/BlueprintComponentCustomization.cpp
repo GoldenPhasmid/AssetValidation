@@ -1,4 +1,4 @@
-﻿#include "PropertyValidationBlueprintComponentCustomization.h"
+﻿#include "BlueprintComponentCustomization.h"
 
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
@@ -7,12 +7,15 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
 
-TSharedPtr<IDetailCustomization> FPropertyValidationBlueprintComponentCustomization::MakeInstance(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate)
+namespace UE::AssetValidation
+{
+
+TSharedPtr<IDetailCustomization> FBlueprintComponentCustomization::MakeInstance(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate)
 {
 	return MakeShared<ThisClass>(InBlueprintEditor, ChildDelegate);
 }
 
-FPropertyValidationBlueprintComponentCustomization::FPropertyValidationBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate)
+FBlueprintComponentCustomization::FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate)
 	: BlueprintEditor(InBlueprintEditor)
 	, Blueprint(InBlueprintEditor->GetBlueprintObj())
 	, ChildCustomizationDelegate(InChildDelegate)
@@ -20,7 +23,7 @@ FPropertyValidationBlueprintComponentCustomization::FPropertyValidationBlueprint
 	
 }
 
-void FPropertyValidationBlueprintComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
+void FBlueprintComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 {
 	check(BlueprintEditor.IsValid());
 	TSharedPtr<SSubobjectEditor> Editor = BlueprintEditor.Pin()->GetSubobjectEditor();
@@ -45,7 +48,7 @@ void FPropertyValidationBlueprintComponentCustomization::CustomizeDetails(IDetai
 	IDetailCategoryBuilder& Category = DetailLayout.EditCategory(
 		"Validation",
 		NSLOCTEXT("AssetValidation", "ValidationCategoryTitle", "Validation"),
-		ECategoryPriority::Default).InitiallyCollapsed(false);
+		ECategoryPriority::Variable).InitiallyCollapsed(false);
 
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
 	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
@@ -54,7 +57,7 @@ void FPropertyValidationBlueprintComponentCustomization::CustomizeDetails(IDetai
 	});	
 }
 
-bool FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
+bool FBlueprintComponentCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
 {
 	if (Customization.IsValid())
 	{
@@ -70,7 +73,7 @@ bool FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::H
 	return false;
 }
 
-bool FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
+bool FBlueprintComponentCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
 	if (Customization.IsValid())
 	{
@@ -90,12 +93,12 @@ bool FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::H
 	return false;
 }
 
-bool FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
+bool FBlueprintComponentCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
 {
 	return Customization.IsValid() && Customization.Pin()->GetMetaData(MetaKey, OutValue);
 }
 
-void FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
+void FBlueprintComponentCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
 {
 	if (Customization.IsValid())
 	{
@@ -103,18 +106,18 @@ void FPropertyValidationBlueprintComponentCustomization::FCustomizationTarget::H
 	}
 }
 
-bool FPropertyValidationBlueprintComponentCustomization::IsInheritedComponent() const
+bool FBlueprintComponentCustomization::IsInheritedComponent() const
 {
 	return EditingNode->GetDataSource()->IsInheritedComponent();
 }
 
-bool FPropertyValidationBlueprintComponentCustomization::HasMetaData(const FName& MetaName) const
+bool FBlueprintComponentCustomization::HasMetaData(const FName& MetaName) const
 {
 	FString MetaValue{};
 	return GetMetaData(MetaName, MetaValue);
 }
 
-bool FPropertyValidationBlueprintComponentCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
+bool FBlueprintComponentCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
 {
 	if (Blueprint.IsValid() && EditingNode.IsValid())
 	{
@@ -127,7 +130,7 @@ bool FPropertyValidationBlueprintComponentCustomization::GetMetaData(const FName
 	return false;
 }
 
-void FPropertyValidationBlueprintComponentCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
+void FBlueprintComponentCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
 {
 	if (Blueprint.IsValid() && EditingNode.IsValid())
 	{
@@ -142,3 +145,5 @@ void FPropertyValidationBlueprintComponentCustomization::SetMetaData(const FName
 		}
 	}
 }
+
+} // UE::AssetValidation
