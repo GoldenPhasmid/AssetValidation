@@ -92,6 +92,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObject(const UObj
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
+	TRACE_CPUPROFILER_EVENT_SCOPE(UPropertyValidatorSubsystem::ValidateObject);
+
 	// package check happens inside WithContext call
 	FPropertyValidationContext ValidationContext(this, Object);
 	ValidateContainerWithContext(reinterpret_cast<const uint8*>(Object), Object->GetClass(), ValidationContext);
@@ -99,17 +101,19 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObject(const UObj
 	return ValidationContext.MakeValidationResult();
 }
 
-FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* Data)
+FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStruct(const UObject* OwningObject, const UScriptStruct* ScriptStruct, const uint8* StructData)
 {
-	if (!IsValid(OwningObject) || ScriptStruct == nullptr || Data == nullptr)
+	if (!IsValid(OwningObject) || ScriptStruct == nullptr || StructData == nullptr)
 	{
 		// count invalid objects as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
+	
+	TRACE_CPUPROFILER_EVENT_SCOPE(UPropertyValidatorSubsystem::ValidateStruct);
 
 	// package check happens inside WithContext call
 	FPropertyValidationContext ValidationContext(this, OwningObject);
-	ValidateContainerWithContext(Data, ScriptStruct, ValidationContext);
+	ValidateContainerWithContext(StructData, ScriptStruct, ValidationContext);
 	
 	return ValidationContext.MakeValidationResult();
 }
@@ -130,7 +134,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(co
 	
 	// sanity check that property belongs to object class
 	check(Object->IsA(Property->GetOwner<UClass>()));
-
+	TRACE_CPUPROFILER_EVENT_SCOPE(UPropertyValidatorSubsystem::ValidateObjectProperty);
 	
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, Object);
@@ -139,8 +143,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(co
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
-	TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>(Property);
-	ValidatePropertyWithContext(reinterpret_cast<const uint8*>(Object), Property, *MetaData, ValidationContext);
+	UE::AssetValidation::FMetaDataSource MetaData{Property};
+	ValidatePropertyWithContext(reinterpret_cast<const uint8*>(Object), Property, MetaData, ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
@@ -160,8 +164,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStructProperty(co
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
 
-	TSharedRef MetaData = MakeShared<UE::AssetValidation::FMetaDataSource>(Property);
-	ValidatePropertyWithContext(StructData, Property, *MetaData, ValidationContext);
+	UE::AssetValidation::FMetaDataSource MetaData{Property};
+	ValidatePropertyWithContext(StructData, Property, MetaData, ValidationContext);
 
 	return ValidationContext.MakeValidationResult();
 }
@@ -380,15 +384,12 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 
 		return true;
 	}
-	else if (const UObject* PropertyOwner = Property->GetOwnerUObject(); PropertyOwner->IsA<UBlueprintGeneratedClass>())
+	else if (UE::AssetValidation::IsBlueprintComponentProperty(Property))
 	{
 		// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
 		// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
 		// and property to be object property derived from actor component
-		if (const FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
-		{
-			return ObjectProperty->PropertyClass->IsChildOf<UActorComponent>();
-		}
+		return true;
 	}
 
 	return false;

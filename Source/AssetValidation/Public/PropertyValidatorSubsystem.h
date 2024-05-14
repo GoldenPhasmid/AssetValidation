@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
-#include "Editor/PropertyValidationVariableDetailCustomization.h"
+#include "Editor/PropertyValidationBlueprintVariableCustomization.h"
 #include "PropertyValidators/PropertyValidationResult.h"
 #include "Templates/NonNullPointer.h"
 

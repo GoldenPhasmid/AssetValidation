@@ -3,19 +3,9 @@
 namespace UE::AssetValidation
 {
 	
-bool FMetaDataSource::HasMetaData(const FName& Key) const
+bool FMetaDataSource::IsValid() const
 {
-	if (auto PropertyPtr = Variant.TryGet<FProperty*>())
-	{
-		return (*PropertyPtr)->HasMetaData(Key);
-	}
-	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
-	{
-		return ExternalData->HasMetaData(Key);
-	}
-
-	checkNoEntry();
-	return false;
+	return Variant.GetIndex() != 0;
 }
 
 FString FMetaDataSource::GetMetaData(const FName& Key) const
@@ -32,7 +22,22 @@ FString FMetaDataSource::GetMetaData(const FName& Key) const
 	checkNoEntry();
 	return {};
 }
+	
+bool FMetaDataSource::HasMetaData(const FName& Key) const
+{
+	if (auto PropertyPtr = Variant.TryGet<FProperty*>())
+	{
+		return (*PropertyPtr)->HasMetaData(Key);
+	}
+	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	{
+		return ExternalData->HasMetaData(Key);
+	}
 
+	checkNoEntry();
+	return false;
+}
+	
 void FMetaDataSource::SetMetaData(const FName& Key, const FString& Value)
 {
 	if (auto PropertyPtr = Variant.TryGet<FProperty*>())

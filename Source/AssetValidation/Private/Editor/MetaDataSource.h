@@ -23,6 +23,16 @@ public:
 		Variant.Set<FPropertyExternalValidationData>(PropertyData);
 	}
 
+	FProperty* GetProperty() const
+	{
+		return Variant.Get<FProperty*>();
+	}
+
+	FPropertyExternalValidationData GetExternalData() const
+	{
+		return Variant.Get<FPropertyExternalValidationData>();
+	}
+
 	void SetProperty(FProperty* Property)
 	{
 		Variant.Set<FProperty*>(Property);
@@ -32,14 +42,16 @@ public:
 	{
 		Variant.Set<FPropertyExternalValidationData>(PropertyData);
 	}
-	
-	bool HasMetaData(const FName& Key) const;
+
+	bool IsValid() const;
+
 	FString GetMetaData(const FName& Key) const;
+	bool HasMetaData(const FName& Key) const;
 	void SetMetaData(const FName& Key, const FString& Value);
 	void RemoveMetaData(const FName& Key);
 
 private:
-	TVariant<FProperty*, FPropertyExternalValidationData> Variant;
+	TVariant<FEmptyVariantState, FProperty*, FPropertyExternalValidationData> Variant;
 };
 
 }

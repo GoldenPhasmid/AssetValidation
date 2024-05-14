@@ -15,14 +15,14 @@ class IBlueprintEditor;
 class UBlueprint;
 class UPropertyValidatorSubsystem;
 
-class FPropertyValidationVariableDetailCustomization: public IDetailCustomization
+class FPropertyValidationBlueprintVariableCustomization: public IDetailCustomization
 {
-	using ThisClass = FPropertyValidationVariableDetailCustomization;
+	using ThisClass = FPropertyValidationBlueprintVariableCustomization;
 public:
 
 	static TSharedPtr<IDetailCustomization> MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor);
 
-	FPropertyValidationVariableDetailCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint)
+	FPropertyValidationBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint)
 		: BlueprintEditor(InBlueprintEditor)
 		, Blueprint(InBlueprint)
 	{}
@@ -35,8 +35,8 @@ private:
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FPropertyValidationVariableDetailCustomization& InCustomization)
-			: Customization(StaticCastWeakPtr<FPropertyValidationVariableDetailCustomization>(InCustomization.AsWeak()))
+		FCustomizationTarget(FPropertyValidationBlueprintVariableCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FPropertyValidationBlueprintVariableCustomization>(InCustomization.AsWeak()))
 		{}
 		//~Begin ICustomizationTarget interface
 		virtual bool HandleIsMetaVisible(const FName& MetaKey) const override;
@@ -45,7 +45,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 
-		TWeakPtr<FPropertyValidationVariableDetailCustomization> Customization;
+		TWeakPtr<FPropertyValidationBlueprintVariableCustomization> Customization;
 	};
 
 	/**

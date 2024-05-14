@@ -2,9 +2,13 @@
 
 #include "CoreMinimal.h"
 
+struct EVisibility;
+class FDetailWidgetRow;
+enum class ECheckBoxState : uint8;
+
 namespace UE::AssetValidation
 {
-	
+class FMetaDataSource;
 class ICustomizationTarget: public TSharedFromThis<ICustomizationTarget>
 {
 public:

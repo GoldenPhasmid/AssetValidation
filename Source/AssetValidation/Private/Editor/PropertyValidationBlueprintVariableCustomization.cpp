@@ -1,4 +1,4 @@
-#include "PropertyValidationVariableDetailCustomization.h"
+#include "PropertyValidationBlueprintVariableCustomization.h"
 
 #include "BlueprintEditorModule.h"
 #include "DetailCategoryBuilder.h"
@@ -10,7 +10,7 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
+bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
 {
 	if (Customization.IsValid())
 	{
@@ -23,7 +23,7 @@ bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::Handl
 	return false;
 }
 
-bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
+bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
     if (Customization.IsValid())
     {
@@ -41,21 +41,20 @@ bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::Handl
 	return Customization.IsValid() && Customization.Pin()->IsVariableInBlueprint();
 }
 
-bool FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
+bool FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
 {
 	return Customization.IsValid() && Customization.Pin()->GetMetaData(MetaKey, OutValue);
 }
 
-void FPropertyValidationVariableDetailCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
+void FPropertyValidationBlueprintVariableCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
 {
 	if (Customization.IsValid())
 	{
 		Customization.Pin()->SetMetaData(MetaKey, NewMetaState, MetaValue);
 	}
-	
 }
 
-TSharedPtr<IDetailCustomization> FPropertyValidationVariableDetailCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
+TSharedPtr<IDetailCustomization> FPropertyValidationBlueprintVariableCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
 {
 	if (const TArray<UObject*>* Objects = InBlueprintEditor.IsValid() ? InBlueprintEditor->GetObjectsCurrentlyBeingEdited() : nullptr;
 		Objects && Objects->Num() == 1)
@@ -69,7 +68,7 @@ TSharedPtr<IDetailCustomization> FPropertyValidationVariableDetailCustomization:
 	return nullptr;
 }
 
-void FPropertyValidationVariableDetailCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
+void FPropertyValidationBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 {
 	TArray<TWeakObjectPtr<UObject>> Objects;
 	DetailLayout.GetObjectsBeingCustomized(Objects);
@@ -206,12 +205,12 @@ void FPropertyValidationVariableDetailCustomization::CustomizeDetails(IDetailLay
 #endif
 }
 
-bool FPropertyValidationVariableDetailCustomization::IsVariableInBlueprint() const
+bool FPropertyValidationBlueprintVariableCustomization::IsVariableInBlueprint() const
 {
 	return Blueprint.Get() == PropertyBlueprint.Get();
 }
 
-bool FPropertyValidationVariableDetailCustomization::IsVariableInheritedByBlueprint() const
+bool FPropertyValidationBlueprintVariableCustomization::IsVariableInheritedByBlueprint() const
 {
 	const UClass* PropertyOwnerClass = nullptr;
 	if (PropertyBlueprint.IsValid())
@@ -226,14 +225,14 @@ bool FPropertyValidationVariableDetailCustomization::IsVariableInheritedByBluepr
 	return SkeletonGeneratedClass && SkeletonGeneratedClass->IsChildOf(PropertyOwnerClass);
 }
 
-bool FPropertyValidationVariableDetailCustomization::HasMetaData(const FName& MetaName) const
+bool FPropertyValidationBlueprintVariableCustomization::HasMetaData(const FName& MetaName) const
 {
 	FString MetaValue{};
 	return GetMetaData(MetaName, MetaValue);
 }
 
 
-bool FPropertyValidationVariableDetailCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
+bool FPropertyValidationBlueprintVariableCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
 {
 	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
@@ -246,7 +245,7 @@ bool FPropertyValidationVariableDetailCustomization::GetMetaData(const FName& Me
 	return false;
 }
 
-void FPropertyValidationVariableDetailCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
+void FPropertyValidationBlueprintVariableCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
 {
 	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
@@ -261,12 +260,12 @@ void FPropertyValidationVariableDetailCustomization::SetMetaData(const FName& Me
 	}
 }
 
-bool FPropertyValidationVariableDetailCustomization::IsMetaEditingEnabled() const
+bool FPropertyValidationBlueprintVariableCustomization::IsMetaEditingEnabled() const
 {
 	return IsVariableInBlueprint();
 }
 
-EVisibility FPropertyValidationVariableDetailCustomization::GetValidateVisibility() const
+EVisibility FPropertyValidationBlueprintVariableCustomization::GetValidateVisibility() const
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
@@ -276,49 +275,49 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateVisibilit
 	return EVisibility::Collapsed;
 }
 
-ECheckBoxState FPropertyValidationVariableDetailCustomization::GetValidateState() const
+ECheckBoxState FPropertyValidationBlueprintVariableCustomization::GetValidateState() const
 {
 	return HasMetaData(UE::AssetValidation::Validate) ? ECheckBoxState::Checked: ECheckBoxState::Unchecked;
 }
 
-void FPropertyValidationVariableDetailCustomization::SetValidateState(ECheckBoxState NewState)
+void FPropertyValidationBlueprintVariableCustomization::SetValidateState(ECheckBoxState NewState)
 {
 	SetMetaData(UE::AssetValidation::Validate, NewState == ECheckBoxState::Checked);
 }
 
-ECheckBoxState FPropertyValidationVariableDetailCustomization::GetValidateRecursiveState() const
+ECheckBoxState FPropertyValidationBlueprintVariableCustomization::GetValidateRecursiveState() const
 {
 	return HasMetaData(UE::AssetValidation::ValidateRecursive) ? ECheckBoxState::Checked: ECheckBoxState::Unchecked;
 }
 
-void FPropertyValidationVariableDetailCustomization::SetValidateRecursiveState(ECheckBoxState NewState)
+void FPropertyValidationBlueprintVariableCustomization::SetValidateRecursiveState(ECheckBoxState NewState)
 {
 	SetMetaData(UE::AssetValidation::ValidateRecursive, NewState == ECheckBoxState::Checked);
 }
 
-ECheckBoxState FPropertyValidationVariableDetailCustomization::GetValidateKeyState() const
+ECheckBoxState FPropertyValidationBlueprintVariableCustomization::GetValidateKeyState() const
 {
 	return HasMetaData(UE::AssetValidation::ValidateKey) ? ECheckBoxState::Checked: ECheckBoxState::Unchecked;
 }
 
-void FPropertyValidationVariableDetailCustomization::SetValidateKeyState(ECheckBoxState NewState)
+void FPropertyValidationBlueprintVariableCustomization::SetValidateKeyState(ECheckBoxState NewState)
 {
 	SetMetaData(UE::AssetValidation::Validate, false);
 	SetMetaData(UE::AssetValidation::ValidateKey, NewState == ECheckBoxState::Checked);
 }
 
-ECheckBoxState FPropertyValidationVariableDetailCustomization::GetValidateValueState() const
+ECheckBoxState FPropertyValidationBlueprintVariableCustomization::GetValidateValueState() const
 {
 	return HasMetaData(UE::AssetValidation::ValidateValue) ? ECheckBoxState::Checked: ECheckBoxState::Unchecked;
 }
 
-void FPropertyValidationVariableDetailCustomization::SetValidateValueState(ECheckBoxState NewState)
+void FPropertyValidationBlueprintVariableCustomization::SetValidateValueState(ECheckBoxState NewState)
 {
 	SetMetaData(UE::AssetValidation::Validate, false);
 	SetMetaData(UE::AssetValidation::ValidateValue, NewState == ECheckBoxState::Checked);
 }
 
-EVisibility FPropertyValidationVariableDetailCustomization::IsFailureMessageVisible() const
+EVisibility FPropertyValidationBlueprintVariableCustomization::IsFailureMessageVisible() const
 {
 	bool bVisible = GetValidateVisibility() == EVisibility::Visible ||
 					GetValidateKeyVisibility() == EVisibility::Visible ||
@@ -326,12 +325,12 @@ EVisibility FPropertyValidationVariableDetailCustomization::IsFailureMessageVisi
 	return bVisible ? EVisibility::Visible : EVisibility::Collapsed;
 }
 
-bool FPropertyValidationVariableDetailCustomization::IsFailureMessageEnabled() const
+bool FPropertyValidationBlueprintVariableCustomization::IsFailureMessageEnabled() const
 {
 	return GetValidateState() == ECheckBoxState::Checked || GetValidateKeyState() == ECheckBoxState::Checked || GetValidateValueState() == ECheckBoxState::Checked;
 }
 
-FText FPropertyValidationVariableDetailCustomization::GetFailureMessage() const
+FText FPropertyValidationBlueprintVariableCustomization::GetFailureMessage() const
 {
 	FString Value{};
 	FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint.Get(), CachedVariableName, nullptr, UE::AssetValidation::FailureMessage, Value);
@@ -339,12 +338,12 @@ FText FPropertyValidationVariableDetailCustomization::GetFailureMessage() const
 	return FText::FromString(Value);
 }
 
-void FPropertyValidationVariableDetailCustomization::SetFailureMessage(const FText& NewText, ETextCommit::Type CommitType)
+void FPropertyValidationBlueprintVariableCustomization::SetFailureMessage(const FText& NewText, ETextCommit::Type CommitType)
 {
 	SetMetaData(UE::AssetValidation::FailureMessage, !NewText.IsEmpty(), NewText.ToString());
 }
 
-EVisibility FPropertyValidationVariableDetailCustomization::GetValidateRecursiveVisibility() const
+EVisibility FPropertyValidationBlueprintVariableCustomization::GetValidateRecursiveVisibility() const
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
@@ -355,7 +354,7 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateRecursive
 	return EVisibility::Collapsed;
 }
 
-EVisibility FPropertyValidationVariableDetailCustomization::GetValidateKeyVisibility() const
+EVisibility FPropertyValidationBlueprintVariableCustomization::GetValidateKeyVisibility() const
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{
@@ -365,7 +364,7 @@ EVisibility FPropertyValidationVariableDetailCustomization::GetValidateKeyVisibi
 	return EVisibility::Collapsed;
 }
 
-EVisibility FPropertyValidationVariableDetailCustomization::GetValidateValueVisibility() const
+EVisibility FPropertyValidationBlueprintVariableCustomization::GetValidateValueVisibility() const
 {
 	if (const FProperty* Property = CachedProperty.Get())
 	{

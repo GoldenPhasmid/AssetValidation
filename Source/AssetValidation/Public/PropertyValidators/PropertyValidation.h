@@ -48,6 +48,8 @@ namespace UE::AssetValidation
 	bool CanValidatePropertyValue(const FProperty* Property);
 	/** @return true if property can be validated recursively */
 	bool CanValidatePropertyRecursively(const FProperty* Property);
+	/** @return true if @Property an actor component with owner being a blueprint class */
+	bool IsBlueprintComponentProperty(const FProperty* Property);
 
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property

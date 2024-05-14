@@ -194,6 +194,19 @@ bool UE::AssetValidation::CanValidatePropertyRecursively(const FProperty* Proper
 	return CanApplyMeta_ValidateRecursive(Property);
 }
 
+bool UE::AssetValidation::IsBlueprintComponentProperty(const FProperty* Property)
+{
+	if (const FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
+	{
+		if (const UObject* PropertyOwner = Property->GetOwnerUObject(); PropertyOwner->IsA<UBlueprintGeneratedClass>())
+		{
+			return ObjectProperty->PropertyClass->IsChildOf<UActorComponent>();
+		}
+	}
+
+	return false;
+}
+
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)
 {
 	FString OutValue{};

@@ -6,13 +6,15 @@
 #include "StructureEditorCustomization.h"
 #include "PropertyValidators/PropertyValidation.h"
 
+#define LOCTEXT_NAMESPACE "AssetValidation"
+
 FValidationTabSummoner::FValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor)
 	: FWorkflowTabFactory("ValidationTab", InBlueprintEditor)
 	  , BlueprintEditor(InBlueprintEditor)
 {
 	bIsSingleton = true;
 
-	TabLabel = NSLOCTEXT("AssetValidation", "ValidationTabLabel", "Validation");
+	TabLabel = LOCTEXT("ValidationTabTitle", "Validation");
 	TabIcon = FSlateIcon(FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon");
 }
 
@@ -81,22 +83,22 @@ void FBlueprintEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder&
 		return;
 	}
 
-#if 1
-	IDetailCategoryBuilder& Category = DetailLayout.EditCategory("Validation",
-NSLOCTEXT("AssetValidation", "ValidationDetailsCategory", "Validation"), ECategoryPriority::Default).InitiallyCollapsed(false);
-#else
-	IDetailCategoryBuilder& Category = DetailLayout.EditCategoryAllowNone(NAME_None);
-#endif
+	IDetailCategoryBuilder& ComponentsCategory = DetailLayout.EditCategory("Components",
+		LOCTEXT("ComponentCategoryTitle", "Components"), ECategoryPriority::Important).InitiallyCollapsed(false);
+	IDetailCategoryBuilder& PropertiesCategory = DetailLayout.EditCategory("Properties",
+		LOCTEXT("PropertyCategoryTitle", "Properties"), ECategoryPriority::Default).InitiallyCollapsed(false);
 
 	UObject* GeneratedObject = Blueprint->GeneratedClass->GetDefaultObject();
 	for (const FProperty* Property: TFieldRange<FProperty>{Blueprint->GeneratedClass, EFieldIterationFlags::None})
 	{
 		if (UE::AssetValidation::CanValidatePropertyValue(Property) || UE::AssetValidation::CanValidatePropertyRecursively(Property))
 		{
+			IDetailCategoryBuilder& Category = UE::AssetValidation::IsBlueprintComponentProperty(Property) ? ComponentsCategory : PropertiesCategory;
+			
 			TSharedPtr<IPropertyHandle> PropertyHandle = DetailLayout.AddObjectPropertyData({GeneratedObject}, Property->GetFName());
 			check(PropertyHandle.IsValid());
 			
-			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(EditedObject, PropertyHandle.ToSharedRef());
+			TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(GeneratedObject, PropertyHandle.ToSharedRef(), false);
 			Category.AddCustomBuilder(PropertyBuilder);
 		}
 	}

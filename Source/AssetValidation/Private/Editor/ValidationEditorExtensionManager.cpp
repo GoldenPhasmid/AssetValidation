@@ -4,7 +4,7 @@
 #include "BlueprintEditorModule.h"
 #include "BlueprintEditorTabs.h"
 #include "PropertyValidationSettings.h"
-#include "PropertyValidationVariableDetailCustomization.h"
+#include "PropertyValidationBlueprintVariableCustomization.h"
 #include "StructureEditorCustomization.h"
 #include "SubobjectData.h"
 #include "SubobjectDataSubsystem.h"
@@ -25,7 +25,7 @@ void UValidationEditorExtensionManager::Initialize()
 {
 	// Register bp variable customization
 	FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("Kismet");
-	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationVariableDetailCustomization::MakeInstance));
+	VariableCustomizationHandle = BlueprintEditorModule.RegisterVariableCustomization(FProperty::StaticClass(), FOnGetVariableCustomizationInstance::CreateStatic(&FPropertyValidationBlueprintVariableCustomization::MakeInstance));
 	BlueprintTabSpawnerHandle = BlueprintEditorModule.OnRegisterTabsForEditor().AddUObject(this, &ThisClass::RegisterValidationTab);
 	BlueprintLayoutExtensionHandle = BlueprintEditorModule.OnRegisterLayoutExtensions().AddUObject(this, &ThisClass::RegisterBlueprintEditorLayout);
 	
