@@ -62,7 +62,7 @@ TSharedPtr<IDetailCustomization> FBlueprintVariableCustomization::MakeInstance(T
 	{
 		if (UBlueprint* Blueprint = Cast<UBlueprint>((*Objects)[0]))
 		{
-			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint);
+			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint, FPrivateToken{});
 		}
 	}
 
@@ -76,7 +76,7 @@ TSharedPtr<IDetailCustomNodeBuilder> FBlueprintVariableCustomization::MakeNodeBu
 	{
 		if (UBlueprint* Blueprint = Cast<UBlueprint>((*Objects)[0]))
 		{
-			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint, InPropertyHandle, CategoryName);
+			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint, InPropertyHandle, CategoryName, FPrivateToken{});
 		}
 	}
 
@@ -206,13 +206,14 @@ void FBlueprintVariableCustomization::SetMetaData(const FName& MetaName, bool bE
 {
 	if (Blueprint.IsValid() && CachedProperty.IsValid())
 	{
+		FName VariableName = CachedProperty->GetFName();
 		if (bEnabled)
 		{
-			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint.Get(), CachedProperty->GetFName(), nullptr, MetaName, MetaValue);
+			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint.Get(), VariableName, nullptr, MetaName, MetaValue);
 		}
 		else
 		{
-			FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint.Get(), CachedProperty->GetFName(), nullptr, MetaName);
+			FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint.Get(), VariableName, nullptr, MetaName);
 		}
 
 		if (OnRebuildChildren.IsBound())

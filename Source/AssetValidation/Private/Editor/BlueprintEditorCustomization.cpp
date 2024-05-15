@@ -1,5 +1,6 @@
 ﻿#include "BlueprintEditorCustomization.h"
 
+#include "BlueprintComponentCustomization.h"
 #include "BlueprintEditor.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
@@ -40,12 +41,21 @@ void SBlueprintEditorValidationTab::Construct(const FArguments& Args)
 	DetailsView->RegisterInstancedCustomPropertyLayout(UBlueprintValidationView::StaticClass(), CustomLayoutDelegate);
 
 	BlueprintView = NewObject<UBlueprintValidationView>();
-	DetailsView->SetObject(BlueprintView.Get());
+	if (UBlueprint* Blueprint = BlueprintEditor.Pin()->GetBlueprintObj())
+	{
+		Blueprint->OnChanged().AddSP(this, &SBlueprintEditorValidationTab::OnBlueprintChanged);
+	}
 
+	UpdateBlueprintView();
 	ChildSlot
 	[
 		DetailsView.ToSharedRef()
 	];
+}
+
+void SBlueprintEditorValidationTab::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(BlueprintView);
 }
 
 void SBlueprintEditorValidationTab::NotifyPreChange(FProperty* PropertyAboutToChange)
@@ -55,15 +65,17 @@ void SBlueprintEditorValidationTab::NotifyPreChange(FProperty* PropertyAboutToCh
 
 void SBlueprintEditorValidationTab::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged)
 {
-#if 0
-	DetailsView->SetObject(Blueprint.Get(), true);
-#endif
-	DetailsView->SetObject(BlueprintView.Get(), true);
+	UpdateBlueprintView(true);
 }
 
-void SBlueprintEditorValidationTab::AddReferencedObjects(FReferenceCollector& Collector)
+void SBlueprintEditorValidationTab::UpdateBlueprintView(bool bForceRefresh)
 {
-	Collector.AddReferencedObject(BlueprintView);
+	DetailsView->SetObject(BlueprintView.Get(), bForceRefresh);
+}
+
+void SBlueprintEditorValidationTab::OnBlueprintChanged(UBlueprint* Blueprint)
+{
+	UpdateBlueprintView(true);
 }
 
 void FBlueprintEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
@@ -103,8 +115,8 @@ void FBlueprintEditorValidationTabLayout::CustomizeDetails(IDetailLayoutBuilder&
 			IDetailCategoryBuilder& Category = bBlueprintComponent ? ComponentsCategory : PropertiesCategory;
 			if (bBlueprintComponent)
 			{
-				TSharedRef<IDetailCustomNodeBuilder> PropertyBuilder = MakeShared<FPropertyValidationDetailsBuilder>(GeneratedObject, PropertyHandle.ToSharedRef());
-				Category.AddCustomBuilder(PropertyBuilder);
+				auto ComponentBuilder = UE::AssetValidation::FBlueprintComponentCustomization::MakeNodeBuilder(BlueprintEditor.Pin(), PropertyHandle.ToSharedRef());
+				Category.AddCustomBuilder(ComponentBuilder.ToSharedRef());
 			}
 			else
 			{

@@ -53,6 +53,7 @@ TSharedRef<IDetailCustomization> UValidationEditorExtensionManager::HandleInspec
 	{
 		virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override {}
 	};
+	// this chain is ugly but seems to always work
 	for (TWeakObjectPtr<UObject> SelectedObject: BlueprintEditor->GetInspector()->GetPropertyView()->GetSelectedObjects())
 	{
 		if (SelectedObject.IsValid() && SelectedObject->IsA<UActorComponent>())
@@ -199,15 +200,10 @@ void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBluepri
 	const FProperty* VarProperty = FindFProperty<FProperty>(Blueprint->SkeletonGeneratedClass, VarName);
 	check(VarProperty);
 
-	using namespace UE::AssetValidation;
-	bool bHasFailureMessage = UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, Validate, bAddIfPossible);
-	bHasFailureMessage |= UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateKey, bAddIfPossible);
-	bHasFailureMessage |= UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateValue, bAddIfPossible);
-	if (bHasFailureMessage)
+	for (FName MetaKey: UE::AssetValidation::GetMetaKeys())
 	{
-		UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, FailureMessage, bAddIfPossible);
+		UE::AssetValidation::UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, MetaKey, bAddIfPossible);
 	}
-	UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, ValidateRecursive, bAddIfPossible);
 }
 
 void UValidationEditorExtensionManager::RegisterValidationTab(FWorkflowAllowedTabSet& TabFactory, FName ModeName, TSharedPtr<FBlueprintEditor> BlueprintEditor)

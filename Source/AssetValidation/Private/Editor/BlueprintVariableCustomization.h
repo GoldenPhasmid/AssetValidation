@@ -23,16 +23,18 @@ namespace UE::AssetValidation
 class FBlueprintVariableCustomization: public IDetailCustomization, public IDetailCustomNodeBuilder
 {
 	using ThisClass = FBlueprintVariableCustomization;
+	struct FPrivateToken {};
 public:
 
 	static TSharedPtr<IDetailCustomization>		MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor);
 	static TSharedPtr<IDetailCustomNodeBuilder> MakeNodeBuilder(TSharedPtr<IBlueprintEditor> InBlueprintEditor, TSharedRef<IPropertyHandle> InPropertyHandle, FName CategoryName);
 
-	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint)
+	// private constructors
+	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint, FPrivateToken = {})
 		: BlueprintEditor(InBlueprintEditor)
 		, Blueprint(InBlueprint)
 	{}
-	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint, TSharedRef<IPropertyHandle> InPropertyHandle, FName InCategoryName)
+	FBlueprintVariableCustomization(TSharedPtr<IBlueprintEditor> InBlueprintEditor, UBlueprint* InBlueprint, TSharedRef<IPropertyHandle> InPropertyHandle, FName InCategoryName, FPrivateToken = {})
 		: BlueprintEditor(InBlueprintEditor)
 		, Blueprint(InBlueprint)
 		, PropertyHandle(InPropertyHandle)

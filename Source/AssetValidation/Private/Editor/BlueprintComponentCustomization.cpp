@@ -3,6 +3,7 @@
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
+#include "IDetailChildrenBuilder.h"
 #include "SSubobjectEditor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
@@ -10,12 +11,21 @@
 namespace UE::AssetValidation
 {
 
-TSharedPtr<IDetailCustomization> FBlueprintComponentCustomization::MakeInstance(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate)
+TSharedPtr<IDetailCustomization> FBlueprintComponentCustomization::MakeInstance(
+	TSharedPtr<FBlueprintEditor> InBlueprintEditor,
+	FOnGetDetailCustomizationInstance ChildDelegate)
 {
-	return MakeShared<ThisClass>(InBlueprintEditor, ChildDelegate);
+	return MakeShared<ThisClass>(InBlueprintEditor, ChildDelegate, FPrivateToken{});
 }
 
-FBlueprintComponentCustomization::FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate)
+TSharedPtr<IDetailCustomNodeBuilder> FBlueprintComponentCustomization::MakeNodeBuilder(
+	TSharedPtr<FBlueprintEditor> InBlueprintEditor,
+	TSharedPtr<IPropertyHandle> PropertyHandle)
+{
+	return MakeShared<ThisClass>(InBlueprintEditor, PropertyHandle, FPrivateToken{});
+}
+
+FBlueprintComponentCustomization::FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate, FPrivateToken)
 	: BlueprintEditor(InBlueprintEditor)
 	, Blueprint(InBlueprintEditor->GetBlueprintObj())
 	, ChildCustomizationDelegate(InChildDelegate)
@@ -23,18 +33,31 @@ FBlueprintComponentCustomization::FBlueprintComponentCustomization(TSharedPtr<FB
 	
 }
 
+FBlueprintComponentCustomization::FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, TSharedPtr<IPropertyHandle> InPropertyHandle, FPrivateToken)
+	: BlueprintEditor(InBlueprintEditor)
+	, Blueprint(InBlueprintEditor->GetBlueprintObj())
+	, PropertyHandle(InPropertyHandle)
+{
+	
+}
+	
+FBlueprintComponentCustomization::~FBlueprintComponentCustomization()
+{
+	CustomizationTarget.Reset();
+}
+	
 void FBlueprintComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailLayout)
 {
-	check(BlueprintEditor.IsValid());
-	TSharedPtr<SSubobjectEditor> Editor = BlueprintEditor.Pin()->GetSubobjectEditor();
-	check(Editor.IsValid());
-
 	if (ChildCustomizationDelegate.IsBound())
 	{
 		// handle child customization
 		ChildCustomization = ChildCustomizationDelegate.Execute();
 		ChildCustomization->CustomizeDetails(DetailLayout);
 	}
+	
+	check(BlueprintEditor.IsValid());
+	TSharedPtr<SSubobjectEditor> Editor = BlueprintEditor.Pin()->GetSubobjectEditor();
+	check(Editor.IsValid());
 
 	TArray<FSubobjectEditorTreeNodePtrType> Nodes = Editor->GetSelectedNodes();
 	if (Nodes.Num() == 0)
@@ -54,6 +77,34 @@ void FBlueprintComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return Category.AddCustomRow(SearchString).ShouldAutoExpand(true);
+	});	
+}
+	
+void FBlueprintComponentCustomization::GenerateHeaderRowContent(FDetailWidgetRow& NodeRow)
+{
+	check(PropertyHandle.IsValid());
+	if (const FProperty* Property = PropertyHandle->GetProperty())
+	{
+		if (UBlueprintGeneratedClass* BlueprintClass = Cast<UBlueprintGeneratedClass>(Property->GetOwnerClass()))
+		{
+			OwnerBlueprint = Cast<UBlueprint>(BlueprintClass->ClassGeneratedBy);
+		}
+	}
+	
+	NodeRow
+	.ShouldAutoExpand(true)
+	.WholeRowContent()
+	[
+		PropertyHandle->CreatePropertyNameWidget()
+	];
+}
+
+void FBlueprintComponentCustomization::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
+{
+	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
+	{
+		return ChildrenBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});	
 }
 
@@ -108,7 +159,19 @@ void FBlueprintComponentCustomization::FCustomizationTarget::HandleMetaStateChan
 
 bool FBlueprintComponentCustomization::IsInheritedComponent() const
 {
-	return EditingNode->GetDataSource()->IsInheritedComponent();
+	if (EditingNode.IsValid())
+	{
+		const FSubobjectData* DataSource = EditingNode->GetDataSource();
+		return DataSource->IsInheritedComponent() || DataSource->IsNativeComponent();
+	}
+	if (PropertyHandle.IsValid())
+	{
+		return Blueprint.Get() != OwnerBlueprint.Get();
+	}
+
+	checkNoEntry();
+	return false;
+	
 }
 
 bool FBlueprintComponentCustomization::HasMetaData(const FName& MetaName) const
@@ -119,9 +182,9 @@ bool FBlueprintComponentCustomization::HasMetaData(const FName& MetaName) const
 
 bool FBlueprintComponentCustomization::GetMetaData(const FName& MetaName, FString& OutValue) const
 {
-	if (Blueprint.IsValid() && EditingNode.IsValid())
+	if (const FName VariableName = GetVariableName(); VariableName != NAME_None)
 	{
-		if (FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint.Get(), EditingNode->GetVariableName(), nullptr, MetaName, OutValue))
+		if (FBlueprintEditorUtils::GetBlueprintVariableMetaData(Blueprint.Get(), VariableName, nullptr, MetaName, OutValue))
 		{
 			return true;
 		}
@@ -132,9 +195,8 @@ bool FBlueprintComponentCustomization::GetMetaData(const FName& MetaName, FStrin
 
 void FBlueprintComponentCustomization::SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue)
 {
-	if (Blueprint.IsValid() && EditingNode.IsValid())
+	if (const FName VariableName = GetVariableName(); VariableName != NAME_None)
 	{
-		const FName VariableName = EditingNode->GetVariableName();
 		if (bEnabled)
 		{
 			FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint.Get(), VariableName, nullptr, MetaName, MetaValue);
@@ -146,4 +208,21 @@ void FBlueprintComponentCustomization::SetMetaData(const FName& MetaName, bool b
 	}
 }
 
+FName FBlueprintComponentCustomization::GetVariableName() const
+{
+	if (Blueprint.IsValid())
+	{
+		if (EditingNode.IsValid())
+		{
+			return EditingNode->GetVariableName();
+		}
+		if (PropertyHandle.IsValid())
+		{
+			return PropertyHandle->GetProperty()->GetFName();
+		}
+	}
+
+	return NAME_None;
+}
+	
 } // UE::AssetValidation

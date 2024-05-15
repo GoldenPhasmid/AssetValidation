@@ -52,6 +52,10 @@ public:
 	}
 	//~End FGCObject interface
 protected:
+
+	void UpdateBlueprintView(bool bForceRefresh = false);
+	void OnBlueprintChanged(UBlueprint* Blueprint);
+	
 	/** owning blueprint editor */
 	TWeakPtr<FBlueprintEditor> BlueprintEditor;
 	/** view object spawned by this tab */

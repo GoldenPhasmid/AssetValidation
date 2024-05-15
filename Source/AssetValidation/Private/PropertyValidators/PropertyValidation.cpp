@@ -7,6 +7,25 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
+template <uint32 NumElements>
+struct TMetaKeysWrapper
+{
+	template <typename ...ArgTypes>
+	TMetaKeysWrapper(ArgTypes&&... Args)
+	{
+		int32 Index = 0;
+		((MetaKeys[Index] = Args, ++Index), ...);
+	}
+		
+	TStaticArray<FName, NumElements> MetaKeys;
+};
+
+const TStaticArray<FName, 5>& UE::AssetValidation::GetMetaKeys()
+{
+	static TMetaKeysWrapper<5> Wrapper{Validate, ValidateKey, ValidateValue, ValidateRecursive, FailureMessage};
+	return Wrapper.MetaKeys;
+}
+
 bool UE::AssetValidation::IsContainerProperty(const FProperty* Property)
 {
 	return Property != nullptr && (Property->IsA<FArrayProperty>() || Property->IsA<FMapProperty>() || Property->IsA<FSetProperty>());

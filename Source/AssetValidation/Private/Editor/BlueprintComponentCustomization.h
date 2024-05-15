@@ -2,6 +2,7 @@
 
 #include "CustomizationTarget.h"
 #include "IDetailCustomization.h"
+#include "IDetailCustomNodeBuilder.h"
 
 class FBlueprintEditor;
 class FSubobjectEditorTreeNode;
@@ -14,15 +15,30 @@ namespace UE::AssetValidation
 namespace UE::AssetValidation
 {
 
-class FBlueprintComponentCustomization: public IDetailCustomization
+class FBlueprintComponentCustomization: public IDetailCustomization, public IDetailCustomNodeBuilder
 {
 	using ThisClass = FBlueprintComponentCustomization;
+	struct FPrivateToken {};
 public:
-	static TSharedPtr<IDetailCustomization> MakeInstance(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate);
+	static TSharedPtr<IDetailCustomization>		MakeInstance(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate);
+	static TSharedPtr<IDetailCustomNodeBuilder> MakeNodeBuilder(TSharedPtr<FBlueprintEditor> InBlueprintEditor, TSharedPtr<IPropertyHandle> PropertyHandle);
 
-	FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate);
-
+	// private constructors
+	FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, FOnGetDetailCustomizationInstance InChildDelegate, FPrivateToken = {});
+	FBlueprintComponentCustomization(TSharedPtr<FBlueprintEditor> InBlueprintEditor, TSharedPtr<IPropertyHandle> InPropertyHandle, FPrivateToken = {});
+	
+	// IDetailCustomization interface
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
+
+	// IDetailCustomNodeBuilder interface
+	virtual ~FBlueprintComponentCustomization() override;
+	virtual void GenerateHeaderRowContent( FDetailWidgetRow& NodeRow ) override;
+	virtual void GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder) override;
+	virtual void SetOnRebuildChildren(FSimpleDelegate InOnRebuildChildren) override { OnRebuildChildren = InOnRebuildChildren; } 
+	virtual bool InitiallyCollapsed() const override { return false; }
+	virtual bool RequiresTick() const override { return false; }
+	virtual void Tick( float DeltaTime ) override {}
+	virtual FName GetName() const override { return TEXT("BlueprintComponentCustomization"); }
 	
 private:
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
@@ -45,11 +61,14 @@ private:
 	bool HasMetaData(const FName& MetaName) const;
 	bool GetMetaData(const FName& MetaName, FString& OutValue) const;
 	void SetMetaData(const FName& MetaName, bool bEnabled, const FString& MetaValue = {});
+	FName GetVariableName() const;
 
 	/** blueprint editor customization is called for */
 	TWeakPtr<FBlueprintEditor>			BlueprintEditor;
 	/** blueprint that is currently being edited */
 	TWeakObjectPtr<UBlueprint>			Blueprint;
+	/** blueprint of a currently displayed property. May differ from Blueprint, as property can be inherited from a parent blueprint */
+	TWeakObjectPtr<UBlueprint>			OwnerBlueprint;
 
 	/** Customization target */
 	TSharedPtr<FCustomizationTarget>	CustomizationTarget;
@@ -57,9 +76,13 @@ private:
 	FOnGetDetailCustomizationInstance	ChildCustomizationDelegate;
 	/** child customization instance, can be null */
 	TSharedPtr<IDetailCustomization>	ChildCustomization;
+	/** children rebuild delegate */
+	FSimpleDelegate OnRebuildChildren;
 	
-	/** The cached tree Node we're editing */
+	/** The cached tree Node we're editing, used in details customization mode */
 	TSharedPtr<FSubobjectEditorTreeNode> EditingNode;
+	/** The cached property handle we're editing, used in node builder mode */
+	TSharedPtr<IPropertyHandle> PropertyHandle;
 };
 	
 } // UE::AssetValidation
