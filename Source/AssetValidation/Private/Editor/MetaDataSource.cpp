@@ -14,7 +14,7 @@ FString FMetaDataSource::GetMetaData(const FName& Key) const
 	{
 		return (*PropertyPtr)->GetMetaData(Key);
 	}
-	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	if (auto ExternalData = Variant.TryGet<FEnginePropertyExtension>())
 	{
 		return ExternalData->GetMetaData(Key);
 	}
@@ -29,7 +29,7 @@ bool FMetaDataSource::HasMetaData(const FName& Key) const
 	{
 		return (*PropertyPtr)->HasMetaData(Key);
 	}
-	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	if (auto ExternalData = Variant.TryGet<FEnginePropertyExtension>())
 	{
 		return ExternalData->HasMetaData(Key);
 	}
@@ -44,7 +44,7 @@ void FMetaDataSource::SetMetaData(const FName& Key, const FString& Value)
 	{
 		return (*PropertyPtr)->SetMetaData(Key, *Value);
 	}
-	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	if (auto ExternalData = Variant.TryGet<FEnginePropertyExtension>())
 	{
 		return ExternalData->SetMetaData(Key, Value);
 	}
@@ -57,7 +57,7 @@ void FMetaDataSource::RemoveMetaData(const FName& Key)
 	{
 		return (*PropertyPtr)->RemoveMetaData(Key);
 	}
-	if (auto ExternalData = Variant.TryGet<FPropertyExternalValidationData>())
+	if (auto ExternalData = Variant.TryGet<FEnginePropertyExtension>())
 	{
 		return ExternalData->RemoveMetaData(Key);
 	}

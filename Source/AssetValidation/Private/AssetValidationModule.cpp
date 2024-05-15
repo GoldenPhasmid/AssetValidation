@@ -9,13 +9,14 @@
 #include "ISettingsModule.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
+#include "PropertyExtensionTypes.h"
 #include "SourceControlProxy.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
 #include "UnrealEdGlobals.h"
 #include "AssetRegistry/AssetDataToken.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Editor/PropertyExternalValidationDataCustomization.h"
+#include "Editor/EnginePropertyExtensionCustomization.h"
 #include "Editor/PropertyValidationSettingsDetails.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Misc/ScopedSlowTask.h"
@@ -120,11 +121,12 @@ void FAssetValidationModule::StartupModule()
 	UpdateSourceControlProxy(SCCProvider, SCCProvider);
 	
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyEditor.RegisterCustomClassLayout("PropertyValidationSettings", FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
-	PropertyEditor.RegisterCustomPropertyTypeLayout("PropertyExternalValidationData", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FPropertyExternalValidationDataCustomization::MakeInstance));
+	PropertyEditor.RegisterCustomClassLayout(StaticClass<UPropertyValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FPropertyValidationSettingsDetails::MakeInstance));
+	PropertyEditor.RegisterCustomPropertyTypeLayout(StaticStruct<FEnginePropertyExtension>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&UE::AssetValidation::FEnginePropertyExtensionCustomization::MakeInstance));
 
 	FEditorDelegates::OnEditorInitialized.AddLambda([this](double Duration)
 	{
+		// override default FAssetDataToken callbacks to further customize DisplayName and activation action
 		FAssetDataToken::DefaultOnMessageTokenActivated().BindRaw(this, &ThisClass::OnAssetDataTokenActivated);
 		FAssetDataToken::DefaultOnGetAssetDisplayName().BindRaw(this, &ThisClass::OnGetAssetDataTokenDisplayName);
 	});

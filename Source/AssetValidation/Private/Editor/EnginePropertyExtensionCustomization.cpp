@@ -1,4 +1,4 @@
-#include "PropertyExternalValidationDataCustomization.h"
+#include "EnginePropertyExtensionCustomization.h"
 
 #include "AssetValidationDefines.h"
 #include "DetailWidgetRow.h"
@@ -7,11 +7,15 @@
 #include "SPropertySelector.h"
 #include "PropertyValidationSettings.h"
 #include "BlueprintVariableCustomization.h"
+#include "PropertyExtensionTypes.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
+namespace UE::AssetValidation
+{
+	
+bool FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleIsMetaVisible(const FName& MetaKey) const
 {
 	if (Customization.IsValid())
 	{
@@ -20,11 +24,11 @@ bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleI
 			return IsPropertyMetaVisible(Property, MetaKey);
 		}
 	}
-	
+
 	return false;
 }
 
-bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
+bool FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleIsMetaEditable(FName MetaKey) const
 {
 	if (Customization.IsValid())
 	{
@@ -34,7 +38,7 @@ bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleI
 			if (MetaKey == UE::AssetValidation::FailureMessage)
 			{
 				// enable editing FailureMessage only if value validation meta is already set
-				const FPropertyExternalValidationData& PropertyDesc = Shared->GetExternalPropertyData();
+				const FEnginePropertyExtension& PropertyDesc = Shared->GetExternalPropertyData();
 				return PropertyDesc.HasMetaData(UE::AssetValidation::Validate) || PropertyDesc.HasMetaData(UE::AssetValidation::ValidateKey) || PropertyDesc.HasMetaData(UE::AssetValidation::ValidateValue);
 			}
 
@@ -45,29 +49,29 @@ bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleI
 	return false;
 }
 
-bool FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
+bool FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleGetMetaState(const FName& MetaKey, FString& OutValue) const
 {
 	if (Customization.IsValid())
 	{
-		const FPropertyExternalValidationData& PropertyDesc = Customization.Pin()->GetExternalPropertyData();
+		const FEnginePropertyExtension& PropertyDesc = Customization.Pin()->GetExternalPropertyData();
 		if (PropertyDesc.HasMetaData(MetaKey))
 		{
 			OutValue = PropertyDesc.GetMetaData(MetaKey);
 			return true;
 		}
 	}
-	
+
 	return false;
 }
 
-void FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
+void FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue)
 {
 	if (Customization.IsValid())
 	{
 		auto Shared = Customization.Pin();
 		Shared->StructHandle->NotifyPreChange();
-		
-		FPropertyExternalValidationData& PropertyDesc = Shared->GetExternalPropertyData();
+	
+		FEnginePropertyExtension& PropertyDesc = Shared->GetExternalPropertyData();
 		if (NewMetaState)
 		{
 			PropertyDesc.SetMetaData(MetaKey, MetaValue);
@@ -76,33 +80,33 @@ void FPropertyExternalValidationDataCustomization::FCustomizationTarget::HandleM
 		{
 			PropertyDesc.RemoveMetaData(MetaKey);
 		}
-		
+	
 		Shared->StructHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
 	}
 }
 
-void FPropertyExternalValidationDataCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils)
+void FEnginePropertyExtensionCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils)
 {
 	// cache property utilities to update children layout when property value changes
 	PropertyUtilities = CustomizationUtils.GetPropertyUtilities();
-	
+
 	// cache customized object
 	TArray<UObject*> Objects;
 	StructPropertyHandle->GetOuterObjects(Objects);
 	CustomizedObject = Objects[0];
-	
+
 	StructHandle = StructPropertyHandle.ToSharedPtr();
-	PropertyPathHandle = StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPropertyExternalValidationData, PropertyPath));
+	PropertyPathHandle = StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FEnginePropertyExtension, PropertyPath));
 	PropertyPathHandle->MarkHiddenByCustomization();
 
-	MetaDataMapHandle = StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPropertyExternalValidationData, MetaDataMap));
+	MetaDataMapHandle = StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FEnginePropertyExtension, MetaDataMap));
 	MetaDataMapHandle->MarkHiddenByCustomization();
-	
-	StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPropertyExternalValidationData, Struct))
+
+	StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FEnginePropertyExtension, Struct))
 	->MarkHiddenByCustomization();
 
 	using namespace UE::AssetValidation;
-	
+
 	HeaderRow
 	.ShouldAutoExpand(true)
 	.NameContent()
@@ -118,7 +122,7 @@ void FPropertyExternalValidationDataCustomization::CustomizeHeader(TSharedRef<IP
 	];
 }
 
-void FPropertyExternalValidationDataCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
+void FEnginePropertyExtensionCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
 {
 	const FProperty* Property = GetProperty();
 	if (Property == nullptr)
@@ -134,55 +138,57 @@ void FPropertyExternalValidationDataCustomization::CustomizeChildren(TSharedRef<
 	});
 }
 
-FPropertyExternalValidationDataCustomization::~FPropertyExternalValidationDataCustomization()
+FEnginePropertyExtensionCustomization::~FEnginePropertyExtensionCustomization()
 {
 	UE_LOG(LogAssetValidation, Verbose, TEXT("FEngineVariableDescCustomization has been destroyed"));
 }
 
-void FPropertyExternalValidationDataCustomization::HandlePropertyChanged(TFieldPath<FProperty> NewPath)
+void FEnginePropertyExtensionCustomization::HandlePropertyChanged(TFieldPath<FProperty> NewPath)
 {
 	// notify pre change to a struct value
 	StructHandle->NotifyPreChange();
-	
-	FPropertyExternalValidationData& PropertyData = GetExternalPropertyData();
+
+	FEnginePropertyExtension& PropertyData = GetExternalPropertyData();
 	PropertyData.PropertyPath = NewPath.Get(PropertyData.Struct);
 	PropertyData.MetaDataMap.Empty();
-	
+
 	// notify post change to a struct value
 	StructHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-	
+
 	if (PropertyUtilities.IsValid())
 	{
 		// notify UI to refresh itself
-		PropertyUtilities->RequestRefresh();
+		PropertyUtilities->RequestForceRefresh();
 	}
 }
 
-FProperty* FPropertyExternalValidationDataCustomization::GetProperty() const
+FProperty* FEnginePropertyExtensionCustomization::GetProperty() const
 {
 	return GetExternalPropertyData().GetProperty();
 }
 
-TFieldPath<FProperty> FPropertyExternalValidationDataCustomization::GetPropertyPath() const
+TFieldPath<FProperty> FEnginePropertyExtensionCustomization::GetPropertyPath() const
 {
 	return GetExternalPropertyData().PropertyPath;
 }
 
-UStruct* FPropertyExternalValidationDataCustomization::GetOwningStruct() const
+UStruct* FEnginePropertyExtensionCustomization::GetOwningStruct() const
 {
 	return GetExternalPropertyData().Struct;
 }
 
-FPropertyExternalValidationData& FPropertyExternalValidationDataCustomization::GetExternalPropertyData() const
+FEnginePropertyExtension& FEnginePropertyExtensionCustomization::GetExternalPropertyData() const
 {
 	if (uint8* StructValue = StructHandle->GetValueBaseAddress(reinterpret_cast<uint8*>(CustomizedObject.Get())))
 	{
-		return *reinterpret_cast<FPropertyExternalValidationData*>(StructValue);
+		return *reinterpret_cast<FEnginePropertyExtension*>(StructValue);
 	}
 
-	static FPropertyExternalValidationData InvalidDesc;
+	static FEnginePropertyExtension InvalidDesc;
 	UE_LOG(LogAssetValidation, Error, TEXT("FEngineVariableDescCustomization: Failed to get struct value"));
 	return InvalidDesc;
 }
+	
+} // UE::AssetValidation
 
 #undef LOCTEXT_NAMESPACE

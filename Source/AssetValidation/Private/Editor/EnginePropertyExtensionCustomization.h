@@ -3,15 +3,18 @@
 #include "CoreMinimal.h"
 #include "Editor/CustomizationTarget.h"
 
-struct FPropertyExternalValidationData;
+struct FEnginePropertyExtension;
 namespace UE::AssetValidation
 {
 	class SPropertySelector;
 }
 
-class FPropertyExternalValidationDataCustomization: public IPropertyTypeCustomization
+namespace UE::AssetValidation
 {
-	using ThisClass = FPropertyExternalValidationDataCustomization;
+	
+class FEnginePropertyExtensionCustomization: public IPropertyTypeCustomization
+{
+	using ThisClass = FEnginePropertyExtensionCustomization;
 public:
 	static TSharedRef<IPropertyTypeCustomization> MakeInstance()
 	{
@@ -20,15 +23,15 @@ public:
 	
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
 	virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
-	virtual ~FPropertyExternalValidationDataCustomization() override;
+	virtual ~FEnginePropertyExtensionCustomization() override;
 
 private:
 
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FPropertyExternalValidationDataCustomization& InCustomization)
-			: Customization(StaticCastWeakPtr<FPropertyExternalValidationDataCustomization>(InCustomization.AsWeak()))
+		FCustomizationTarget(FEnginePropertyExtensionCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FEnginePropertyExtensionCustomization>(InCustomization.AsWeak()))
 		{}
 		
 		//~Begin ICustomizationTarget interface
@@ -38,7 +41,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 
-		TWeakPtr<FPropertyExternalValidationDataCustomization> Customization;
+		TWeakPtr<FEnginePropertyExtensionCustomization> Customization;
 	};
 	
 	void HandlePropertyChanged(TFieldPath<FProperty> NewPath);
@@ -50,7 +53,7 @@ private:
 	/** @return struct that owns the property from customized struct */
 	UStruct* GetOwningStruct() const;
 
-	FPropertyExternalValidationData& GetExternalPropertyData() const;
+	FEnginePropertyExtension& GetExternalPropertyData() const;
 
 	/** */
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;
@@ -69,3 +72,6 @@ private:
 	/** */
 	TSharedPtr<UE::AssetValidation::SPropertySelector> PropertySelector;
 };
+
+} // UE::AssetValidation
+

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PropertyValidationSettings.h"
+#include "PropertyExtensionTypes.h"
 #include "Engine/Blueprint.h"
 
 namespace UE::AssetValidation
@@ -18,9 +18,9 @@ public:
 	{
 		Variant.Set<FProperty*>(const_cast<FProperty*>(Property)); // @todo: remove const_cast after everything clears up
 	}
-	FMetaDataSource(const FPropertyExternalValidationData& PropertyData)
+	FMetaDataSource(const FEnginePropertyExtension& PropertyData)
 	{
-		Variant.Set<FPropertyExternalValidationData>(PropertyData);
+		Variant.Set<FEnginePropertyExtension>(PropertyData);
 	}
 
 	FProperty* GetProperty() const
@@ -28,9 +28,9 @@ public:
 		return Variant.Get<FProperty*>();
 	}
 
-	FPropertyExternalValidationData GetExternalData() const
+	FEnginePropertyExtension GetExternalData() const
 	{
-		return Variant.Get<FPropertyExternalValidationData>();
+		return Variant.Get<FEnginePropertyExtension>();
 	}
 
 	void SetProperty(FProperty* Property)
@@ -38,9 +38,9 @@ public:
 		Variant.Set<FProperty*>(Property);
 	}
 
-	void SetExternalData(const FPropertyExternalValidationData& PropertyData)
+	void SetExternalData(const FEnginePropertyExtension& PropertyData)
 	{
-		Variant.Set<FPropertyExternalValidationData>(PropertyData);
+		Variant.Set<FEnginePropertyExtension>(PropertyData);
 	}
 
 	bool IsValid() const;
@@ -51,7 +51,7 @@ public:
 	void RemoveMetaData(const FName& Key);
 
 private:
-	TVariant<FEmptyVariantState, FProperty*, FPropertyExternalValidationData> Variant;
+	TVariant<FEmptyVariantState, FProperty*, FEnginePropertyExtension> Variant;
 };
 
 }
