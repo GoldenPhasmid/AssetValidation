@@ -41,6 +41,7 @@ public class AssetValidation : ModuleRules
 				"AdvancedWidgets", 
 				"StudioTelemetry",
 				"TraceLog",
+				"UMGEditor",
 			}
 		);
 	}

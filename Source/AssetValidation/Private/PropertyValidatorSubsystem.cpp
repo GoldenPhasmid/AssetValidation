@@ -345,13 +345,14 @@ void UPropertyValidatorSubsystem::ValidatePropertyValueWithContext(TNonNullPtr<c
 
 bool UPropertyValidatorSubsystem::CanEverValidateProperty(const FProperty* Property) const
 {
-	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Deprecated | EPropertyFlags::CPF_Transient | EPropertyFlags::CPF_SkipSerialization))
+	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Deprecated | EPropertyFlags::CPF_SkipSerialization))
 	{
 		return false;
 	}
 
 	// for some reason blueprint created components doesn't have CPF_Edit, only CPF_BlueprintVisible. So we don't require CPF_Edit to be on a component property
 	// it is not required for component properties to be editable, as we want to validate their properties recursively
+	// Also, engine properties can have Transient and we still want to validate them, like UUserWidget::WidgetTree
 	return true;
 }
 
@@ -376,6 +377,11 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 			return false;
 		}
 		return true;
+	}
+	else if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient))
+	{
+		// do not validate transient properties
+		return false;
 	}
 	else if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
 	{

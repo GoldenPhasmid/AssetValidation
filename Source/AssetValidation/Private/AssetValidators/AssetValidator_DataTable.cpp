@@ -5,7 +5,7 @@
 
 bool UAssetValidator_DataTable::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject->IsAsset() && InObject->IsA<UDataTable>();
+	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject && InObject->IsA<UDataTable>();
 }
 
 EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
