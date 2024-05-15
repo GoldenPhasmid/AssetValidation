@@ -265,7 +265,7 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 		
 		if (ShouldIteratePackageProperties(Package))
 		{
-			// EFieldIterationFlags::None because we look only at Struct type properties
+			// EFieldIterationFlags::None because we look only at this Struct properties
 			for (FProperty* Property: TFieldRange<FProperty>(Struct, EFieldIterationFlags::None))
 			{
 				UE::AssetValidation::FMetaDataSource MetaData{Property};
@@ -273,14 +273,13 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 			}
 		}
 
-		// @todo: fixme
-#if 0
-		for (const FPropertyExternalValidationData& ExternalData: UPropertyValidationSettings::GetExternalValidationData(Struct))
+		// query property extensions for current Struct and run validation on them
+		for (const FEnginePropertyExtension& Extension: UPropertyValidationSettings::GetExtensions(Struct))
 		{
-			UE::AssetValidation::FMetaDataSource MetaData{ExternalData};
-			ValidatePropertyWithContext(ContainerMemory, ExternalData.GetProperty(), *MetaData, ValidationContext);
+			UE::AssetValidation::FMetaDataSource MetaData{Extension};
+			ValidatePropertyWithContext(ContainerMemory, Extension.GetProperty(), MetaData, ValidationContext);
 		}
-#endif	
+		
 		Struct = Struct->GetSuperStruct();
 		if (Struct)
 		{

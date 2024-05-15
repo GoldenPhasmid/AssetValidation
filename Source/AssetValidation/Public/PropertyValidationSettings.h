@@ -7,6 +7,7 @@
 class UStruct;
 class UUserDefinedStruct;
 struct FPropertyExtensionConfig;
+struct FEnginePropertyExtension;
 struct FEngineClassExtension;
 struct FEngineStructExtension;
 
@@ -86,11 +87,20 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	TArray<FEngineStructExtension> StructExtensions;
 
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	UPROPERTY(Config)
 	TArray<FPropertyExtensionConfig> PropertyExtensions;
+	
+	static const TArray<FEnginePropertyExtension>& GetExtensions(const UStruct* Struct);
 
 protected:
 
-	void ConvertConfig();
+	void LoadConfig();
 	void StoreConfig();
+
+	FORCEINLINE void MarkExtensionMapDirty() const { bExtensionMapDirty = true; }
+	void UpdatePropertyExtensionMap() const;
+
+	// marked mutable for lazy updates
+	mutable TMap<FSoftObjectPath, TArray<FEnginePropertyExtension>> PropertyExtensionMap;
+	mutable bool bExtensionMapDirty = false;
 };

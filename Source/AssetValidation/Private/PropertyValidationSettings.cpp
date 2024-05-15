@@ -12,7 +12,7 @@ void UPropertyValidationSettings::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	ConvertConfig();
+	LoadConfig();
 }
 
 void UPropertyValidationSettings::PostReloadConfig(FProperty* PropertyThatWasLoaded)
@@ -21,11 +21,20 @@ void UPropertyValidationSettings::PostReloadConfig(FProperty* PropertyThatWasLoa
 
 	if (PropertyThatWasLoaded->GetFName() == GET_MEMBER_NAME_CHECKED(ThisClass, PropertyExtensions))
 	{
-		ConvertConfig();
+		LoadConfig();
 	}
 }
 
-void UPropertyValidationSettings::ConvertConfig()
+const TArray<FEnginePropertyExtension>& UPropertyValidationSettings::GetExtensions(const UStruct* Struct)
+{
+	auto Settings = Get();
+	Settings->UpdatePropertyExtensionMap();
+	
+	const TArray<FEnginePropertyExtension> EmptyArray;
+	return Settings->PropertyExtensionMap.FindOrAdd(FSoftObjectPath{Struct});
+}
+
+void UPropertyValidationSettings::LoadConfig()
 {
 	if (HasAnyFlags(RF_ClassDefaultObject))
 	{
@@ -66,30 +75,75 @@ void UPropertyValidationSettings::ConvertConfig()
 			}
 		}
 	}
+
+	MarkExtensionMapDirty();
 }
 
 void UPropertyValidationSettings::StoreConfig()
 {
-	PropertyExtensions.Reset();
-	
-	for (FEngineClassExtension& ClassExtension: ClassExtensions)
+	PropertyExtensions.Reset(ClassExtensions.Num() + StructExtensions.Num());
+
+	auto IsExtensionValid = [](const FEnginePropertyExtension& Extension) { return Extension.IsValid(); };
+	for (const FEngineClassExtension& ClassExtension: ClassExtensions)
 	{
-		Algo::CopyIf(ClassExtension.Properties, PropertyExtensions, [](const FEnginePropertyExtension& Prop) { return Prop.IsValid(); });
+		if (ClassExtension.IsValid())
+		{
+			Algo::CopyIf(ClassExtension.Properties, PropertyExtensions, IsExtensionValid);
+		}
 	}
 
-	for (FEngineStructExtension& StructExtension: StructExtensions)
+	for (const FEngineStructExtension& StructExtension: StructExtensions)
 	{
-		Algo::CopyIf(StructExtension.Properties, PropertyExtensions, [](const FEnginePropertyExtension& Prop) { return Prop.IsValid(); });
+		if (StructExtension.IsValid())
+		{
+			Algo::CopyIf(StructExtension.Properties, PropertyExtensions, IsExtensionValid);
+		}
 	}
 
+	MarkExtensionMapDirty();
 	TryUpdateDefaultConfigFile();
+}
+
+void UPropertyValidationSettings::UpdatePropertyExtensionMap() const
+{
+	if (!bExtensionMapDirty)
+	{
+		return;
+	}
+	
+	bExtensionMapDirty = false;
+	PropertyExtensionMap.Reset();
+
+	auto IsExtensionValid = [](const FEnginePropertyExtension& Extension) { return Extension.IsValid(); };
+	for (const FEngineClassExtension& ClassExtension: ClassExtensions)
+	{
+		if (ClassExtension.IsValid())
+		{
+			TArray<FEnginePropertyExtension>& Extensions = PropertyExtensionMap.Add(FSoftObjectPath{ClassExtension.Class});
+			Extensions.Reserve(ClassExtension.Properties.Num());
+			
+			Algo::CopyIf(ClassExtension.Properties, Extensions, IsExtensionValid);
+		}
+	}
+
+	for (const FEngineStructExtension& StructExtension: StructExtensions)
+	{
+		if (StructExtension.IsValid())
+		{
+			TArray<FEnginePropertyExtension>& Extensions = PropertyExtensionMap.Add(FSoftObjectPath{StructExtension.Struct});
+			Extensions.Reserve(StructExtension.Properties.Num());
+			
+			Algo::CopyIf(StructExtension.Properties, Extensions, IsExtensionValid);
+		}
+	}
 }
 
 
 void UPropertyValidationSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	
+
+	// @todo: move to detail customization instead
 	for (FEngineClassExtension& ClassExtension: ClassExtensions)
 	{
 		for (FEnginePropertyExtension& PropertyData: ClassExtension.Properties)
@@ -98,6 +152,7 @@ void UPropertyValidationSettings::PostEditChangeProperty(FPropertyChangedEvent& 
 		}
 	}
 
+	// @todo: move to detail customization instead
 	for (FEngineStructExtension& StructExtension: StructExtensions)
 	{
 		for (FEnginePropertyExtension& PropertyData: StructExtension.Properties)

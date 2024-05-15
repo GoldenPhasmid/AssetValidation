@@ -5,7 +5,12 @@
 
 namespace UE::AssetValidation
 {
-
+	
+/**
+ *  Variant structure that represents either property or its extension
+ *  Provides access to meta data map for a single property
+ *  Not a part of FPropertyValidationContext, because multiple properties may be validated as part of a single context
+ */
 class FMetaDataSource
 {
 public:
@@ -16,11 +21,12 @@ public:
 	}
 	FMetaDataSource(const FProperty* Property)
 	{
-		Variant.Set<FProperty*>(const_cast<FProperty*>(Property)); // @todo: remove const_cast after everything clears up
+		// @todo: remove const_cast after everything clears up
+		Variant.Set<FProperty*>(const_cast<FProperty*>(Property)); 
 	}
-	FMetaDataSource(const FEnginePropertyExtension& PropertyData)
+	FMetaDataSource(const FEnginePropertyExtension& Extension)
 	{
-		Variant.Set<FEnginePropertyExtension>(PropertyData);
+		Variant.Set<FEnginePropertyExtension>(Extension);
 	}
 
 	FProperty* GetProperty() const
@@ -28,7 +34,7 @@ public:
 		return Variant.Get<FProperty*>();
 	}
 
-	FEnginePropertyExtension GetExternalData() const
+	FEnginePropertyExtension GetExtension() const
 	{
 		return Variant.Get<FEnginePropertyExtension>();
 	}
@@ -38,7 +44,7 @@ public:
 		Variant.Set<FProperty*>(Property);
 	}
 
-	void SetExternalData(const FEnginePropertyExtension& PropertyData)
+	void SetExtension(const FEnginePropertyExtension& PropertyData)
 	{
 		Variant.Set<FEnginePropertyExtension>(PropertyData);
 	}

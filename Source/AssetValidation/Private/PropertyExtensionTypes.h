@@ -9,6 +9,9 @@ class UUserDefinedStruct;
 struct FPropertyExtensionConfig;
 struct FEnginePropertyExtension;
 
+/**
+ * Single property meta data extension, in config format
+ */
 USTRUCT(BlueprintType)
 struct FPropertyExtensionConfig
 {
@@ -27,6 +30,9 @@ struct FPropertyExtensionConfig
 	FString MetaData;
 };
 
+/**
+ * Single property meta data extension
+ */
 USTRUCT()
 struct FEnginePropertyExtension
 {
@@ -84,6 +90,9 @@ struct FEnginePropertyExtension
 	TMap<FName, FString> MetaDataMap;
 };
 
+/**
+ * Class extension data
+ */
 USTRUCT()
 struct FEngineClassExtension
 {
@@ -93,6 +102,11 @@ struct FEngineClassExtension
 	FEngineClassExtension(UClass* InClass)
 		: Class(InClass)
 	{}
+
+	FORCEINLINE bool IsValid() const
+	{
+		return Class != nullptr;
+	}
 
 	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
 	TSubclassOf<UObject> Class;
@@ -106,6 +120,9 @@ FORCEINLINE bool operator==(const FEngineClassExtension& ClassData, const UClass
 	return ClassData.Class == Class;
 }
 
+/**
+ * Extension data for a script struct
+ */
 USTRUCT()
 struct FEngineStructExtension
 {
@@ -115,6 +132,11 @@ struct FEngineStructExtension
 	FEngineStructExtension(UScriptStruct* InStruct)
 		: Struct(InStruct)
 	{}
+
+	FORCEINLINE bool IsValid() const
+	{
+		return Struct != nullptr;
+	}
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UScriptStruct> Struct;
