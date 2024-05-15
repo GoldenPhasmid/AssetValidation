@@ -5,6 +5,7 @@
 #include "IDetailCustomNodeBuilder.h"
 #include "Editor/CustomizationTarget.h"
 
+class IDetailCategoryBuilder;
 class FBlueprintEditor;
 
 namespace UE::AssetValidation
@@ -56,6 +57,13 @@ public:
 	virtual FName GetName() const override { return TEXT("BlueprintVariableCustomization"); }
 
 private:
+
+	/** CPF_DisableEditOnTemplate functionality */
+	void AddDefaultsEditableRow(FDetailWidgetRow& WidgetRow);
+	
+	EVisibility ShowEditableCheckboxVisibility() const;
+	ECheckBoxState OnEditableCheckboxState() const;
+	void OnEditableChanged(ECheckBoxState InNewState);
 
 	void Initialize(UObject* EditedObject);
 

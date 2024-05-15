@@ -5,8 +5,9 @@
 #include "IDetailChildrenBuilder.h"
 #include "IPropertyUtilities.h"
 #include "SPropertySelector.h"
-#include "PropertyValidationSettings.h"
 #include "BlueprintVariableCustomization.h"
+#include "DetailLayoutBuilder.h"
+#include "IDocumentation.h"
 #include "PropertyExtensionTypes.h"
 #include "PropertyValidators/PropertyValidation.h"
 
@@ -38,7 +39,7 @@ bool FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleIsMetaEd
 			if (MetaKey == UE::AssetValidation::FailureMessage)
 			{
 				// enable editing FailureMessage only if value validation meta is already set
-				const FEnginePropertyExtension& PropertyDesc = Shared->GetExternalPropertyData();
+				const FEnginePropertyExtension& PropertyDesc = Shared->GetPropertyExtension();
 				return PropertyDesc.HasMetaData(UE::AssetValidation::Validate) || PropertyDesc.HasMetaData(UE::AssetValidation::ValidateKey) || PropertyDesc.HasMetaData(UE::AssetValidation::ValidateValue);
 			}
 
@@ -53,7 +54,7 @@ bool FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleGetMetaS
 {
 	if (Customization.IsValid())
 	{
-		const FEnginePropertyExtension& PropertyDesc = Customization.Pin()->GetExternalPropertyData();
+		const FEnginePropertyExtension& PropertyDesc = Customization.Pin()->GetPropertyExtension();
 		if (PropertyDesc.HasMetaData(MetaKey))
 		{
 			OutValue = PropertyDesc.GetMetaData(MetaKey);
@@ -71,7 +72,7 @@ void FEnginePropertyExtensionCustomization::FCustomizationTarget::HandleMetaStat
 		auto Shared = Customization.Pin();
 		Shared->StructHandle->NotifyPreChange();
 	
-		FEnginePropertyExtension& PropertyDesc = Shared->GetExternalPropertyData();
+		FEnginePropertyExtension& PropertyDesc = Shared->GetPropertyExtension();
 		if (NewMetaState)
 		{
 			PropertyDesc.SetMetaData(MetaKey, MetaValue);
@@ -105,8 +106,6 @@ void FEnginePropertyExtensionCustomization::CustomizeHeader(TSharedRef<IProperty
 	StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FEnginePropertyExtension, Struct))
 	->MarkHiddenByCustomization();
 
-	using namespace UE::AssetValidation;
-
 	HeaderRow
 	.ShouldAutoExpand(true)
 	.NameContent()
@@ -136,6 +135,8 @@ void FEnginePropertyExtensionCustomization::CustomizeChildren(TSharedRef<IProper
 	{
 		return ChildBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});
+
+	AddDefaultsEditableRow(ChildBuilder.AddCustomRow(LOCTEXT("IsVariableEditableTitle", "Defaults Editable")));
 }
 
 FEnginePropertyExtensionCustomization::~FEnginePropertyExtensionCustomization()
@@ -143,14 +144,62 @@ FEnginePropertyExtensionCustomization::~FEnginePropertyExtensionCustomization()
 	UE_LOG(LogAssetValidation, Verbose, TEXT("FEngineVariableDescCustomization has been destroyed"));
 }
 
+void FEnginePropertyExtensionCustomization::AddDefaultsEditableRow(FDetailWidgetRow& WidgetRow)
+{
+	// @todo: duplicate in FBlueprintVariableCustomization::AddDefaultsEditableRow
+	const FText TooltipText = LOCTEXT("VarEditableTooltip", "Adds CPF_DisableEditOnTemplate flag to property, allows validation subsystem to skip it on default objects.");
+	TSharedPtr<SToolTip> Tooltip = IDocumentation::Get()->CreateToolTip(TooltipText, nullptr, {}, {});
+
+	WidgetRow
+	.Visibility(TAttribute<EVisibility>(this, &ThisClass::ShowEditableCheckboxVisibility))
+	.NameContent()
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("IsVariableEditableTitle", "Defaults Editable"))
+		.ToolTip(Tooltip)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+	]
+	.ValueContent()
+	[
+		SNew(SCheckBox)
+		.IsChecked(this, &ThisClass::OnEditableCheckboxState)
+		.OnCheckStateChanged(this, &ThisClass::OnEditableChanged)
+		.IsEnabled(true)
+		.ToolTip(Tooltip)
+	];
+}
+
+EVisibility FEnginePropertyExtensionCustomization::ShowEditableCheckboxVisibility() const
+{
+	return EVisibility::Visible;
+}
+
+ECheckBoxState FEnginePropertyExtensionCustomization::OnEditableCheckboxState() const
+{
+	return GetPropertyExtension().HasMetaData(UE::AssetValidation::DisableEditOnTemplate) ? ECheckBoxState::Unchecked : ECheckBoxState::Checked;
+}
+
+void FEnginePropertyExtensionCustomization::OnEditableChanged(ECheckBoxState InNewState)
+{
+	FEnginePropertyExtension& PropertyExtension = GetPropertyExtension();
+	if (InNewState == ECheckBoxState::Checked)
+	{
+		PropertyExtension.RemoveMetaData(UE::AssetValidation::DisableEditOnTemplate);
+	}
+	else
+	{
+		PropertyExtension.SetMetaData(UE::AssetValidation::DisableEditOnTemplate, {});
+	}
+}
+
 void FEnginePropertyExtensionCustomization::HandlePropertyChanged(TFieldPath<FProperty> NewPath)
 {
 	// notify pre change to a struct value
 	StructHandle->NotifyPreChange();
 
-	FEnginePropertyExtension& PropertyData = GetExternalPropertyData();
-	PropertyData.PropertyPath = NewPath.Get(PropertyData.Struct);
-	PropertyData.MetaDataMap.Empty();
+	FEnginePropertyExtension& PropertyExtension = GetPropertyExtension();
+	PropertyExtension.PropertyPath = NewPath.Get(PropertyExtension.Struct);
+	PropertyExtension.MetaDataMap.Empty();
 
 	// notify post change to a struct value
 	StructHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
@@ -164,20 +213,20 @@ void FEnginePropertyExtensionCustomization::HandlePropertyChanged(TFieldPath<FPr
 
 FProperty* FEnginePropertyExtensionCustomization::GetProperty() const
 {
-	return GetExternalPropertyData().GetProperty();
+	return GetPropertyExtension().GetProperty();
 }
 
 TFieldPath<FProperty> FEnginePropertyExtensionCustomization::GetPropertyPath() const
 {
-	return GetExternalPropertyData().PropertyPath;
+	return GetPropertyExtension().PropertyPath;
 }
 
 UStruct* FEnginePropertyExtensionCustomization::GetOwningStruct() const
 {
-	return GetExternalPropertyData().Struct;
+	return GetPropertyExtension().Struct;
 }
 
-FEnginePropertyExtension& FEnginePropertyExtensionCustomization::GetExternalPropertyData() const
+FEnginePropertyExtension& FEnginePropertyExtensionCustomization::GetPropertyExtension() const
 {
 	if (uint8* StructValue = StructHandle->GetValueBaseAddress(reinterpret_cast<uint8*>(CustomizedObject.Get())))
 	{

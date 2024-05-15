@@ -20,9 +20,9 @@ struct TMetaKeysWrapper
 	TStaticArray<FName, NumElements> MetaKeys;
 };
 
-const TStaticArray<FName, 5>& UE::AssetValidation::GetMetaKeys()
+const TStaticArray<FName, 6>& UE::AssetValidation::GetMetaKeys()
 {
-	static TMetaKeysWrapper<5> Wrapper{Validate, ValidateKey, ValidateValue, ValidateRecursive, FailureMessage};
+	static TMetaKeysWrapper<6> Wrapper{Validate, ValidateKey, ValidateValue, ValidateRecursive, FailureMessage, DisableEditOnTemplate};
 	return Wrapper.MetaKeys;
 }
 
@@ -195,12 +195,8 @@ bool UE::AssetValidation::CanApplyMeta(const FProperty* Property, const FName& M
 		// @todo: replace with "has any valid meta specifier AND it can be applied"
 		return CanApplyMeta_Validate(Property) || CanApplyMeta_ValidateKey(Property) || CanApplyMeta_ValidateValue(Property);
 	}
-	else
-	{
-		checkNoEntry();
-	}
 
-	return false;
+	return true;
 }
 
 bool UE::AssetValidation::CanValidatePropertyValue(const FProperty* Property)

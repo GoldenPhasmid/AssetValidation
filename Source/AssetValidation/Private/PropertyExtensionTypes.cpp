@@ -7,20 +7,42 @@ FPropertyExtensionConfig::FPropertyExtensionConfig(const FEnginePropertyExtensio
 	: Class(Extension.Struct)
 	, Property(Extension.GetProperty()->GetFName())
 {
+	auto MakeMessage = [](const FString& Key, const FString& Value)
+	{
+		FString MetaData{};
+		if (Value.IsEmpty())
+		{
+			MetaData += Key;
+		}
+		else
+		{
+			MetaData += Key + TEXT("=") + Value;
+		}
+		MetaData += TEXT(";");
+		return MetaData;
+	};
+	
+	auto MetaDataMap = Extension.MetaDataMap;
 	for (const FName& MetaKey: UE::AssetValidation::GetMetaKeys())
 	{
-		if (const FString* Value = Extension.MetaDataMap.Find(MetaKey))
+		if (const FString* MetaValue = MetaDataMap.Find(MetaKey))
 		{
-			if (Value->IsEmpty())
-			{
-				MetaData += MetaKey.ToString();
-			}
-			else
-			{
-				MetaData += MetaKey.ToString() + TEXT("=") + *Value;
-			}
-			MetaData += TEXT(";");
+			MetaData += MakeMessage(MetaKey.ToString(), *MetaValue);
+			MetaDataMap.Remove(MetaKey);
 		}
+	}
+	
+	TArray<TPair<FName, FString>> MetaDataArray = MetaDataMap.Array();
+	// sort by name to guarantee the same order
+	Algo::SortBy(MetaDataArray,
+		[](const TPair<FName, FString>& Pair) { return Pair.Key; },
+		[](const FName& Lhs, const FName& Rhs) { return Lhs.Compare(Rhs) < 0; }
+	);
+
+	// append remaining metadata which is not related to asset validation meta keys.
+	for (auto& [MetaKey, MetaValue]: MetaDataArray)
+	{
+		MetaData += MakeMessage(MetaKey.ToString(), MetaValue);
 	}
 
 	MetaData.RemoveFromEnd(TEXT(";"));

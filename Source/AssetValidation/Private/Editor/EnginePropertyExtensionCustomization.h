@@ -27,6 +27,13 @@ public:
 
 private:
 
+	/** CPF_DisableEditOnTemplate functionality */
+	void AddDefaultsEditableRow(FDetailWidgetRow& WidgetRow);
+	
+	EVisibility ShowEditableCheckboxVisibility() const;
+	ECheckBoxState OnEditableCheckboxState() const;
+	void OnEditableChanged(ECheckBoxState InNewState);
+
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
@@ -53,7 +60,7 @@ private:
 	/** @return struct that owns the property from customized struct */
 	UStruct* GetOwningStruct() const;
 
-	FEnginePropertyExtension& GetExternalPropertyData() const;
+	FEnginePropertyExtension& GetPropertyExtension() const;
 
 	/** */
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;

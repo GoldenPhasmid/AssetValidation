@@ -362,17 +362,28 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 		return false;
 	}
 
-	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
+	const UObject* SourceObject = ValidationContext.GetSourceObject();
+	constexpr EObjectFlags TemplateFlags = RF_ArchetypeObject | RF_ClassDefaultObject;
+	// don't use IsTemplate, as it checks outer chain as well
+	// we're only interested whether this object is template or not
+	const bool bTemplate = SourceObject->HasAnyFlags(TemplateFlags);
+
+	if (MetaData.IsType<FEnginePropertyExtension>())
 	{
-		const UObject* SourceObject = ValidationContext.GetSourceObject();
+		// always validate property extensions no matter the property flags
+		if (MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
+		{
+			return false;
+		}
+		return true;
+	}
+	else if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
+	{
 		if (SourceObject->IsAsset())
 		{
 			// assets ignore EditDefaultsOnly and EditInstanceOnly specifics
 			return true;
 		}
-
-		constexpr EObjectFlags TemplateFlags = RF_ArchetypeObject | RF_ClassDefaultObject;
-		const bool bTemplate = SourceObject->HasAnyFlags(TemplateFlags);
 		
 		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnInstance) && !bTemplate)
 		{
@@ -385,11 +396,6 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 			return false;
 		}
 
-		return true;
-	}
-	else if (MetaData.IsType<FEnginePropertyExtension>())
-	{
-		// always validate property extensions no matter the property flags
 		return true;
 	}
 	else if (UE::AssetValidation::IsBlueprintComponentProperty(Property))

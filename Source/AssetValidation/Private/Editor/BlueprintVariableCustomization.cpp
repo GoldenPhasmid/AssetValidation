@@ -4,9 +4,13 @@
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
+#include "EdMode.h"
 #include "IDetailChildrenBuilder.h"
+#include "IDocumentation.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "PropertyValidators/PropertyValidation.h"
+
+#define LOCTEXT_NAMESPACE "AssetValidation"
 
 namespace UE::AssetValidation
 {
@@ -83,6 +87,83 @@ TSharedPtr<IDetailCustomNodeBuilder> FBlueprintVariableCustomization::MakeNodeBu
 	return nullptr;
 }
 
+void FBlueprintVariableCustomization::AddDefaultsEditableRow(FDetailWidgetRow& WidgetRow)
+{
+	// @todo: duplicate in FEnginePropertyExtensionCustomization::AddDefaultsEditableRow
+	const FText TooltipText = LOCTEXT("VarEditableTooltip", "Adds CPF_DisableEditOnTemplate flag to property, allows validation subsystem to skip it on default objects.");
+	TSharedPtr<SToolTip> Tooltip = IDocumentation::Get()->CreateToolTip(TooltipText, nullptr, {}, {});
+
+	WidgetRow
+	.Visibility(TAttribute<EVisibility>(this, &ThisClass::ShowEditableCheckboxVisibility))
+	.NameContent()
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("IsVariableEditableTitle", "Defaults Editable"))
+		.ToolTip(Tooltip)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+	]
+	.ValueContent()
+	[
+		SNew(SCheckBox)
+		.IsChecked(this, &ThisClass::OnEditableCheckboxState)
+		.OnCheckStateChanged(this, &ThisClass::OnEditableChanged)
+		.IsEnabled(IsVariableInBlueprint())
+		.ToolTip(Tooltip)
+	];
+}
+
+EVisibility FBlueprintVariableCustomization::ShowEditableCheckboxVisibility() const
+{
+	if (IsVariableInBlueprint())
+	{
+		return EVisibility::Visible;
+	}
+	return EVisibility::Collapsed;
+}
+
+ECheckBoxState FBlueprintVariableCustomization::OnEditableCheckboxState() const
+{
+	if (CachedProperty.IsValid())
+	{
+		return CachedProperty->HasAnyPropertyFlags(CPF_DisableEditOnTemplate) ? ECheckBoxState::Unchecked : ECheckBoxState::Checked;
+	}
+	return ECheckBoxState::Unchecked;
+}
+
+void FBlueprintVariableCustomization::OnEditableChanged(ECheckBoxState InNewState)
+{
+	if (!CachedProperty.IsValid() || !Blueprint.IsValid())
+	{
+		return;
+	}
+	
+	FName VarName = CachedProperty->GetFName();
+
+	// Toggle the flag on the blueprint's version of the variable description, based on state
+	const bool bVariableIsExposed = InNewState == ECheckBoxState::Checked;
+	
+	const int32 VarIndex = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint.Get(), VarName);
+
+	if (!bVariableIsExposed)
+	{
+		FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint.Get(), VarName, nullptr, FEdMode::MD_MakeEditWidget);
+	}
+
+	if (VarIndex != INDEX_NONE)
+	{
+		if(!bVariableIsExposed)
+		{
+			Blueprint->NewVariables[VarIndex].PropertyFlags |= CPF_DisableEditOnTemplate;
+		}
+		else
+		{
+			Blueprint->NewVariables[VarIndex].PropertyFlags &= ~CPF_DisableEditOnTemplate;
+		}
+	}
+
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint.Get());
+}
+
 void FBlueprintVariableCustomization::Initialize(UObject* EditedObject)
 {
 	if (PropertyHandle.IsValid())
@@ -121,17 +202,20 @@ void FBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 		// this creates default category if it is not yet present
 		DetailLayout.EditCategory(
 		CategoryName,
-		NSLOCTEXT("AssetValidation", "ValidationCategoryTitle", "Validation"),
+		LOCTEXT("ValidationCategoryTitle", "Validation"),
 		ECategoryPriority::Variable).InitiallyCollapsed(false);
 	}
 
-	IDetailCategoryBuilder& Category = DetailLayout.EditCategory(CategoryName);
+	IDetailCategoryBuilder& ValidationCategory = DetailLayout.EditCategory(CategoryName);
 	
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ValidationCategory](const FText& SearchString) -> FDetailWidgetRow&
 	{
-		return Category.AddCustomRow(SearchString).ShouldAutoExpand(true);
-	});	
+		return ValidationCategory.AddCustomRow(SearchString).ShouldAutoExpand(true);
+	});
+
+	IDetailCategoryBuilder& VariableCategory = DetailLayout.EditCategory("Variable");
+	AddDefaultsEditableRow(ValidationCategory.AddCustomRow(LOCTEXT("IsVariableEditableTitle", "Defaults Editable")));
 }
 
 FBlueprintVariableCustomization::~FBlueprintVariableCustomization()
@@ -160,6 +244,8 @@ void FBlueprintVariableCustomization::GenerateChildContent(IDetailChildrenBuilde
 	{
 		return ChildrenBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});
+	
+	AddDefaultsEditableRow(ChildrenBuilder.AddCustomRow(LOCTEXT("IsVariableEditableTitle", "Defaults Editable")));
 }
 
 bool FBlueprintVariableCustomization::IsVariableInBlueprint() const
@@ -225,3 +311,4 @@ void FBlueprintVariableCustomization::SetMetaData(const FName& MetaName, bool bE
 	
 } // UE::AssetValidation
 
+#undef LOCTEXT_NAMESPACE

@@ -11,8 +11,6 @@ class UPropertyValidatorSubsystem;
 
 namespace UE::AssetValidation
 {
-	class FMetaDataSource;
-
 	/**
 	 * Property validation meta specifiers
 	 * see Tests/MetaSpecifierTests.cpp/FAutomationTest_MetaSpecifiers::RunTest for more info
@@ -22,8 +20,9 @@ namespace UE::AssetValidation
 	static const FName ValidateValue("ValidateValue");
 	static const FName ValidateRecursive("ValidateRecursive");
 	static const FName FailureMessage("FailureMessage");
+	static const FName DisableEditOnTemplate("DisableEditOnTemplate");
 
-	const TStaticArray<FName, 5>& GetMetaKeys();
+	const TStaticArray<FName, 6>& GetMetaKeys();
 }
 
 namespace UE::AssetValidation
