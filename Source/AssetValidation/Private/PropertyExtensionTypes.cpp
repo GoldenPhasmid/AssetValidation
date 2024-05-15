@@ -7,17 +7,20 @@ FPropertyExtensionConfig::FPropertyExtensionConfig(const FEnginePropertyExtensio
 	: Class(Extension.Struct)
 	, Property(Extension.GetProperty()->GetFName())
 {
-	for (auto It = Extension.MetaDataMap.CreateConstIterator(); It; ++It)
+	for (const FName& MetaKey: UE::AssetValidation::GetMetaKeys())
 	{
-		if (It->Value.IsEmpty())
+		if (const FString* Value = Extension.MetaDataMap.Find(MetaKey))
 		{
-			MetaData += It->Key.ToString();
+			if (Value->IsEmpty())
+			{
+				MetaData += MetaKey.ToString();
+			}
+			else
+			{
+				MetaData += MetaKey.ToString() + TEXT("=") + *Value;
+			}
+			MetaData += TEXT(";");
 		}
-		else
-		{
-			MetaData += It->Key.ToString() + TEXT("=") + It->Value;
-		}
-		MetaData += TEXT(";");
 	}
 
 	MetaData.RemoveFromEnd(TEXT(";"));

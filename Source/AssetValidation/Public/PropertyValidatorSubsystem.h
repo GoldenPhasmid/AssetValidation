@@ -126,7 +126,7 @@ protected:
 	virtual void ValidatePropertyValueWithContext(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const;
 	
 	/** @return whether property should be validated for given @ValidationContext */
-	bool ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const;
+	bool ShouldValidateProperty(const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const;
 
 	/** @return property validator for a given property type */
 	const UPropertyValidatorBase* FindPropertyValidator(const FProperty* PropertyType) const;

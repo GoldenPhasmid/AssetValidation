@@ -249,20 +249,21 @@ bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, cons
 
 FPropertyValidationContext::FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject)
 	: Subsystem(OwningSubsystem)
-	, SourceObject(InSourceObject)
 {
 	// obtain object's package. It can be either outermost package or external package (in case of external actors)
-	const UPackage* Package = SourceObject->GetPackage();
+	const UPackage* Package = InSourceObject->GetPackage();
 	check(Package);
 
 	// construct outer chain until we meet a package
 	TArray<const UObject*, TInlineAllocator<4>> Outers;
-	Outers.Add(SourceObject.Get());
-	for (UObject* Outer = SourceObject->GetOuter(); Outer && !Outer->IsA<UPackage>() && Outer != Package; Outer = Outer->GetOuter())
+	Outers.Add(InSourceObject);
+	for (UObject* Outer = InSourceObject->GetOuter(); Outer && !Outer->IsA<UPackage>() && Outer != Package; Outer = Outer->GetOuter())
 	{
 		Outers.Add(Outer);
 	}
 
+	// push first scoped object
+	PushObject(InSourceObject);
 	// push outer chain as a validation prefix
 	// explicitly exclude last outer, as it is probably a context that user can understand (blueprint, map, etc.)
 	for (int32 Index = Outers.Num() - 2; Index >= 0; --Index)

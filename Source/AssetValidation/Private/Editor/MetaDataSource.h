@@ -29,6 +29,9 @@ public:
 		Variant.Set<FEnginePropertyExtension>(Extension);
 	}
 
+	template <typename T>
+	bool IsType() const;
+
 	FProperty* GetProperty() const
 	{
 		return Variant.Get<FProperty*>();
@@ -50,7 +53,7 @@ public:
 	}
 
 	bool IsValid() const;
-
+	
 	FString GetMetaData(const FName& Key) const;
 	bool HasMetaData(const FName& Key) const;
 	void SetMetaData(const FName& Key, const FString& Value);
@@ -59,6 +62,19 @@ public:
 private:
 	TVariant<FEmptyVariantState, FProperty*, FEnginePropertyExtension> Variant;
 };
+
+template <>
+FORCEINLINE bool FMetaDataSource::IsType<FProperty>() const
+{
+	return Variant.IsType<FProperty*>();
+}
+
+template <>
+FORCEINLINE bool FMetaDataSource::IsType<FEnginePropertyExtension>() const
+{
+	return Variant.IsType<FEnginePropertyExtension>();
+}
+
 
 }
 

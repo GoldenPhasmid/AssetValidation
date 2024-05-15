@@ -291,7 +291,7 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	// check whether we should validate property at all
-	if (!ShouldValidateProperty(Property, ValidationContext))
+	if (!ShouldValidateProperty(Property, MetaData, ValidationContext))
 	{
 		return;
 	}
@@ -355,7 +355,7 @@ bool UPropertyValidatorSubsystem::CanEverValidateProperty(const FProperty* Prope
 	return true;
 }
 
-bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Property, FPropertyValidationContext& ValidationContext) const
+bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	if (!CanEverValidateProperty(Property))
 	{
@@ -371,17 +371,25 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 			return true;
 		}
 
-		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnInstance) && !SourceObject->IsTemplate())
+		constexpr EObjectFlags TemplateFlags = RF_ArchetypeObject | RF_ClassDefaultObject;
+		const bool bTemplate = SourceObject->HasAnyFlags(TemplateFlags);
+		
+		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnInstance) && !bTemplate)
 		{
 			// EditDefaultsOnly property for instance object (not template and not asset)
 			return false;
 		}
-		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnTemplate) && SourceObject->IsTemplate())
+		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnTemplate) && bTemplate)
 		{
 			// EditInstanceOnly property for template object
 			return false;
 		}
 
+		return true;
+	}
+	else if (MetaData.IsType<FEnginePropertyExtension>())
+	{
+		// always validate property extensions no matter the property flags
 		return true;
 	}
 	else if (UE::AssetValidation::IsBlueprintComponentProperty(Property))

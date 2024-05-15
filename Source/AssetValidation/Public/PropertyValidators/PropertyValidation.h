@@ -77,6 +77,40 @@ namespace UE::AssetValidation
 class FPropertyValidationContext: public FNoncopyable
 {
 public:
+	/** Scoped prefix struct */
+	class FScopedPrefix
+	{
+	public:
+		FScopedPrefix(FPropertyValidationContext& InContext, const FString& Prefix)
+			: Context(InContext)
+		{
+			Context.PushPrefix(Prefix);
+		}
+
+		~FScopedPrefix()
+		{
+			Context.PopPrefix();
+		}
+	private:
+		FPropertyValidationContext& Context;
+	};
+	/** Scoped object struct */
+	class FScopedObject
+	{
+	public:
+		FScopedObject(FPropertyValidationContext& InContext, const UObject* InObject)
+			: Context(InContext)
+		{
+			Context.PushObject(InObject);
+		}
+		~FScopedObject()
+		{
+			Context.PopObject();
+		}
+
+	private:
+		FPropertyValidationContext& Context;
+	};
 	
 	FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject);
 
@@ -91,7 +125,7 @@ public:
 	}
 	
 	void PropertyFails(const FProperty* Property, const FText& DefaultFailureMessage);
-
+	
 	/** push prefix to context string */
 	FORCEINLINE void PushPrefix(const FString& Prefix)
 	{
@@ -108,6 +142,18 @@ public:
 		ContextString = ContextString.LeftChop(Prefix.Len() + 1);
 	}
 
+	FORCEINLINE void PushObject(const UObject* InObject)
+	{
+		check(IsValid(InObject));
+		Objects.Push(InObject);
+	}
+
+	FORCEINLINE void PopObject()
+	{
+		check(Objects.Num() > 0);
+		Objects.Pop();
+	}
+
 	/** Route property container validation request to validator subsystem */
 	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct);
 	/** Route property container validation request to validator subsystem, add scoped prefix */
@@ -119,8 +165,8 @@ public:
 
 	FORCEINLINE const UObject* GetSourceObject() const
 	{
-		check(SourceObject.IsValid());
-		return SourceObject.Get();
+		check(Objects.Num() > 0);
+		return Objects.Last().Get();
 	}
 
 private:
@@ -146,8 +192,8 @@ private:
 	FString ContextString = "";
 	/** Weak reference to property validator subsystem */
 	TWeakObjectPtr<const UPropertyValidatorSubsystem> Subsystem;
-	/** Weak reference to an initial object from which validation sequence has started */
-	TWeakObjectPtr<const UObject> SourceObject;
+	/** Weak reference to the object chain, starting from which validation sequence has started */
+	TArray<TWeakObjectPtr<const UObject>> Objects;
 };
 
 template <typename TPropertyType>
@@ -161,7 +207,3 @@ const typename TPropertyType::TCppType* GetPropertyValuePtr(const void* Property
 {
 	return CastFieldChecked<TPropertyType>(Property)->GetPropertyValuePtr(PropertyMemory);
 }
-
-
-
-

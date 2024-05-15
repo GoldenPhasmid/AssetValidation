@@ -19,15 +19,22 @@ struct FPropertyExtensionConfig
 
 	FPropertyExtensionConfig() = default;
 	FPropertyExtensionConfig(const FEnginePropertyExtension& Extension);
-	
+
+	/** class path in a /<PackageName>/<ModuleName>.<ClassName> format */
 	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
 	FSoftObjectPath Class;
 
+	/** Simple property name */
 	UPROPERTY(EditAnywhere)
 	FName Property = NAME_None;
 
+	/** property meta data, list of pairs Key=Value separated by ';' */
 	UPROPERTY(EditAnywhere)
 	FString MetaData;
+
+	/** user comment */
+	UPROPERTY(EditAnywhere)
+	FString Comment;
 };
 
 /**
