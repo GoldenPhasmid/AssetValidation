@@ -222,6 +222,18 @@ bool UE::AssetValidation::IsBlueprintComponentProperty(const FProperty* Property
 	return false;
 }
 
+bool UE::AssetValidation::IsVisibleProperty(const FProperty* Property)
+{
+	constexpr EPropertyFlags VisibleFlags = CPF_Edit | CPF_BlueprintVisible;
+	return Property && Property->HasAnyPropertyFlags(VisibleFlags);
+}
+
+FString UE::AssetValidation::GetPropertyDisplayName(const FProperty* Property)
+{
+	check(Property);
+	return Property->GetDisplayNameText().ToString();
+}
+
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)
 {
 	FString OutValue{};
@@ -259,7 +271,7 @@ FPropertyValidationContext::FPropertyValidationContext(const UPropertyValidatorS
 	}
 
 	// push first scoped object
-	PushObject(InSourceObject);
+	PushSource(InSourceObject);
 	// push outer chain as a validation prefix
 	// explicitly exclude last outer, as it is probably a context that user can understand (blueprint, map, etc.)
 	for (int32 Index = Outers.Num() - 2; Index >= 0; --Index)
@@ -321,13 +333,6 @@ void FPropertyValidationContext::PropertyFails(const FProperty* Property, const 
 void FPropertyValidationContext::IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct)
 {
 	Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);
-}
-
-void FPropertyValidationContext::IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, const FString& ScopedPrefix)
-{
-	PushPrefix(ScopedPrefix);
-	Subsystem->ValidateContainerWithContext(ContainerMemory, Struct, *this);
-	PopPrefix();
 }
 
 void FPropertyValidationContext::IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData)

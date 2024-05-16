@@ -48,10 +48,11 @@ void UArrayContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Propert
 	const uint8* Data = static_cast<const uint8*>(Array->GetData());
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
-		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
+		// add scoped array property prefix
+		const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(ArrayProperty) + "[" + FString::FromInt(Index) + "]";
+		FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, UE::AssetValidation::IsVisibleProperty(ArrayProperty)};
 		// validate property value
 		ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
-		ValidationContext.PopPrefix();
 
 		Data += Stride;
 	}

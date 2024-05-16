@@ -52,6 +52,10 @@ namespace UE::AssetValidation
 	/** @return true if @Property an actor component with owner being a blueprint class */
 	bool IsBlueprintComponentProperty(const FProperty* Property);
 
+	bool IsVisibleProperty(const FProperty* Property);
+
+	FString GetPropertyDisplayName(const FProperty* Property);
+
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property
 	 * @param Blueprint blueprint that associates with the variable
@@ -76,6 +80,7 @@ namespace UE::AssetValidation
 class FPropertyValidationContext: public FNoncopyable
 {
 public:
+	
 	/** Scoped prefix struct */
 	class FScopedPrefix
 	{
@@ -85,7 +90,7 @@ public:
 		{
 			Context.PushPrefix(Prefix);
 		}
-
+		
 		~FScopedPrefix()
 		{
 			Context.PopPrefix();
@@ -93,18 +98,45 @@ public:
 	private:
 		FPropertyValidationContext& Context;
 	};
-	/** Scoped object struct */
-	class FScopedObject
+	
+	/** Scoped conditional prefix */
+	class FConditionalPrefix
 	{
 	public:
-		FScopedObject(FPropertyValidationContext& InContext, const UObject* InObject)
+		FConditionalPrefix(FPropertyValidationContext& InContext, const FString& Prefix, bool bCondition)
+			: Context(InContext)
+			, bPushed(bCondition)
+		{
+			if (bPushed)
+			{
+				Context.PushPrefix(Prefix);
+			}
+		}
+
+		~FConditionalPrefix()
+		{
+			if (bPushed)
+			{
+				Context.PopPrefix();
+			}
+		}
+	private:
+		FPropertyValidationContext& Context;
+		bool bPushed = false;
+	};
+	
+	/** Scoped object struct */
+	class FScopedSourceObject
+	{
+	public:
+		FScopedSourceObject(FPropertyValidationContext& InContext, const UObject* InObject)
 			: Context(InContext)
 		{
-			Context.PushObject(InObject);
+			Context.PushSource(InObject);
 		}
-		~FScopedObject()
+		~FScopedSourceObject()
 		{
-			Context.PopObject();
+			Context.PopSource();
 		}
 
 	private:
@@ -112,8 +144,6 @@ public:
 	};
 	
 	FPropertyValidationContext(const UPropertyValidatorSubsystem* OwningSubsystem, const UObject* InSourceObject);
-
-	FPropertyValidationResult MakeValidationResult() const;
 
 	FORCEINLINE void FailOnCondition(bool Condition, const FProperty* Property, const FText& DefaultFailureMessage)
 	{
@@ -133,30 +163,26 @@ public:
 		Prefixes.Push(Prefix);
 		ContextString.Append(Prefix + TEXT("."));
 	}
+	
+	/** @return last pushed prefix */
+	FORCEINLINE FString GetPrefix() const
+	{
+		check(Prefixes.Num() > 0);
+		return Prefixes.Last();
+	}
 
 	/** pop last prefix from context string */
 	FORCEINLINE void PopPrefix()
 	{
+		check(Prefixes.Num() > 0);
 		const FString Prefix = Prefixes.Pop();
 		ContextString = ContextString.LeftChop(Prefix.Len() + 1);
 	}
 
-	FORCEINLINE void PushObject(const UObject* InObject)
-	{
-		check(IsValid(InObject));
-		Objects.Push(InObject);
-	}
-
-	FORCEINLINE void PopObject()
-	{
-		check(Objects.Num() > 0);
-		Objects.Pop();
-	}
-
+	/** */
+	FPropertyValidationResult MakeValidationResult() const;
 	/** Route property container validation request to validator subsystem */
 	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct);
-	/** Route property container validation request to validator subsystem, add scoped prefix */
-	void IsPropertyContainerValid(TNonNullPtr<const uint8> ContainerMemory, const UStruct* Struct, const FString& ScopedPrefix);
 	/** Route property validation request to validator subsystem */
 	void IsPropertyValid(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, UE::AssetValidation::FMetaDataSource& MetaData);
 	/** Route property value validation request to validator subsystem */
@@ -169,6 +195,18 @@ public:
 	}
 
 private:
+
+	FORCEINLINE void PushSource(const UObject* InObject)
+	{
+		check(IsValid(InObject));
+		Objects.Push(InObject);
+	}
+
+	FORCEINLINE void PopSource()
+	{
+		check(Objects.Num() > 0);
+		Objects.Pop();
+	}
 	
 	FText MakeFullMessage(const FText& FailureMessage, const FText& PropertyPrefix) const;
 	/** @return beautified name for an object */

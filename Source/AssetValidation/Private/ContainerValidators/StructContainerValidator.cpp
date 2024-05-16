@@ -25,18 +25,13 @@ bool UStructContainerValidator::CanValidateProperty(const FProperty* Property, F
 void UStructContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
 	const FStructProperty* StructProperty = CastFieldChecked<FStructProperty>(Property);
+	const bool bContainerProperty = UE::AssetValidation::IsContainerProperty(StructProperty->GetOwner<FProperty>());
+	
+	// push property prefix only if owner property is not a container property
+	// handles 'struct inside array' type of cases
+	const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(StructProperty);
+	FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, !bContainerProperty};
 	
 	// validate underlying struct properties: structure becomes a property container
-	const bool bContainerProperty = UE::AssetValidation::IsContainerProperty(StructProperty->GetOwner<FProperty>());
-	if (bContainerProperty == false)
-	{
-		// push property prefix only if owner property is not a container property
-		// handles 'struct inside array' type of cases
-		ValidationContext.PushPrefix(StructProperty->GetName());
-	}
 	ValidationContext.IsPropertyContainerValid(PropertyMemory, StructProperty->Struct);
-	if (bContainerProperty == false)
-	{
-		ValidationContext.PopPrefix();
-	}
 }

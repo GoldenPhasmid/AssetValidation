@@ -62,12 +62,13 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	{
 		const uint8* Data = static_cast<const uint8*>(Map->GetData(Index, MapLayout));
 
-		// add map property prefix
-		ValidationContext.PushPrefix(Property->GetName() + "[" + FString::FromInt(Index) + "]");
-
+		// add scoped map property prefix
+		const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(MapProperty) + "[" + FString::FromInt(Index) + "]";
+		
 		if (bCanValidateKey)
 		{
 			// validate key property value
+			FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix + TEXT(".Key"), UE::AssetValidation::IsVisibleProperty(MapProperty)};
 			ValidationContext.IsPropertyValueValid(Data, KeyProperty, MetaData);
 		}
 
@@ -77,11 +78,10 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 		if (bCanValidateValue)
 		{
 			// validate value property value
+			FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix + TEXT(".Value"), UE::AssetValidation::IsVisibleProperty(MapProperty)};
 			ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 		}
-
-		// pop map property prefix
-		ValidationContext.PopPrefix();
+		
 	}
 
 	if (!bHasValidateMeta)
