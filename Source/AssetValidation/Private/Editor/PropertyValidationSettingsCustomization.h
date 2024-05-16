@@ -1,13 +1,15 @@
 #pragma once
 
-
 #include "IDetailCustomization.h"
 
 class UPropertyValidationSettings;
 
-class FPropertyValidationSettingsDetails: public IDetailCustomization
+namespace UE::AssetValidation
 {
-	using ThisClass = FPropertyValidationSettingsDetails;
+	
+class FPropertyValidationSettingsCustomization: public IDetailCustomization
+{
+	using ThisClass = FPropertyValidationSettingsCustomization;
 public:
 	static TSharedRef<IDetailCustomization> MakeInstance();
 
@@ -19,10 +21,12 @@ public:
 
 private:
 	void OnClassPicked(UClass* PickedClass) const;
-	
+
 	TWeakObjectPtr<UPropertyValidationSettings> Settings;
 	/** Class property handle */
 	TSharedPtr<IPropertyHandle> ClassPropertyHandle;
 	/** Class combo button */
 	TSharedPtr<SComboButton> ClassComboButton;
 };
+
+}

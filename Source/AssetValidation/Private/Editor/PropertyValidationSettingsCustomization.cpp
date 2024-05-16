@@ -1,4 +1,4 @@
-#include "PropertyValidationSettingsDetails.h"
+#include "PropertyValidationSettingsCustomization.h"
 
 #include "ClassViewerFilter.h"
 #include "ClassViewerModule.h"
@@ -28,12 +28,15 @@ namespace UE::AssetValidation
 	};
 }
 
-TSharedRef<IDetailCustomization> FPropertyValidationSettingsDetails::MakeInstance()
+namespace UE::AssetValidation
 {
-	return MakeShared<FPropertyValidationSettingsDetails>();
+	
+TSharedRef<IDetailCustomization> FPropertyValidationSettingsCustomization::MakeInstance()
+{
+	return MakeShared<FPropertyValidationSettingsCustomization>();
 }
 
-void FPropertyValidationSettingsDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FPropertyValidationSettingsCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> Objects;
 	DetailBuilder.GetObjectsBeingCustomized(Objects);
@@ -82,7 +85,7 @@ void FPropertyValidationSettingsDetails::CustomizeDetails(IDetailLayoutBuilder& 
 #endif
 }
 
-TSharedRef<SWidget> FPropertyValidationSettingsDetails::GetMenuContent() const
+TSharedRef<SWidget> FPropertyValidationSettingsCustomization::GetMenuContent() const
 {
 	FClassViewerInitializationOptions InitOptions;
 	InitOptions.Mode = EClassViewerMode::ClassPicker;
@@ -108,7 +111,7 @@ TSharedRef<SWidget> FPropertyValidationSettingsDetails::GetMenuContent() const
 	];
 }
 
-FText FPropertyValidationSettingsDetails::GetClassName() const
+FText FPropertyValidationSettingsCustomization::GetClassName() const
 {
 	UObject* OutValue = nullptr;
 	if (FPropertyAccess::Result AccessResult = ClassPropertyHandle->GetValue(OutValue); AccessResult == FPropertyAccess::Success)
@@ -122,11 +125,12 @@ FText FPropertyValidationSettingsDetails::GetClassName() const
 	return FText::GetEmpty();
 }
 
-void FPropertyValidationSettingsDetails::OnClassPicked(UClass* PickedClass) const
+void FPropertyValidationSettingsCustomization::OnClassPicked(UClass* PickedClass) const
 {
 	ClassComboButton->SetIsOpen(false);
 	ClassPropertyHandle->SetValue(PickedClass);
 }
 
+}
 
 #undef LOCTEXT_NAMESPACE
