@@ -6,7 +6,7 @@
 
 #include "AssetValidationSettings.generated.h"
 
-UCLASS(Config = Editor, DefaultConfig)
+UCLASS(Config = Editor, DefaultConfig, DisplayName = "Asset Validation")
 class ASSETVALIDATION_API UAssetValidationSettings: public UDeveloperSettings
 {
 	GENERATED_BODY()
