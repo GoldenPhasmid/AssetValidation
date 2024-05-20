@@ -62,7 +62,8 @@ void UStructValidator_SoftClassPath::ValidateProperty(TNonNullPtr<const uint8> P
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("SoftClassPath_Null", "Soft class path not set."));
 	}
-	else if (UObject* Class = ClassPath->TryLoadClass<UObject>(); Class == nullptr)
+	// same as FSoftClassPath::TryLoadClass<T> but with LOAD_Quiet to silence the warning
+	else if (UObject* Class = LoadClass<UObject>(nullptr, *ClassPath->ToString()); Class == nullptr)
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("SoftClassPath_NotExists", "Soft class path: failed to load class."));
 	}
