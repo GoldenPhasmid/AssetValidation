@@ -298,7 +298,15 @@ void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const 
 
 	if (UPropertyValidationSettings::Get()->bReportIncorrectMetaUsage)
 	{
+		// check whether metadata is valid
 		UE::AssetValidation::CheckPropertyMetaData(Property, MetaData, true);
+	}
+	
+	UStruct* Struct = Property->GetOwnerStruct();
+	// @todo: move to ShouldValidateProperty
+	if (UE::AssetValidation::PassesEditCondition(Struct, ContainerMemory, Property) == false)
+	{
+		return;
 	}
 	
 	TNonNullPtr<const uint8> PropertyMemory{Property->ContainerPtrToValuePtr<uint8>(ContainerMemory)};
@@ -362,57 +370,57 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 	{
 		return false;
 	}
+	
+	bool bTransient = MetaData.IsType<FEnginePropertyExtension>() || Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient);
+	if (bTransient)
+	{
+		// do not validate transient properties, unless it is property extension
+		return false;
+	}
+	
+	bool bVisibleInBlueprint = false;
+	// engine property extension ignore visibility requirements
+	bVisibleInBlueprint |= MetaData.IsType<FEnginePropertyExtension>();
+	// property is editable in blueprints
+	bVisibleInBlueprint |= Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit);
+	// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
+	// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
+	// and property to be object property derived from actor component
+	bVisibleInBlueprint |= UE::AssetValidation::IsBlueprintComponentProperty(Property);
+	if (!bVisibleInBlueprint)
+	{
+		return false;
+	}
 
 	const UObject* SourceObject = ValidationContext.GetSourceObject();
 	constexpr EObjectFlags TemplateFlags = RF_ArchetypeObject | RF_ClassDefaultObject;
 	// don't use IsTemplate, as it checks outer chain as well
 	// we're only interested whether this object is template or not
 	const bool bTemplate = SourceObject->HasAnyFlags(TemplateFlags);
-
-	if (MetaData.IsType<FEnginePropertyExtension>())
+	
+	// assets ignore EditDefaultsOnly and EditInstanceOnly specifics
+	if (SourceObject->IsAsset() == false)
 	{
-		// always validate property extensions no matter the property flags
-		if (MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
+		// user can disable property validation on template
+		if (MetaData.IsType<FEnginePropertyExtension>() && MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
 		{
 			return false;
-		}
-		return true;
-	}
-	else if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient))
-	{
-		// do not validate transient properties
-		return false;
-	}
-	else if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit))
-	{
-		if (SourceObject->IsAsset())
-		{
-			// assets ignore EditDefaultsOnly and EditInstanceOnly specifics
-			return true;
 		}
 		
+		// EditDefaultsOnly property for instance object (not template and not asset)
 		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnInstance) && !bTemplate)
 		{
-			// EditDefaultsOnly property for instance object (not template and not asset)
 			return false;
 		}
+		
+		// EditInstanceOnly property for template object
 		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnTemplate) && bTemplate)
 		{
-			// EditInstanceOnly property for template object
 			return false;
 		}
-
-		return true;
-	}
-	else if (UE::AssetValidation::IsBlueprintComponentProperty(Property))
-	{
-		// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
-		// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
-		// and property to be object property derived from actor component
-		return true;
 	}
 
-	return false;
+	return true;
 }
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator(const FProperty* PropertyType) const

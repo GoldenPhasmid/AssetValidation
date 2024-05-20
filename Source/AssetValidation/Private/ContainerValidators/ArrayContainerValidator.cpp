@@ -50,7 +50,7 @@ void UArrayContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Propert
 	{
 		// add scoped array property prefix
 		const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(ArrayProperty) + "[" + FString::FromInt(Index) + "]";
-		FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, UE::AssetValidation::IsVisibleProperty(ArrayProperty)};
+		FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, UE::AssetValidation::IsBlueprintVisibleProperty(ArrayProperty)};
 		// validate property value
 		ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 

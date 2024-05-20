@@ -26,7 +26,7 @@ void UObjectContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Proper
 		
 		// push either property prefix or object prefix, depending on whether property is visible
 		const FString ObjectName = FindObjectDisplayName(Object);
-		if (UE::AssetValidation::IsVisibleProperty(ObjectProperty))
+		if (UE::AssetValidation::IsBlueprintVisibleProperty(ObjectProperty))
 		{
 			// push property prefix
 			ValidationContext.PushPrefix(UE::AssetValidation::GetPropertyDisplayName(ObjectProperty)/* + TEXT(".") + ObjectDisplayName*/);

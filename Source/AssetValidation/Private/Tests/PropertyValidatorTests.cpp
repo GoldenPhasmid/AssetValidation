@@ -295,7 +295,7 @@ BEGIN_DEFINE_SPEC(FAutomationSpec_ValidateMetas, "PropertyValidation.ValidationM
 END_DEFINE_SPEC(FAutomationSpec_ValidateMetas)
 void FAutomationSpec_ValidateMetas::Define()
 {
-	BeforeEach([this]()
+	BeforeEach([this]
 	{
 		TestObject = NewObject<UValidationTestObject_ValidationMetas>(GetTransientPackage());
 		TestObject->AddToRoot();
@@ -303,7 +303,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		ValidationSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
 	});
 
-	It("property with Validate meta should be validated", [this]()
+	It("property with Validate meta should be validated", [this]
 	{
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("Validate");
 
@@ -311,7 +311,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
 	});
 
-	It("property with ValidateRecursive meta should validate nested properties", [this]()
+	It("property with ValidateRecursive meta should validate nested properties", [this]
 	{
 		UNestedObject* NestedObject = NewObject<UNestedObject>();
 		FPropertyValidationResult NestedResult = ValidationSubsystem->ValidateObject(NestedObject);
@@ -327,7 +327,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		TestEqual("NumErrors", Result.Errors.Num(), NestedResult.Errors.Num());
 	});
 
-	It("property with custom FailureMessage", [this]()
+	It("property with custom FailureMessage", [this]
 	{
 		FProperty* Property = TestObject->GetClass()->FindPropertyByName("ValidateWithCustomMessage");
 		FPropertyValidationResult Result = ValidationSubsystem->ValidateObjectProperty(TestObject, Property);
@@ -338,7 +338,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));
 	});
 
-	It("map property with ValidateKey meta", [this]()
+	It("map property with ValidateKey meta", [this]
 	{
 		TestObject->ValidateKey.Add(NewObject<UEmptyObject>(), nullptr);
 		TestObject->ValidateKey.Add(NewObject<UEmptyObject>(), nullptr);
@@ -351,7 +351,7 @@ void FAutomationSpec_ValidateMetas::Define()
 		TestEqual("NumErrors", Result.Errors.Num(), 1);
 	});
 
-	It("map property with ValidateValue meta", [this]()
+	It("map property with ValidateValue meta", [this]
 	{
 		TestObject->ValidateValue.Add(NewObject<UEmptyObject>(), nullptr);
 		TestObject->ValidateValue.Add(NewObject<UEmptyObject>(), nullptr);

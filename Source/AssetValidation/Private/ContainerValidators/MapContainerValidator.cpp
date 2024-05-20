@@ -68,7 +68,7 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 		if (bCanValidateKey)
 		{
 			// validate key property value
-			FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix + TEXT(".Key"), UE::AssetValidation::IsVisibleProperty(MapProperty)};
+			FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix + TEXT(".Key"), UE::AssetValidation::IsBlueprintVisibleProperty(MapProperty)};
 			ValidationContext.IsPropertyValueValid(Data, KeyProperty, MetaData);
 		}
 
@@ -78,7 +78,7 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 		if (bCanValidateValue)
 		{
 			// validate value property value
-			FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix + TEXT(".Value"), UE::AssetValidation::IsVisibleProperty(MapProperty)};
+			FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix + TEXT(".Value"), UE::AssetValidation::IsBlueprintVisibleProperty(MapProperty)};
 			ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 		}
 		

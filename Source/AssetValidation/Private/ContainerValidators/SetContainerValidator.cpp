@@ -50,7 +50,7 @@ void USetContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 
 		// add scoped set property prefix
 		const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(SetProperty) + "[" + FString::FromInt(Index) + "]";
-		FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, UE::AssetValidation::IsVisibleProperty(SetProperty)};
+		FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, UE::AssetValidation::IsBlueprintVisibleProperty(SetProperty)};
 		// validate property value
 		ValidationContext.IsPropertyValueValid(Data, ValueProperty, MetaData);
 	}

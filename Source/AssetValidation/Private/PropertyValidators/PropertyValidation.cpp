@@ -2,7 +2,10 @@
 
 #include "AssetValidationDefines.h"
 #include "PropertyValidatorSubsystem.h"
+#include "EditCondition/EditConditionContext.h"
+#include "EditCondition/EditConditionParser.h"
 #include "Editor/MetaDataSource.h"
+#include "Editor/PropertyEditor/Private/EditConditionParser.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
@@ -55,6 +58,28 @@ bool ApplyToNonContainerProperty(const FProperty* Property, TPropPred&& Func)
 	}
 
 	return Func(Property);
+}
+
+bool UE::AssetValidation::PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property)
+{
+	const FString EditConditionString = Property->GetMetaData(TEXT("EditCondition"));
+	if (EditConditionString.IsEmpty())
+	{
+		return true;
+	}
+
+	static UE::AssetValidation::FEditConditionParser Parser;
+	
+	if (TSharedPtr<UE::AssetValidation::FEditConditionExpression> Expression = Parser.Parse(EditConditionString))
+	{
+		FEditConditionContext Context{Struct, Container, Property};
+		if (auto Result = Parser.Evaluate(*Expression, Context); Result.HasValue())
+		{
+			return Result.GetValue();
+		}
+	}
+
+	return false;
 }
 
 bool UE::AssetValidation::CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled)
@@ -222,7 +247,7 @@ bool UE::AssetValidation::IsBlueprintComponentProperty(const FProperty* Property
 	return false;
 }
 
-bool UE::AssetValidation::IsVisibleProperty(const FProperty* Property)
+bool UE::AssetValidation::IsBlueprintVisibleProperty(const FProperty* Property)
 {
 	constexpr EPropertyFlags VisibleFlags = CPF_Edit | CPF_BlueprintVisible;
 	return Property && Property->HasAnyPropertyFlags(VisibleFlags);

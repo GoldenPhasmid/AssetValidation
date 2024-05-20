@@ -27,6 +27,8 @@ namespace UE::AssetValidation
 
 namespace UE::AssetValidation
 {
+	/** */
+	bool PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property);
 	/**
 	 * checks property meta data to see if any meta specifiers are placed incorrectly
 	 * @return true if all metas can be applied to a property, false otherwise
@@ -51,9 +53,9 @@ namespace UE::AssetValidation
 	bool CanValidatePropertyRecursively(const FProperty* Property);
 	/** @return true if @Property an actor component with owner being a blueprint class */
 	bool IsBlueprintComponentProperty(const FProperty* Property);
-
-	bool IsVisibleProperty(const FProperty* Property);
-
+	/** @return whether property is visible in blueprints */
+	bool IsBlueprintVisibleProperty(const FProperty* Property);
+	/** @return property display name set by user */
 	FString GetPropertyDisplayName(const FProperty* Property);
 
 	/**
