@@ -57,6 +57,8 @@ namespace UE::AssetValidation
 	bool IsBlueprintVisibleProperty(const FProperty* Property);
 	/** @return property display name set by user */
 	FString GetPropertyDisplayName(const FProperty* Property);
+	/** @return property underlying type name */
+	FString GetPropertyTypeName(const FProperty* Property);
 
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property

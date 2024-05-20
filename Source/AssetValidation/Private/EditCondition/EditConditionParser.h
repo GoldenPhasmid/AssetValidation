@@ -93,13 +93,8 @@ namespace UE::AssetValidation
 
 namespace UE::AssetValidation
 {
-	class IEditConditionContext;
-}
 
-
-namespace UE::AssetValidation
-{
-	
+class FEditConditionContext;
 class FEditConditionExpression
 {
 public:
@@ -130,12 +125,12 @@ public:
 	 * Evaluate the given expression within the given context.
 	 * @returns The result of the evaluated expression if valid, invalid TOptional if the evaluation failed or produced a non-bool result.
 	 */
-	TValueOrError<bool, FText> Evaluate(const FEditConditionExpression& Expression, const IEditConditionContext& Context) const;
+	TValueOrError<bool, FText> Evaluate(const FEditConditionExpression& Expression, const FEditConditionContext& Context) const;
 
 private:
 	FTokenDefinitions TokenDefinitions;
 	FExpressionGrammar ExpressionGrammar;
-	TOperatorJumpTable<IEditConditionContext> OperatorJumpTable;
+	TOperatorJumpTable<FEditConditionContext> OperatorJumpTable;
 };
 	
 }

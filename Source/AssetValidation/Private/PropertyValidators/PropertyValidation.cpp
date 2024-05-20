@@ -259,6 +259,25 @@ FString UE::AssetValidation::GetPropertyDisplayName(const FProperty* Property)
 	return Property->GetDisplayNameText().ToString();
 }
 
+FString UE::AssetValidation::GetPropertyTypeName(const FProperty* Property)
+{
+	check(Property);
+	if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
+	{
+		return EnumProperty->GetEnum()->GetName();
+	}
+	if (const FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
+	{
+		const UEnum* EnumType = ByteProperty->GetIntPropertyEnum();
+		if (EnumType != nullptr)
+		{
+			return EnumType->GetName();
+		}
+	}
+
+	return Property->GetCPPType();
+}
+
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)
 {
 	FString OutValue{};

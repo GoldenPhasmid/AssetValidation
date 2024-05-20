@@ -194,28 +194,28 @@ static TOptional<FExpressionError> ConsumePropertyName(FExpressionTokenConsumer&
 }
 
 template <typename T>
-TOptional<T> GetValueInternal(const UE::AssetValidation::IEditConditionContext& Context, const FString& PropertyName)
+TOptional<T> GetValueInternal(const UE::AssetValidation::FEditConditionContext& Context, const FString& PropertyName)
 {
 	return TOptional<T>();
 }
 
 template<>
-TOptional<bool> GetValueInternal<bool>(const UE::AssetValidation::IEditConditionContext& Context, const FString& PropertyName)
+TOptional<bool> GetValueInternal<bool>(const UE::AssetValidation::FEditConditionContext& Context, const FString& PropertyName)
 {
-	return Context.GetBoolValue(PropertyName, Context.GetFunction(PropertyName));
+	return Context.GetBoolValue(PropertyName);
 }
 
 template<>
-TOptional<double> GetValueInternal<double>(const UE::AssetValidation::IEditConditionContext& Context, const FString& PropertyName)
+TOptional<double> GetValueInternal<double>(const UE::AssetValidation::FEditConditionContext& Context, const FString& PropertyName)
 {
-	return Context.GetNumericValue(PropertyName, Context.GetFunction(PropertyName));
+	return Context.GetNumericValue(PropertyName);
 }
 
 template <typename T>
 struct TOperand
 {
 	TOperand(T InValue) : Value(InValue), Property(nullptr), Context(nullptr) {}
-	TOperand(const UE::AssetValidation::FPropertyToken& InProperty, const UE::AssetValidation::IEditConditionContext& InContext) : 
+	TOperand(const UE::AssetValidation::FPropertyToken& InProperty, const UE::AssetValidation::FEditConditionContext& InContext) : 
 		Property(&InProperty), Context(&InContext) {}
 
 	bool IsProperty() const { return Property != nullptr; }
@@ -234,7 +234,7 @@ struct TOperand
 private:
 	T Value;
 	const UE::AssetValidation::FPropertyToken* Property;
-	const UE::AssetValidation::IEditConditionContext* Context;
+	const UE::AssetValidation::FEditConditionContext* Context;
 };
 
 static FExpressionResult ApplyNot(TOperand<bool> A)
@@ -265,7 +265,7 @@ FExpressionResult ApplyBinary(TOperand<T> A, TOperand<T> B, Function Apply)
 	return MakeValue(Apply(ValueA.GetValue(), ValueB.GetValue()));
 }
 
-static FExpressionResult ApplyBitwiseAnd(const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::FEnumToken& Enum, const UE::AssetValidation::IEditConditionContext& Context)
+static FExpressionResult ApplyBitwiseAnd(const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::FEnumToken& Enum, const UE::AssetValidation::FEditConditionContext& Context)
 {
 	TOptional<int64> EnumValue = Context.GetIntegerValueOfEnum(Enum.Type, Enum.Value);
 	if (!EnumValue.IsSet())
@@ -273,7 +273,7 @@ static FExpressionResult ApplyBitwiseAnd(const UE::AssetValidation::FPropertyTok
 		return MakeError(FText::Format(LOCTEXT("InvalidEnumValue", "EditCondition attempted to use an invalid enum value \"{0}::{1}\"."), FText::FromString(Enum.Type), FText::FromString(Enum.Value)));
 	}
 
-	TOptional<int64> PropertyValue = Context.GetIntegerValue(Property.PropertyName, Context.GetFunction(Property.PropertyName));
+	TOptional<int64> PropertyValue = Context.GetIntegerValue(Property.PropertyName);
 	if (!PropertyValue.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand", "EditCondition attempted to use an invalid operand \"{0}\"."), FText::FromString(Property.PropertyName)));
@@ -282,17 +282,15 @@ static FExpressionResult ApplyBitwiseAnd(const UE::AssetValidation::FPropertyTok
 	return MakeValue((PropertyValue.Get(0) & EnumValue.Get(0)) != 0);
 }
 
-static FExpressionResult ApplyPropertyIsNull(const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::IEditConditionContext& Context, bool bNegate)
+static FExpressionResult ApplyPropertyIsNull(const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::FEditConditionContext& Context, bool bNegate)
 {
-	TWeakObjectPtr<UFunction> CachedFunction = Context.GetFunction(Property.PropertyName);
-
-	TOptional<FString> TypeName = Context.GetTypeName(Property.PropertyName, CachedFunction);
+	TOptional<FString> TypeName = Context.GetTypeName(Property.PropertyName);
 	if (!TypeName.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand", "EditCondition attempted to use an invalid operand \"{0}\"."), FText::FromString(Property.PropertyName)));
 	}
 
-	TOptional<UObject*> Ptr = Context.GetPointerValue(Property.PropertyName, CachedFunction);
+	TOptional<UObject*> Ptr = Context.GetObjectValue(Property.PropertyName);
 	if (!Ptr.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand", "EditCondition attempted to use an invalid operand \"{0}\"."), FText::FromString(Property.PropertyName)));
@@ -307,17 +305,15 @@ static FExpressionResult ApplyPropertyIsNull(const UE::AssetValidation::FPropert
 	return MakeValue(bIsNull);
 }
 
-static FExpressionResult ApplyPropertyIsIndexNone(const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::IEditConditionContext& Context, bool bNegate)
+static FExpressionResult ApplyPropertyIsIndexNone(const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::FEditConditionContext& Context, bool bNegate)
 {
-	TWeakObjectPtr<UFunction> CachedFunction = Context.GetFunction(Property.PropertyName);
-
-	TOptional<FString> TypeName = Context.GetTypeName(Property.PropertyName, CachedFunction);
+	TOptional<FString> TypeName = Context.GetTypeName(Property.PropertyName);
 	if (!TypeName.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand", "EditCondition attempted to use an invalid operand \"{0}\"."), FText::FromString(Property.PropertyName)));
 	}
 
-	TOptional<int64> Value = Context.GetIntegerValue(Property.PropertyName, CachedFunction);
+	TOptional<int64> Value = Context.GetIntegerValue(Property.PropertyName);
 	if (!Value.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand", "EditCondition attempted to use an invalid operand \"{0}\"."), FText::FromString(Property.PropertyName)));
@@ -332,21 +328,18 @@ static FExpressionResult ApplyPropertyIsIndexNone(const UE::AssetValidation::FPr
 	return MakeValue(bIsIndexNone);
 }
 
-static FExpressionResult ApplyPropertiesEqual(const UE::AssetValidation::FPropertyToken& A, const UE::AssetValidation::FPropertyToken& B, const UE::AssetValidation::IEditConditionContext& Context, bool bNegate)
+static FExpressionResult ApplyPropertiesEqual(const UE::AssetValidation::FPropertyToken& A, const UE::AssetValidation::FPropertyToken& B, const UE::AssetValidation::FEditConditionContext& Context, bool bNegate)
 {
-	TWeakObjectPtr<UFunction> CachedFunctionA = Context.GetFunction(A.PropertyName);
-	TWeakObjectPtr<UFunction> CachedFunctionB = Context.GetFunction(A.PropertyName);
-
-	TOptional<UObject*> PtrA = Context.GetPointerValue(A.PropertyName, CachedFunctionA);
-	TOptional<UObject*> PtrB = Context.GetPointerValue(B.PropertyName, CachedFunctionB);
+	TOptional<UObject*> PtrA = Context.GetObjectValue(A.PropertyName);
+	TOptional<UObject*> PtrB = Context.GetObjectValue(B.PropertyName);
 	if (PtrA.IsSet() && PtrB.IsSet())
 	{
 		const bool bAreEqual = PtrA.GetValue() == PtrB.GetValue();
 		return MakeValue(bNegate ? !bAreEqual : bAreEqual);
 	}
 
-	TOptional<FString> TypeNameA = Context.GetTypeName(A.PropertyName, CachedFunctionA);
-	TOptional<FString> TypeNameB = Context.GetTypeName(B.PropertyName, CachedFunctionB);
+	TOptional<FString> TypeNameA = Context.GetTypeName(A.PropertyName);
+	TOptional<FString> TypeNameB = Context.GetTypeName(B.PropertyName);
 	if (!TypeNameA.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand", "EditCondition attempted to use an invalid operand \"{0}\"."), FText::FromString(A.PropertyName)));
@@ -362,24 +355,24 @@ static FExpressionResult ApplyPropertiesEqual(const UE::AssetValidation::FProper
 		return MakeError(FText::Format(LOCTEXT("OperandTypeMismatch", "EditCondition attempted to compare operands of different types: \"{0}\" and \"{1}\"."), FText::FromString(A.PropertyName), FText::FromString(B.PropertyName)));
 	}
 
-	TOptional<bool> BoolA = Context.GetBoolValue(A.PropertyName, CachedFunctionA);
-	TOptional<bool> BoolB = Context.GetBoolValue(B.PropertyName, CachedFunctionB);
+	TOptional<bool> BoolA = Context.GetBoolValue(A.PropertyName);
+	TOptional<bool> BoolB = Context.GetBoolValue(B.PropertyName);
 	if (BoolA.IsSet() && BoolB.IsSet())
 	{
 		const bool bAreEqual = BoolA.GetValue() == BoolB.GetValue();
 		return MakeValue(bNegate ? !bAreEqual : bAreEqual);
 	}
 
-	TOptional<double> DoubleA = Context.GetNumericValue(A.PropertyName, CachedFunctionA);
-	TOptional<double> DoubleB = Context.GetNumericValue(B.PropertyName, CachedFunctionB);
+	TOptional<double> DoubleA = Context.GetNumericValue(A.PropertyName);
+	TOptional<double> DoubleB = Context.GetNumericValue(B.PropertyName);
 	if (DoubleA.IsSet() && DoubleB.IsSet())
 	{
 		const bool bAreEqual = DoubleA.GetValue() == DoubleB.GetValue();
 		return MakeValue(bNegate ? !bAreEqual : bAreEqual);
 	}
 
-	TOptional<FString> EnumA = Context.GetEnumValue(A.PropertyName, CachedFunctionA);
-	TOptional<FString> EnumB = Context.GetEnumValue(B.PropertyName, CachedFunctionB);
+	TOptional<FString> EnumA = Context.GetEnumValue(A.PropertyName);
+	TOptional<FString> EnumB = Context.GetEnumValue(B.PropertyName);
 	if (EnumA.IsSet() && EnumB.IsSet())
 	{
 		const bool bAreEqual = EnumA.GetValue() == EnumB.GetValue();
@@ -389,12 +382,12 @@ static FExpressionResult ApplyPropertiesEqual(const UE::AssetValidation::FProper
 	return MakeError(FText::Format(LOCTEXT("OperandTypeMismatch", "EditCondition attempted to compare operands of different types: \"{0}\" and \"{1}\"."), FText::FromString(A.PropertyName), FText::FromString(B.PropertyName)));
 }
 
-static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditionContext>& OperatorJumpTable)
+static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::FEditConditionContext>& OperatorJumpTable)
 {
 	using namespace UE::AssetValidation;
 
 	OperatorJumpTable.MapPreUnary<FNot>([](bool A) { return !A; });
-	OperatorJumpTable.MapPreUnary<FNot>([](const FPropertyToken& A, const IEditConditionContext* Context)
+	OperatorJumpTable.MapPreUnary<FNot>([](const FPropertyToken& A, const FEditConditionContext* Context)
 	{
 		return ApplyNot(TOperand<bool>(A, *Context));
 	});
@@ -404,15 +397,15 @@ static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::IEdit
 		auto ApplyAnd = [](bool First, bool Second) { return First && Second; };
 	
 		OperatorJumpTable.MapBinary<FAnd>(ApplyAnd);
-		OperatorJumpTable.MapBinary<FAnd>([ApplyAnd](const FPropertyToken& A, bool B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FAnd>([ApplyAnd](const FPropertyToken& A, bool B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A, *Context), TOperand<bool>(B), ApplyAnd);
 		});
-		OperatorJumpTable.MapBinary<FAnd>([ApplyAnd](bool A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FAnd>([ApplyAnd](bool A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A), TOperand<bool>(B, *Context), ApplyAnd);
 		});
-		OperatorJumpTable.MapBinary<FAnd>([ApplyAnd](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FAnd>([ApplyAnd](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A, *Context), TOperand<bool>(B, *Context), ApplyAnd);
 		});
@@ -423,15 +416,15 @@ static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::IEdit
 		auto ApplyOr = [](bool First, bool Second) { return First || Second; };
 
 		OperatorJumpTable.MapBinary<FOr>(ApplyOr);
-		OperatorJumpTable.MapBinary<FOr>([ApplyOr](const FPropertyToken& A, bool B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FOr>([ApplyOr](const FPropertyToken& A, bool B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A, *Context), TOperand<bool>(B), ApplyOr);
 		});
-		OperatorJumpTable.MapBinary<FOr>([ApplyOr](bool A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FOr>([ApplyOr](bool A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A), TOperand<bool>(B, *Context), ApplyOr);
 		});
-		OperatorJumpTable.MapBinary<FOr>([ApplyOr](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FOr>([ApplyOr](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A, *Context), TOperand<bool>(B, *Context), ApplyOr);
 		});
@@ -442,11 +435,11 @@ static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::IEdit
 		auto ApplyEqual = [](bool First, bool Second) { return First == Second; };
 
 		OperatorJumpTable.MapBinary<FEqual>(ApplyEqual);
-		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](const FPropertyToken& A, bool B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](const FPropertyToken& A, bool B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A, *Context), TOperand<bool>(B), ApplyEqual);
 		});
-		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](bool A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](bool A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A), TOperand<bool>(B, *Context), ApplyEqual);
 		});
@@ -457,11 +450,11 @@ static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::IEdit
 		auto ApplyNotEqual = [](bool First, bool Second) { return First != Second; };
 
 		OperatorJumpTable.MapBinary<FNotEqual>(ApplyNotEqual);
-		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](const FPropertyToken& A, bool B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](const FPropertyToken& A, bool B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A, *Context), TOperand<bool>(B), ApplyNotEqual);
 		});
-		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](bool A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](bool A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<bool>(A), TOperand<bool>(B, *Context), ApplyNotEqual);
 		});
@@ -469,7 +462,7 @@ static void CreateBooleanOperators(TOperatorJumpTable<UE::AssetValidation::IEdit
 }
 
 template <typename T>
-void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditionContext>& OperatorJumpTable)
+void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::FEditConditionContext>& OperatorJumpTable)
 {
 	using namespace UE::AssetValidation;
 
@@ -478,11 +471,11 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyEqual = [](T First, T Second) { return First == Second; };
 
 		OperatorJumpTable.MapBinary<FEqual>(ApplyEqual);
-		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyEqual);
 		});
-		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([ApplyEqual](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyEqual);
 		});
@@ -493,11 +486,11 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyNotEqual = [](T First, T Second) { return First != Second; };
 
 		OperatorJumpTable.MapBinary<FNotEqual>(ApplyNotEqual);
-		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyNotEqual);
 		});
-		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FNotEqual>([ApplyNotEqual](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyNotEqual);
 		});
@@ -508,15 +501,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyGreater = [](T First, T Second) { return First > Second; };
 
 		OperatorJumpTable.MapBinary<FGreater>(ApplyGreater);
-		OperatorJumpTable.MapBinary<FGreater>([ApplyGreater](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FGreater>([ApplyGreater](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyGreater);
 		});
-		OperatorJumpTable.MapBinary<FGreater>([ApplyGreater](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FGreater>([ApplyGreater](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyGreater);
 		});
-		OperatorJumpTable.MapBinary<FGreater>([ApplyGreater](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FGreater>([ApplyGreater](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyGreater);
 		});
@@ -527,15 +520,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyGreaterEqual = [](T First, T Second) { return First >= Second; };
 
 		OperatorJumpTable.MapBinary<FGreaterEqual>(ApplyGreaterEqual);
-		OperatorJumpTable.MapBinary<FGreaterEqual>([ApplyGreaterEqual](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FGreaterEqual>([ApplyGreaterEqual](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyGreaterEqual);
 		});
-		OperatorJumpTable.MapBinary<FGreaterEqual>([ApplyGreaterEqual](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FGreaterEqual>([ApplyGreaterEqual](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyGreaterEqual);
 		});
-		OperatorJumpTable.MapBinary<FGreaterEqual>([ApplyGreaterEqual](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FGreaterEqual>([ApplyGreaterEqual](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyGreaterEqual);
 		});
@@ -546,15 +539,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyLess = [](T First, T Second) { return First < Second; };
 
 		OperatorJumpTable.MapBinary<FLess>(ApplyLess);
-		OperatorJumpTable.MapBinary<FLess>([ApplyLess](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FLess>([ApplyLess](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyLess);
 		});
-		OperatorJumpTable.MapBinary<FLess>([ApplyLess](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FLess>([ApplyLess](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyLess);
 		});
-		OperatorJumpTable.MapBinary<FLess>([ApplyLess](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FLess>([ApplyLess](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyLess);
 		});
@@ -565,15 +558,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyLessEqual = [](T First, T Second) { return First <= Second; };
 
 		OperatorJumpTable.MapBinary<FLessEqual>(ApplyLessEqual);
-		OperatorJumpTable.MapBinary<FLessEqual>([ApplyLessEqual](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FLessEqual>([ApplyLessEqual](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyLessEqual);
 		});
-		OperatorJumpTable.MapBinary<FLessEqual>([ApplyLessEqual](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FLessEqual>([ApplyLessEqual](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyLessEqual);
 		});
-		OperatorJumpTable.MapBinary<FLessEqual>([ApplyLessEqual](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FLessEqual>([ApplyLessEqual](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyLessEqual);
 		});
@@ -584,15 +577,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyAdd = [](T First, T Second) { return First + Second; };
 
 		OperatorJumpTable.MapBinary<FAdd>(ApplyAdd);
-		OperatorJumpTable.MapBinary<FAdd>([ApplyAdd](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FAdd>([ApplyAdd](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyAdd);
 		});
-		OperatorJumpTable.MapBinary<FAdd>([ApplyAdd](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FAdd>([ApplyAdd](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyAdd);
 		});
-		OperatorJumpTable.MapBinary<FAdd>([ApplyAdd](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FAdd>([ApplyAdd](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyAdd);
 		});
@@ -603,15 +596,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplySubtract = [](T First, T Second) { return First - Second; };
 
 		OperatorJumpTable.MapBinary<FSubtract>(ApplySubtract);
-		OperatorJumpTable.MapBinary<FSubtract>([ApplySubtract](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FSubtract>([ApplySubtract](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplySubtract);
 		});
-		OperatorJumpTable.MapBinary<FSubtract>([ApplySubtract](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FSubtract>([ApplySubtract](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplySubtract);
 		});
-		OperatorJumpTable.MapBinary<FSubtract>([ApplySubtract](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FSubtract>([ApplySubtract](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplySubtract);
 		});
@@ -622,15 +615,15 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyMultiply = [](T First, T Second) { return First * Second; };
 
 		OperatorJumpTable.MapBinary<FMultiply>(ApplyMultiply);
-		OperatorJumpTable.MapBinary<FMultiply>([ApplyMultiply](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FMultiply>([ApplyMultiply](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyMultiply);
 		});
-		OperatorJumpTable.MapBinary<FMultiply>([ApplyMultiply](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FMultiply>([ApplyMultiply](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyMultiply);
 		});
-		OperatorJumpTable.MapBinary<FMultiply>([ApplyMultiply](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FMultiply>([ApplyMultiply](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyMultiply);
 		});
@@ -641,26 +634,24 @@ void CreateNumberOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditio
 		auto ApplyDivide = [](T First, T Second) { return First / Second; };
 
 		OperatorJumpTable.MapBinary<FDivide>(ApplyDivide);
-		OperatorJumpTable.MapBinary<FDivide>([ApplyDivide](const FPropertyToken& A, T B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FDivide>([ApplyDivide](const FPropertyToken& A, T B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B), ApplyDivide);
 		});
-		OperatorJumpTable.MapBinary<FDivide>([ApplyDivide](T A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FDivide>([ApplyDivide](T A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A), TOperand<T>(B, *Context), ApplyDivide);
 		});
-		OperatorJumpTable.MapBinary<FDivide>([ApplyDivide](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FDivide>([ApplyDivide](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return ApplyBinary(TOperand<T>(A, *Context), TOperand<T>(B, *Context), ApplyDivide);
 		});
 	}
 }
 
-static FExpressionResult EnumPropertyEquals(const UE::AssetValidation::FEnumToken& Enum, const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::IEditConditionContext& Context, bool bNegate)
+static FExpressionResult EnumPropertyEquals(const UE::AssetValidation::FEnumToken& Enum, const UE::AssetValidation::FPropertyToken& Property, const UE::AssetValidation::FEditConditionContext& Context, bool bNegate)
 {
-	TWeakObjectPtr<UFunction> CachedFunction = Context.GetFunction(Property.PropertyName);
-
-	TOptional<FString> TypeName = Context.GetTypeName(Property.PropertyName, CachedFunction);
+	TOptional<FString> TypeName = Context.GetTypeName(Property.PropertyName);
 	if (!TypeName.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand_Type", "EditCondition attempted to use an invalid operand \"{0}\" (type error)."), FText::FromString(Property.PropertyName)));
@@ -671,7 +662,7 @@ static FExpressionResult EnumPropertyEquals(const UE::AssetValidation::FEnumToke
 		return MakeError(FText::Format(LOCTEXT("OperandTypeMismatch", "EditCondition attempted to compare operands of different types: \"{0}\" and \"{1}\"."), FText::FromString(Property.PropertyName), FText::FromString(Enum.Type + TEXT("::") + Enum.Value)));
 	}
 
-	TOptional<FString> ValueProp = Context.GetEnumValue(Property.PropertyName, CachedFunction);
+	TOptional<FString> ValueProp = Context.GetEnumValue(Property.PropertyName);
 	if (!ValueProp.IsSet())
 	{
 		return MakeError(FText::Format(LOCTEXT("InvalidOperand_Value", "EditCondition attempted to use an invalid operand \"{0}\" (value error)."), FText::FromString(Property.PropertyName)));
@@ -681,21 +672,21 @@ static FExpressionResult EnumPropertyEquals(const UE::AssetValidation::FEnumToke
 	return MakeValue(bNegate ? !bEqual : bEqual);
 }
 
-static void CreateEnumOperators(TOperatorJumpTable<UE::AssetValidation::IEditConditionContext>& OperatorJumpTable)
+static void CreateEnumOperators(TOperatorJumpTable<UE::AssetValidation::FEditConditionContext>& OperatorJumpTable)
 {
 	using namespace UE::AssetValidation;
 
 	// EQUALS
 	{
-		OperatorJumpTable.MapBinary<FEqual>([](const FEnumToken& A, const FEnumToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([](const FEnumToken& A, const FEnumToken& B, const FEditConditionContext* Context)
 		{
 			return A.Type == B.Type && A.Value == B.Value;
 		});
-		OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FEnumToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FEnumToken& B, const FEditConditionContext* Context)
 		{
 			return EnumPropertyEquals(B, A, *Context, false);
 		});
-		OperatorJumpTable.MapBinary<FEqual>([](const FEnumToken& A, const FPropertyToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FEqual>([](const FEnumToken& A, const FPropertyToken& B, const FEditConditionContext* Context)
 		{
 			return EnumPropertyEquals(A, B, *Context, false);
 		});
@@ -703,15 +694,15 @@ static void CreateEnumOperators(TOperatorJumpTable<UE::AssetValidation::IEditCon
 
 	// NOT-EQUALS
 	{
-		OperatorJumpTable.MapBinary<FNotEqual>([](const FEnumToken& A, const FEnumToken& B, const IEditConditionContext* Context)
+		OperatorJumpTable.MapBinary<FNotEqual>([](const FEnumToken& A, const FEnumToken& B, const FEditConditionContext* Context)
 		{
 			return A.Type != B.Type || A.Value != B.Value;
 		});
-		OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FEnumToken& B, const IEditConditionContext* Context) -> FExpressionResult
+		OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FEnumToken& B, const FEditConditionContext* Context) -> FExpressionResult
 		{
 			return EnumPropertyEquals(B, A, *Context, true);
 		});
-		OperatorJumpTable.MapBinary<FNotEqual>([](const FEnumToken& A, const FPropertyToken& B, const IEditConditionContext* Context) -> FExpressionResult
+		OperatorJumpTable.MapBinary<FNotEqual>([](const FEnumToken& A, const FPropertyToken& B, const FEditConditionContext* Context) -> FExpressionResult
 		{
 			return EnumPropertyEquals(A, B, *Context, true);
 		});
@@ -762,40 +753,40 @@ UE::AssetValidation::FEditConditionParser::FEditConditionParser()
 	ExpressionGrammar.DefineGrouping<FSubExpressionStart, FSubExpressionEnd>();
 
 	// POINTER EQUALITY
-	OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyPropertiesEqual(A, B, *Context, false);
 	});
 
-	OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FPropertyToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FPropertyToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyPropertiesEqual(A, B, *Context, true);
 	});
 
 	// POINTER NULL
-	OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FNullPtrToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FNullPtrToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyPropertyIsNull(A, *Context, false);
 	});
 
-	OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FNullPtrToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FNullPtrToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyPropertyIsNull(A, *Context, true);
 	});
 
 	// INDEX_NONE
-	OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FIndexNoneToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FEqual>([](const FPropertyToken& A, const FIndexNoneToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyPropertyIsIndexNone(A, *Context, false);
 	});
 
-	OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FIndexNoneToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FNotEqual>([](const FPropertyToken& A, const FIndexNoneToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyPropertyIsIndexNone(A, *Context, true);
 	});
 
 	// BITWISE AND
-	OperatorJumpTable.MapBinary<FBitwiseAnd>([](const FPropertyToken& A, const FEnumToken& B, const IEditConditionContext* Context) -> FExpressionResult
+	OperatorJumpTable.MapBinary<FBitwiseAnd>([](const FPropertyToken& A, const FEnumToken& B, const FEditConditionContext* Context) -> FExpressionResult
 	{
 		return ApplyBitwiseAnd(A, B, *Context);
 	});
@@ -805,7 +796,7 @@ UE::AssetValidation::FEditConditionParser::FEditConditionParser()
 	CreateEnumOperators(OperatorJumpTable);
 }
 
-TValueOrError<bool, FText> UE::AssetValidation::FEditConditionParser::Evaluate(const FEditConditionExpression& Expression, const UE::AssetValidation::IEditConditionContext& Context) const
+TValueOrError<bool, FText> UE::AssetValidation::FEditConditionParser::Evaluate(const FEditConditionExpression& Expression, const UE::AssetValidation::FEditConditionContext& Context) const
 {
 	using namespace UE::AssetValidation;
 	
@@ -821,7 +812,7 @@ TValueOrError<bool, FText> UE::AssetValidation::FEditConditionParser::Evaluate(c
 		const FPropertyToken* PropertyResult = Result.GetValue().Cast<FPropertyToken>();
 		if (PropertyResult != nullptr)
 		{
-			TOptional<bool> PropertyValue = Context.GetBoolValue(PropertyResult->PropertyName, Context.GetFunction(PropertyResult->PropertyName));
+			TOptional<bool> PropertyValue = Context.GetBoolValue(PropertyResult->PropertyName);
 			if (PropertyValue.IsSet())
 			{
 				return MakeValue(PropertyValue.GetValue());

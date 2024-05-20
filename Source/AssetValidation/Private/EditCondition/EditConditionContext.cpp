@@ -1,5 +1,5 @@
 ﻿#include "EditConditionContext.h"
-#include "EditConditionParser.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 namespace UE::AssetValidation
 {
@@ -17,38 +17,9 @@ FName FEditConditionContext::GetContextName() const
 	return IsValid() ? SourceStruct->GetFName() : NAME_None;
 }
 	
-const TWeakObjectPtr<UFunction> FEditConditionContext::GetFunction(const FString& FieldName) const
+TOptional<bool> FEditConditionContext::GetBoolValue(const FString& PropertyName) const
 {
 	if (!IsValid())
-	{
-		return nullptr;
-	}
-
-	const FProperty* Property = SourceProperty.Get();
-	if (Property == nullptr)
-	{
-		return nullptr;
-	}
-
-	TWeakObjectPtr<UFunction> Function = FindUField<UFunction>(Property->GetOwnerStruct(), *FieldName);
-
-	if (Function == nullptr && FieldName.Contains(TEXT(".")))
-	{
-		// Function not found in struct, try to see if this is a static function
-		Function = FindObject<UFunction>(nullptr, *FieldName, true);
-
-		if (Function.IsValid() && !Function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Static))
-		{
-			Function = nullptr;
-		}
-	}
-
-	return Function;
-}
-	
-TOptional<bool> FEditConditionContext::GetBoolValue(const FString& PropertyName, TWeakObjectPtr<UFunction> CachedFunction) const
-{
-	if (!IsValid() || CachedFunction.IsValid())
 	{
 		return {};
 	}
@@ -61,9 +32,9 @@ TOptional<bool> FEditConditionContext::GetBoolValue(const FString& PropertyName,
 	return {};
 }
 
-TOptional<int64> FEditConditionContext::GetIntegerValue(const FString& PropertyName, TWeakObjectPtr<UFunction> CachedFunction) const
+TOptional<int64> FEditConditionContext::GetIntegerValue(const FString& PropertyName) const
 {
-	if (!IsValid() || CachedFunction.IsValid())
+	if (!IsValid())
 	{
 		return {};
 	}
@@ -82,9 +53,9 @@ TOptional<int64> FEditConditionContext::GetIntegerValue(const FString& PropertyN
 	return NumericProperty->GetSignedIntPropertyValue(NumericProperty->ContainerPtrToValuePtr<void>(Container));
 }
 
-TOptional<double> FEditConditionContext::GetNumericValue(const FString& PropertyName, TWeakObjectPtr<UFunction> CachedFunction) const
+TOptional<double> FEditConditionContext::GetNumericValue(const FString& PropertyName) const
 {
-	if (!IsValid() || CachedFunction.IsValid())
+	if (!IsValid())
 	{
 		return {};
 	}
@@ -110,9 +81,9 @@ TOptional<double> FEditConditionContext::GetNumericValue(const FString& Property
 	return Result;
 }
 
-TOptional<FString> FEditConditionContext::GetEnumValue(const FString& PropertyName, TWeakObjectPtr<UFunction> CachedFunction) const
+TOptional<FString> FEditConditionContext::GetEnumValue(const FString& PropertyName) const
 {
-	if (!IsValid() || CachedFunction.IsValid())
+	if (!IsValid())
 	{
 		return {};
 	}
@@ -142,9 +113,9 @@ TOptional<FString> FEditConditionContext::GetEnumValue(const FString& PropertyNa
 	return EnumType->GetNameStringByValue(Value);
 }
 
-TOptional<UObject*> FEditConditionContext::GetPointerValue(const FString& PropertyName, TWeakObjectPtr<UFunction> CachedFunction) const
+TOptional<UObject*> FEditConditionContext::GetObjectValue(const FString& PropertyName) const
 {
-	if (!IsValid() || CachedFunction.IsValid())
+	if (!IsValid())
 	{
 		return {};
 	}
@@ -160,44 +131,17 @@ TOptional<UObject*> FEditConditionContext::GetPointerValue(const FString& Proper
 	return ObjectProperty->GetObjectPropertyValue(ValuePtr);
 }
 
-TOptional<FString> FEditConditionContext::GetTypeName(const FString& PropertyName, TWeakObjectPtr<UFunction> CachedFunction) const
+TOptional<FString> FEditConditionContext::GetTypeName(const FString& PropertyName) const
 {
-	if (!IsValid())
+	if (IsValid())
 	{
-		return {};
+		if (const FProperty* Property = SourceStruct->FindPropertyByName(FName{PropertyName}))
+		{
+			return UE::AssetValidation::GetPropertyTypeName(Property);
+		}
 	}
 
-	auto GetPropertyName = [](const FProperty* Property) -> TOptional<FString>
-	{
-		if (Property == nullptr)
-		{
-			return {};
-		}
-
-		if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
-		{
-			return EnumProperty->GetEnum()->GetName();
-		}
-		else if (const FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
-		{
-			const UEnum* EnumType = ByteProperty->GetIntPropertyEnum();
-			if (EnumType != nullptr)
-			{
-				return EnumType->GetName();
-			}
-		}
-
-		return Property->GetCPPType();
-	};
-
-	if (const UFunction* Function = CachedFunction.Get())
-	{
-		return GetPropertyName(Function->GetReturnProperty());
-	}
-
-	const FProperty* Property = SourceStruct->FindPropertyByName(FName{PropertyName});
-
-	return GetPropertyName(Property);
+	return {};
 }
 
 TOptional<int64> FEditConditionContext::GetIntegerValueOfEnum(const FString& EnumTypeName, const FString& MemberName) const
