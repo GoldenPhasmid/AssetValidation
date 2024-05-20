@@ -21,13 +21,6 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	FValidateAssetsSettings DefaultSettings;
 
-	/**
-	 * If set to true, packages will be reloaded to check for loading errors
-	 * @todo replace with explicit UAssetValidator_LoadPackage options
-	 */
-	UPROPERTY(EditAnywhere, Config, Category = "Settings")
-	bool bReloadPackages = true;
-
 	/** If true, will fill validation log with messages like "Validating thingy" or "Done validating thingy" */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bEnabledDetailedAssetLogging = false;

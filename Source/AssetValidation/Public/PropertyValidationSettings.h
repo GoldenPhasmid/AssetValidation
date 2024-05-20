@@ -73,6 +73,13 @@ public:
 	bool bAddMetaToNewBlueprintVariables = true;
 
 	/**
+	 * If set to true, property is validated only if it is blueprint visible
+	 * Enabled by default
+	 */
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	bool bRequirePropertyBlueprintVisibility = true;
+
+	/**
 	 * If set to true, will report incorrect meta usage for C++ and Blueprint properties.
 	 * Enabled by default
 	 */

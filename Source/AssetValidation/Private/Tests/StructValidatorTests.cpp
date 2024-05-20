@@ -4,7 +4,7 @@
 
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidatorTests.h"
-#include "Tests/AutomationFlags.h"
+#include "AutomationHelpers.h"
 
 using UE::AssetValidation::AutomationFlags;
 

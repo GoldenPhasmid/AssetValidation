@@ -377,19 +377,22 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 		// do not validate transient properties, unless it is property extension
 		return false;
 	}
-	
-	bool bVisibleInBlueprint = false;
-	// engine property extension ignore visibility requirements
-	bVisibleInBlueprint |= MetaData.IsType<FEnginePropertyExtension>();
-	// property is editable in blueprints
-	bVisibleInBlueprint |= Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit);
-	// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
-	// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
-	// and property to be object property derived from actor component
-	bVisibleInBlueprint |= UE::AssetValidation::IsBlueprintComponentProperty(Property);
-	if (!bVisibleInBlueprint)
+
+	if (UPropertyValidationSettings::Get()->bRequirePropertyBlueprintVisibility)
 	{
-		return false;
+		bool bVisibleInBlueprint = false;
+		// engine property extension ignore visibility requirements
+		bVisibleInBlueprint |= MetaData.IsType<FEnginePropertyExtension>();
+		// property is editable in blueprints
+		bVisibleInBlueprint |= Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit);
+		// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
+		// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
+		// and property to be object property derived from actor component
+		bVisibleInBlueprint |= UE::AssetValidation::IsBlueprintComponentProperty(Property);
+		if (!bVisibleInBlueprint)
+		{
+			return false;
+		}
 	}
 
 	const UObject* SourceObject = ValidationContext.GetSourceObject();

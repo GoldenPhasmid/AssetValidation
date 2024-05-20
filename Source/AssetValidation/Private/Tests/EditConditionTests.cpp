@@ -1,6 +1,6 @@
 ﻿#include "EditConditionTests.h"
 
-#include "AutomationFlags.h"
+#include "AutomationHelpers.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 using UE::AssetValidation::AutomationFlags;
@@ -22,7 +22,9 @@ static TArray<TPair<FName, bool>> PropertyNames
 
 BEGIN_DEFINE_SPEC(FAutomationSpec_EditConditionValue, "PropertyValidation.EditConditionValue", AutomationFlags)
 	void TestEditCondition(UObject* Object, FName PropertyName, bool bExpected);
+	void TestValidationResult(UObject* Object, FName PropertyName, bool bExpectedConditionResult);
 	UObject* TestObject = nullptr;
+	UPropertyValidatorSubsystem* Subsystem = nullptr;
 END_DEFINE_SPEC(FAutomationSpec_EditConditionValue)
 
 void FAutomationSpec_EditConditionValue::TestEditCondition(UObject* Object, FName PropertyName, bool bExpected)
@@ -31,13 +33,26 @@ void FAutomationSpec_EditConditionValue::TestEditCondition(UObject* Object, FNam
 	FProperty* Property = Class->FindPropertyByName(PropertyName);
 	bool bActual = UE::AssetValidation::PassesEditCondition(Class, reinterpret_cast<const uint8*>(Object), Property);
 
+	// @todo: ensure that property is suitable for validation e.g. check(ShouldValidateProperty == true)
 	TestEqual(FString::Printf(TEXT("EditCondition matches for property %s"), *PropertyName.ToString()), bActual, bExpected);
+}
+
+void FAutomationSpec_EditConditionValue::TestValidationResult(UObject* Object, FName PropertyName, bool bExpectedConditionResult)
+{
+	FProperty* Property = Object->GetClass()->FindPropertyByName(PropertyName);
+
+	// if EditCondition evaluates to True, this means property should be validated and validation result for these properties is always false
+	EDataValidationResult Expected = bExpectedConditionResult == true ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
+	FPropertyValidationResult Result = Subsystem->ValidateObjectProperty(Object, Property);
+
+	TestEqual(FString::Printf(TEXT("Validation matches EditCondition result for property %s"), *PropertyName.ToString()), Result.ValidationResult, Expected);
 }
 
 void FAutomationSpec_EditConditionValue::Define()
 {
 	BeforeEach([this]
 	{
+		Subsystem = UPropertyValidatorSubsystem::Get();
 		TestObject = NewObject<UValidationTestObject_EditCondition>(GetTransientPackage());
 	});
 
@@ -47,16 +62,35 @@ void FAutomationSpec_EditConditionValue::Define()
 		{
 			const auto& PropertyName = Pair.Key;
 			const auto& ExpectedResult = Pair.Value;
-			
-			It(FString::Printf(TEXT("%s"), *PropertyName.ToString()), [this, PropertyName, ExpectedResult]
+
 			{
-				TestEditCondition(TestObject, PropertyName, ExpectedResult);
-			});
+				FString Desc = FString::Printf(TEXT("Condition Value: %s"), *PropertyName.ToString());
+				It(Desc, [this, PropertyName, ExpectedResult]
+				{
+					TestEditCondition(TestObject, PropertyName, ExpectedResult);
+				});
+			}
+
+			{
+				FString Desc = FString::Printf(TEXT("Validation Result: %s"), *PropertyName.ToString());
+				It(Desc, [this, PropertyName, ExpectedResult]
+				{
+					TestValidationResult(TestObject, PropertyName, ExpectedResult);
+				});
+			}
 		}
+	});
+
+	It("Total Errors", [this]
+	{
+		FPropertyValidationResult Result = Subsystem->ValidateObject(TestObject);
+		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
+		TestEqual("NumErrors", Result.Errors.Num(), 5);
 	});
 	
 	AfterEach([this]
 	{
-		TestObject = nullptr;
+		Subsystem	= nullptr;
+		TestObject	= nullptr;
 	});
 }

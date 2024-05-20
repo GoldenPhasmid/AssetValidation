@@ -144,7 +144,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 bool UAssetValidator_LoadPackage::IsEnabled() const
 {
 	// Commandlets do not need this validation step as they loaded the content while running.
-	return !IsRunningCommandlet() && UAssetValidationSettings::Get()->bReloadPackages && Super::IsEnabled();
+	return !IsRunningCommandlet() && Super::IsEnabled();
 }
 
 bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const

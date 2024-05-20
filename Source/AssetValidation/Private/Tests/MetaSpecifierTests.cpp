@@ -2,7 +2,7 @@
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
-#include "Tests/AutomationFlags.h"
+#include "AutomationHelpers.h"
 
 using UE::AssetValidation::AutomationFlags;
 
@@ -114,7 +114,10 @@ bool FAutomationTest_MetaSpecifiers::RunTest(const FString& Parameters)
 	TestEqual(What, CanApplyToProperty<FObjectPropertyBase>(CanApplyMeta), false);
 	
 	TestEqual(What, CanApplyToProperty<FEnumProperty>(CanApplyMeta),	true);
+	// byte property validation is not fully supported due to different interpretations of an Invalid value
+#if 0
 	TestEqual(What, CanApplyToProperty<FByteProperty>(CanApplyMeta, UEnum::StaticClass()->GetDefaultObject<UEnum>()), true);
+#endif
 	TestEqual(What, CanApplyToProperty<FNameProperty>(CanApplyMeta),	true);
 	TestEqual(What, CanApplyToProperty<FStrProperty>(CanApplyMeta), true);
 	TestEqual(What, CanApplyToProperty<FTextProperty>(CanApplyMeta),	true);

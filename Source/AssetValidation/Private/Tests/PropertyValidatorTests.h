@@ -1,14 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Tests/AutomationHelpers.h"
 
 #include "PropertyValidatorTests.generated.h"
-
-UCLASS(HideDropdown)
-class UEmptyObject: public UObject
-{
-	GENERATED_BODY()
-};
 
 UCLASS(HideDropdown)
 class UValidationTestObject_ValidationConditions: public UObject
@@ -48,14 +43,6 @@ public:
 	
 };
 
-UENUM()
-enum class EValidationEnum: uint8
-{
-	None = 0,
-	One = 1,
-	Two = 2
-};
-
 UCLASS(HideDropdown)
 class UValidationTestObject_PropertyTypes: public UObject
 {
@@ -84,7 +71,7 @@ public:
 	FText Text;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
-	EValidationEnum Enum = EValidationEnum::None;
+	ESimpleEnum Enum = ESimpleEnum::None;
 };
 
 

@@ -3,7 +3,7 @@
 #include "Misc/AutomationTest.h"
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidators/PropertyValidation.h"
-#include "Tests/AutomationFlags.h"
+#include "AutomationHelpers.h"
 
 using UE::AssetValidation::AutomationFlags;
 

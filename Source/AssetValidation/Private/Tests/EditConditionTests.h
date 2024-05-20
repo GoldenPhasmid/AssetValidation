@@ -1,16 +1,9 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Tests/AutomationHelpers.h"
 
 #include "EditConditionTests.generated.h"
-
-UENUM()
-enum class ETestEnum: uint8
-{
-	None,
-	One,
-	Two,
-};
 
 UCLASS(HideDropdown)
 class UValidationTestObject_EditCondition: public UObject
@@ -25,38 +18,38 @@ public:
 	int32 Int = 32;
 
 	UPROPERTY()
-	ETestEnum Enum = ETestEnum::Two;
+	ESimpleEnum Enum = ESimpleEnum::Two;
 	
 	UPROPERTY()
 	UObject* Pointer = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Bool == false"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Bool == false", Validate))
 	UObject* BoolConditionFalse = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Bool == true"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Bool == true", Validate))
 	UObject* BoolConditionTrue = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Enum == ETestEnum::One"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Enum == ESimpleEnum::One", Validate))
 	UObject* EnumConditionFalse = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Enum != ETestEnum::None"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Enum != ESimpleEnum::None", Validate))
 	UObject* EnumConditionTrue = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Int == 8"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Int == 8", Validate))
 	UObject* IntConditionFalse = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Int >= 20"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Int >= 20", Validate))
 	UObject* IntConditionTrue = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Pointer != nullptr"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Pointer != nullptr", Validate))
 	UObject* PointerConditionFalse = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Pointer == nullptr"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Pointer == nullptr", Validate))
 	UObject* PointerConditionTrue = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Pointer == nullptr && Bool == true && (Int < 10 || Enum == ETestEnum::None)"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Pointer == nullptr && Bool == true && (Int < 10 || Enum == ESimpleEnum::None)", Validate))
 	UObject* ComplexConditionFalse = nullptr;
 
-	UPROPERTY(meta = (EditCondition = "Pointer == nullptr || Bool == false || (Int == 32 && Enum == ETestEnum::Two)"))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "Pointer == nullptr || Bool == false || (Int == 32 && Enum == ESimpleEnum::Two)", Validate))
 	UObject* ComplexConditionTrue = nullptr;
 };
