@@ -127,7 +127,7 @@ UClass* FAssetValidationSettingsCustomization::GetAssetValidatorClassFromAsset(c
 
 	if (!NativeClassPath.IsEmpty())
 	{
-		if (UClass* ParentClass = FindObjectSafe<UClass>(nullptr, *NativeClassPath, true); ParentClass->IsChildOf<UEditorValidatorBase>())
+		if (UClass* ParentClass = FindObjectSafe<UClass>(nullptr, *NativeClassPath, true); ParentClass && ParentClass->IsChildOf<UEditorValidatorBase>())
 		{
 			UBlueprint* Blueprint = CastChecked<UBlueprint>(AssetData.GetAsset());
 			return Blueprint->GeneratedClass;
