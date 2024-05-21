@@ -12,7 +12,6 @@
 #include "AssetValidationSubsystem.h"
 #include "EngineUtils.h"
 #include "PackageTools.h"
-#include "WorldPartitionSourceControlValidator.h"
 #include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationMapCheckErrorHandler.h"
 
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
@@ -157,9 +156,6 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 
 	// starting from 5.4 world calls IsDataValid on actor using FActorIterator, so we don't call it.
 	// Otherwise we would be calling AActor::IsDataValid twice
-#if !WITH_DATA_VALIDATION_UPDATE 
-	Result &= World->IsDataValid(Context);
-#endif
 	
 	for (FActorIterator It{World, AActor::StaticClass(), EActorIteratorFlags::AllActors}; It; ++It)
 	{
@@ -174,12 +170,8 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 
 EDataValidationResult UAssetValidator_World::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
 {
-#if WITH_DATA_VALIDATION_UPDATE // actor validation is fixed in 5.4
 	FAssetData AssetData{Asset};
 	LogValidatingAssetMessage(AssetData, Context);
 	
 	return ValidationSubsystem.IsAssetValidWithContext(AssetData, Context);
-#else
-	return ValidationSubsystem->IsStandaloneActorValid(Asset, Context);
-#endif
 }
