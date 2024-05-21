@@ -78,8 +78,4 @@ namespace UE::AssetValidation
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
-	/** @return correctly tokenized message */
-#if 0
-	ASSETVALIDATION_API TSharedRef<FTokenizedMessage> CreateAssetMessage(const FText& Message, const FAssetData& AssetData, EMessageSeverity::Type Severity);
-#endif
 } // UE::AssetValidation

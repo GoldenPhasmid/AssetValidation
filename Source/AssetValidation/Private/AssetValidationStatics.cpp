@@ -252,104 +252,7 @@ namespace UE::AssetValidation
 	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 	{
 		UE::DataValidation::AddAssetValidationMessages(AssetData, MessageLog, ValidationContext);
-#if 0
-		for (const FDataValidationContext::FIssue& Issue : ValidationContext.GetIssues())
-		{
-			if (Issue.TokenizedMessage.IsValid())
-			{
-				MessageLog.AddMessage(Issue.TokenizedMessage.ToSharedRef());
-			}
-			else
-			{
-				
-				AppendAssetValidationMessages(MessageLog, AssetData, Issue.Severity, { Issue.Message });
-			}
-		}
-#endif
-#if 0
-		TArray<FText> Warnings, Errors;
-		Warnings.Reserve(ValidationContext.GetNumWarnings());
-		Errors.Reserve(ValidationContext.GetNumErrors());
-		
-		ValidationContext.SplitIssues(Warnings, Errors);
-
-		AppendAssetValidationMessages(MessageLog, AssetData, EMessageSeverity::Error, Errors);
-		AppendAssetValidationMessages(MessageLog, AssetData, EMessageSeverity::Warning, Warnings);
-#endif
 	}
-
-#if 0
-	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
-	{
-		// use object name if working with external package
-		const UObject* Asset = AssetData.FastGetAsset(false);
-		const bool bExternalPackage = Asset && Asset->IsPackageExternal();
-		const FString PackageName = bExternalPackage ? Asset->GetName() : AssetData.PackageName.ToString();
-		
-		for (const FText& Msg: Messages)
-		{
-			MessageLog.AddMessage(AssetData, Severity, Msg);
-
-			MessageLog.AddMessage(CreateAssetMessage(Msg, AssetData, Severity));
-		}
-	}
-#endif
-
-#if 0
-	TSharedRef<FTokenizedMessage> CreateAssetMessage(const FText& Message, const FAssetData& AssetData, EMessageSeverity::Type Severity)
-	{
-		// @todo: optimize for loops
-		const UObject* Asset = AssetData.FastGetAsset(false);
-		const bool bExternalPackage = Asset && Asset->IsPackageExternal();
-		const FString PackageName = bExternalPackage ? Asset->GetName() : AssetData.PackageName.ToString();
-		
-		if (bExternalPackage)
-		{
-			return FTokenizedMessage::Create(Severity)
-			// asset log prefix
-			->AddToken(FTextToken::Create(FText::FromString(TEXT("[AssetLog]")))) 
-			// asset token
-			->AddToken(FAssetDataToken::Create(Asset)) 
-			// colon after object token to separate error message
-			->AddToken(FTextToken::Create(FText::FromString(TEXT(":"))))
-			// actual error message
-			->AddToken(FTextToken::Create(Message));
-		}
-		else
-		{
-			const FString FormattedPath		= FAssetMsg::FormatPathForAssetLog(*PackageName);
-			const FString AssetLogString	= FAssetMsg::GetAssetLogString(*PackageName, Message.ToString());
-				
-			FString BeforeAsset{}, AfterAsset{};
-			TSharedRef<FTokenizedMessage> TokenizedMessage = FTokenizedMessage::Create(Severity);
-			if (AssetLogString.Split(FormattedPath, &BeforeAsset, &AfterAsset))
-			{
-				if (!BeforeAsset.IsEmpty())
-				{
-					TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(BeforeAsset)));
-				}
-				
-				TokenizedMessage->AddToken(FAssetDataToken::Create);
-					
-				// add asset name to AfterAsset for cases like default object validation and asset validation that are not yet on disk
-				FString AssetNameString = AssetData.AssetName.ToString();
-				AssetNameString.RemoveFromStart(TEXT("Default__"));
-				AfterAsset.InsertAt(0, AssetNameString);
-				
-				if (!AfterAsset.IsEmpty())
-				{
-					TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(AfterAsset)));
-				}
-			}
-			else
-			{
-				TokenizedMessage->AddToken(FTextToken::Create(FText::FromString(AssetLogString)));
-			}
-
-			return TokenizedMessage;
-		}
-	}
-#endif
 
 	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer)
 	{
@@ -366,10 +269,6 @@ namespace UE::AssetValidation
 		for (const FText& Msg: Messages)
 		{
 			ValidationContext.AddMessage(AssetData, Severity, Msg);
-#if 0
-			ValidationContext.AddMessage(CreateAssetMessage(Msg, AssetData, Severity));
-#endif
-			
 		}
 	}
 
@@ -378,9 +277,6 @@ namespace UE::AssetValidation
 		for (const FString& Msg: Messages)
 		{
 			ValidationContext.AddMessage(AssetData, Severity, FText::FromString(Msg));
-#if 0
-			ValidationContext.AddMessage(CreateAssetMessage(FText::FromString(Msg), AssetData, Severity));
-#endif
 		}
 	}
 	
