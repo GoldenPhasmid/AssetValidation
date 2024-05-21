@@ -5,7 +5,14 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "AssetValidators/AssetValidator_LoadPackage.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "Misc/DataValidation.h"
+
+UAssetValidator_Referencers::UAssetValidator_Referencers()
+{
+	// validation on save would be too slow for any asset change
+	AllowedContext &= ~EAssetValidationFlags::Save;
+	// during commandlet validation we would most likely will validate all assets
+	AllowedContext &= ~EAssetValidationFlags::Commandlet;
+}
 
 bool UAssetValidator_Referencers::IsEnabled() const
 {
@@ -19,13 +26,6 @@ bool UAssetValidator_Referencers::CanValidateAsset_Implementation(const FAssetDa
 		return false;
 	}
 	
-	if (EDataValidationUsecase::Save == InContext.GetValidationUsecase())
-	{
-		// validation on save would be too slow for any asset change
-		// during commandlet validation we would most likely will validate all assets
-		return false;
-	}
-
 	// @todo: validate referencers for external actors? world partition already handles it?
 	return InObject && (InObject->IsA<UBlueprint>() || InObject->IsA<UMaterialFunction>());
 }

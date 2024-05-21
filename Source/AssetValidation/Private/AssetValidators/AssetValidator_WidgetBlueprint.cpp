@@ -5,9 +5,11 @@
 #include "PropertyValidatorSubsystem.h"
 #include "Editor/UMGEditor/Public/WidgetBlueprint.h"
 #include "Blueprint/WidgetTree.h"
-bool UAssetValidator_WidgetBlueprint::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+
+UAssetValidator_WidgetBlueprint::UAssetValidator_WidgetBlueprint()
 {
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject && InObject->IsA<UWidgetBlueprint>();
+	AllowedClasses.Add(FSoftClassPath{UWidgetBlueprint::StaticClass()});
+	bAllowNullAsset = false;
 }
 
 EDataValidationResult UAssetValidator_WidgetBlueprint::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)

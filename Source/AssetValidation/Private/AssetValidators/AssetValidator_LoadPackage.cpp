@@ -1,12 +1,8 @@
 #include "AssetValidators/AssetValidator_LoadPackage.h"
 
 #include "AssetCompilingManager.h"
-#include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationSubsystem.h"
-#include "DataValidationModule.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
 
 bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 {
@@ -141,20 +137,19 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	return true;
 }
 
+UAssetValidator_LoadPackage::UAssetValidator_LoadPackage()
+{
+	AllowedContext &= ~EAssetValidationFlags::Save;
+	AllowedContext &= ~EAssetValidationFlags::Commandlet;
+	// if asset is loaded, we do a copy and check for load errors
+	// if asset is unloaded, we load it instead
+	bAllowNullAsset = true;
+}
+
 bool UAssetValidator_LoadPackage::IsEnabled() const
 {
 	// Commandlets do not need this validation step as they loaded the content while running.
 	return !IsRunningCommandlet() && Super::IsEnabled();
-}
-
-bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
-{
-	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save)
-	{
-		return false;
-	}
-	
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext);
 }
 
 EDataValidationResult UAssetValidator_LoadPackage::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)

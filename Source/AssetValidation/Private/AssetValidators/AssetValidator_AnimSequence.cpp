@@ -5,9 +5,11 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool UAssetValidator_AnimSequence::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+
+UAssetValidator_AnimSequence::UAssetValidator_AnimSequence()
 {
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject && InObject->IsA<UAnimSequenceBase>();
+	AllowedClasses.Add(FSoftClassPath{UAnimSequence::StaticClass()});
+	bAllowNullAsset = false;
 }
 
 EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)

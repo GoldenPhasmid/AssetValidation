@@ -5,6 +5,12 @@
 #include "AssetValidationStatics.h"
 #include "Misc/DataValidation.h"
 
+UAssetValidator_ExternalObjects::UAssetValidator_ExternalObjects()
+{
+	// allow unloaded worlds, validator cares only about external objects
+	bAllowNullAsset = true;
+}
+
 bool UAssetValidator_ExternalObjects::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
 {
 	return CurrentExternalAsset != InAsset && InContext.GetAssociatedExternalObjects().Num();

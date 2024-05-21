@@ -8,9 +8,9 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-bool UAssetValidator_SourceControl::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+UAssetValidator_SourceControl::UAssetValidator_SourceControl()
 {
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject != nullptr;
+	bAllowNullAsset = false;
 }
 
 EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)

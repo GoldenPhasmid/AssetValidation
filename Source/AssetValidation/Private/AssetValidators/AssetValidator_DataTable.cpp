@@ -3,9 +3,10 @@
 #include "AssetValidationDefines.h"
 #include "PropertyValidatorSubsystem.h"
 
-bool UAssetValidator_DataTable::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+UAssetValidator_DataTable::UAssetValidator_DataTable()
 {
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject && InObject->IsA<UDataTable>();
+	AllowedClasses.Add(FSoftClassPath{UDataTable::StaticClass()});
+	bAllowNullAsset = false;
 }
 
 EDataValidationResult UAssetValidator_DataTable::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)

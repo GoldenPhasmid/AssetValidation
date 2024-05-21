@@ -14,6 +14,8 @@ class UAssetValidator_World: public UAssetValidator
 	GENERATED_BODY()
 public:
 
+	UAssetValidator_World();
+
 	//~Begin EditorValidatorBase interface
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
 	virtual EDataValidationResult ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context) override;

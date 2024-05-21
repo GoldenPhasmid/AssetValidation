@@ -5,9 +5,11 @@
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
 
-bool UAssetValidator_Properties::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
+UAssetValidator_Properties::UAssetValidator_Properties()
 {
-	return InObject != nullptr && !InObject->IsA<UUserDefinedStruct>() && !InObject->IsA<UUserDefinedEnum>();
+	DisallowedClasses.Add(UUserDefinedStruct::StaticClass());
+	DisallowedClasses.Add(UUserDefinedEnum::StaticClass());
+	bAllowNullAsset = false;
 }
 
 EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)

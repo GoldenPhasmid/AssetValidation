@@ -15,6 +15,17 @@
 #include "WorldPartitionSourceControlValidator.h"
 #include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationMapCheckErrorHandler.h"
 
+UAssetValidator_World::UAssetValidator_World()
+{
+	// saving WP actors would result in this validator attempting to run with world asset
+	// don't validate on save, wait until PreSubmit or Manual
+	AllowedContext &= ~EAssetValidationFlags::Save;
+	// allow only world assets
+	AllowedClasses.Add(FSoftClassPath{UWorld::StaticClass()});
+	// allow unloaded worlds
+	bAllowNullAsset = true;
+}
+
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	EDataValidationUsecase Usecase = InContext.GetValidationUsecase();
@@ -24,12 +35,8 @@ bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& In
 		// don't validate on save, wait until PreSubmit or Manual
 		return false;
 	}
-
-	if (InObject != nullptr && !InObject->IsA<UWorld>())
-	{
-		return false;
-	}
-	return true;
+	
+	return InObject == nullptr || InObject->IsA<UWorld>();
 }
 
 EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)

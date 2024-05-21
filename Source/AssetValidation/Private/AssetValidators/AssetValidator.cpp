@@ -5,13 +5,43 @@
 #include "AssetValidationSettings.h"
 #include "AssetRegistry/AssetDataToken.h"
 
+EAssetValidationFlags Convert(EDataValidationUsecase Usecase)
+{
+	switch (Usecase)
+	{
+	case EDataValidationUsecase::None:			return EAssetValidationFlags::None;
+	case EDataValidationUsecase::Manual:		return EAssetValidationFlags::Manual;
+	case EDataValidationUsecase::Commandlet:	return EAssetValidationFlags::Commandlet;
+	case EDataValidationUsecase::Save:			return EAssetValidationFlags::Save;
+	case EDataValidationUsecase::PreSubmit:		return EAssetValidationFlags::PreSubmit;
+	case EDataValidationUsecase::Script:		return EAssetValidationFlags::Script;
+	default:
+		checkNoEntry();
+	}
+
+	return EAssetValidationFlags::All;
+}
+
 UAssetValidator::UAssetValidator()
 {
 }
 
 bool UAssetValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return true;
+	const bool bSuitableContext = !!(AllowedContext & Convert(InContext.GetValidationUsecase()));
+	if (!bSuitableContext)
+	{
+		return false;
+	}
+
+	if (InObject == nullptr && !bAllowNullAsset)
+	{
+		// null assets are skipped
+		return false;
+	}
+
+	FSoftClassPath ClassPath{InAssetData.GetClass()};
+	return (AllowedClasses.IsEmpty() || AllowedClasses.Contains(ClassPath)) && !DisallowedClasses.Contains(ClassPath);
 }
 
 EDataValidationResult UAssetValidator::ValidateAsset(const FAssetData& InAssetData, FDataValidationContext& InContext)
