@@ -5,16 +5,16 @@
 #include "AssetValidator.generated.h"
 
 UENUM(BlueprintType)
-enum class EAssetValidationFlags: uint8
+enum EAssetValidationFlags: int32
 {
-	None		= 0		UMETA(Hidden),
-	Manual		= 1,
-	Commandlet	= 2,
-	Save		= 4,
-	PreSubmit	= 8,
-	Script		= 16,
+	None		= 0x00000000	UMETA(Hidden),
+	Manual		= 0x00000001,
+	Commandlet	= 0x00000002,
+	Save		= 0x00000004,
+	PreSubmit	= 0x00000008,
+	Script		= 0x00000010,
 	// ...
-	All			= 255	UMETA(Hidden)
+	All			= 0x7FFFFFFF	UMETA(Hidden)
 };
 ENUM_CLASS_FLAGS(EAssetValidationFlags);
 
@@ -39,8 +39,8 @@ protected:
 	void LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context);
 
 	/** Contexts in which this validator can run */
-	UPROPERTY(EditAnywhere, Config, meta = (BlueprintProtected = "true"))
-	EAssetValidationFlags AllowedContext = EAssetValidationFlags::All;
+	UPROPERTY(EditAnywhere, Config, meta = (BlueprintProtected = "true", Bitmask, BitmaskEnum = "/Script/AssetValidation.EAssetValidationFlags"))
+	int32 AllowedContext = 0;
 
 	/** List of allowed classes. If empty, any class is allowed */
 	UPROPERTY(EditAnywhere, Config, meta = (BlueprintProtected = "true"))

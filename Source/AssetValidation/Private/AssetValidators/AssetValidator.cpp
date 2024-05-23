@@ -24,11 +24,13 @@ EAssetValidationFlags Convert(EDataValidationUsecase Usecase)
 
 UAssetValidator::UAssetValidator()
 {
+	AllowedContext = EAssetValidationFlags::All;
 }
 
 bool UAssetValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	const bool bSuitableContext = !!(AllowedContext & Convert(InContext.GetValidationUsecase()));
+	EAssetValidationFlags ContextFlags = Convert(InContext.GetValidationUsecase());
+	const bool bSuitableContext = (AllowedContext & ContextFlags) > 0;
 	if (!bSuitableContext)
 	{
 		return false;
