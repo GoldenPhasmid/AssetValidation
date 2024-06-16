@@ -5,27 +5,29 @@
 
 using UE::AssetValidation::AutomationFlags;
 
-static TArray<TPair<FName, bool>> PropertyNames
-{
-	{"BoolConditionFalse",		false},
-	{"BoolConditionTrue",			true},
-	{"EnumConditionFalse",		false},
-	{"EnumConditionTrue",			true},
-	{"IntConditionFalse",			false},
-	{"IntConditionTrue",			true},
-	{"PointerConditionFalse",		false},
-	{"PointerConditionTrue",		true},
-	{"ComplexConditionFalse",		false},
-	{"ComplexConditionTrue",		true}
-};
-
-
 BEGIN_DEFINE_SPEC(FAutomationSpec_EditConditionValue, "PropertyValidation.EditConditionValue", AutomationFlags)
+protected:
 	void TestEditCondition(UObject* Object, FName PropertyName, bool bExpected);
 	void TestValidationResult(UObject* Object, FName PropertyName, bool bExpectedConditionResult);
+
 	UObject* TestObject = nullptr;
 	UPropertyValidatorSubsystem* Subsystem = nullptr;
+	static TArray<TPair<FName, bool>> PropertyNames;
 END_DEFINE_SPEC(FAutomationSpec_EditConditionValue)
+
+TArray<TPair<FName, bool>> FAutomationSpec_EditConditionValue::PropertyNames
+{
+		{"BoolConditionFalse",		false},
+		{"BoolConditionTrue",			true},
+		{"EnumConditionFalse",		false},
+		{"EnumConditionTrue",			true},
+		{"IntConditionFalse",			false},
+		{"IntConditionTrue",			true},
+		{"PointerConditionFalse",		false},
+		{"PointerConditionTrue",		true},
+		{"ComplexConditionFalse",		false},
+		{"ComplexConditionTrue",		true}
+};
 
 void FAutomationSpec_EditConditionValue::TestEditCondition(UObject* Object, FName PropertyName, bool bExpected)
 {

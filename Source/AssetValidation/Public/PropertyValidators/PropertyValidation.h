@@ -15,12 +15,12 @@ namespace UE::AssetValidation
 	 * Property validation meta specifiers
 	 * see Tests/MetaSpecifierTests.cpp/FAutomationTest_MetaSpecifiers::RunTest for more info
 	 */
-	ASSETVALIDATION_API static const FName Validate("Validate");
-	ASSETVALIDATION_API static const FName ValidateKey("ValidateKey");
-	ASSETVALIDATION_API static const FName ValidateValue("ValidateValue");
-	ASSETVALIDATION_API static const FName ValidateRecursive("ValidateRecursive");
-	ASSETVALIDATION_API static const FName FailureMessage("FailureMessage");
-	ASSETVALIDATION_API static const FName DisableEditOnTemplate("DisableEditOnTemplate");
+	static const FName Validate("Validate");
+	static const FName ValidateKey("ValidateKey");
+	static const FName ValidateValue("ValidateValue");
+	static const FName ValidateRecursive("ValidateRecursive");
+	static const FName FailureMessage("FailureMessage");
+	static const FName DisableEditOnTemplate("DisableEditOnTemplate");
 
 	ASSETVALIDATION_API const TStaticArray<FName, 6>& GetMetaKeys();
 }

@@ -13,7 +13,7 @@ struct FEnginePropertyExtension;
  * Single property meta data extension, in config format
  */
 USTRUCT(BlueprintType)
-struct FPropertyExtensionConfig
+struct ASSETVALIDATION_API FPropertyExtensionConfig
 {
 	GENERATED_BODY()
 
@@ -41,7 +41,7 @@ struct FPropertyExtensionConfig
  * Single property meta data extension
  */
 USTRUCT()
-struct FEnginePropertyExtension
+struct ASSETVALIDATION_API FEnginePropertyExtension
 {
 	GENERATED_BODY()
 	
@@ -101,7 +101,7 @@ struct FEnginePropertyExtension
  * Class extension data
  */
 USTRUCT()
-struct FEngineClassExtension
+struct ASSETVALIDATION_API FEngineClassExtension
 {
 	GENERATED_BODY()
 
@@ -131,7 +131,7 @@ FORCEINLINE bool operator==(const FEngineClassExtension& ClassData, const UClass
  * Extension data for a script struct
  */
 USTRUCT()
-struct FEngineStructExtension
+struct ASSETVALIDATION_API FEngineStructExtension
 {
 	GENERATED_BODY()
 

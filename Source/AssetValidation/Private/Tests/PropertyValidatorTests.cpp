@@ -7,21 +7,24 @@
 
 using UE::AssetValidation::AutomationFlags;
 
-static TArray<TPair<FName, EDataValidationResult>> PropertyNames
-{
-	{"NoMetaProperty",			EDataValidationResult::Valid},
-	{"NoMetaEditableProperty",	EDataValidationResult::Valid},
-	{"NonEditableProperty",		EDataValidationResult::Valid},
-	{"TransientProperty",			EDataValidationResult::Valid},
-	{"TransientEditableProperty",	EDataValidationResult::Valid},
-	{"EditAnywhereProperty",		EDataValidationResult::Invalid},
-	{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
-};
 
 BEGIN_DEFINE_SPEC(FAutomationSpec_ValidationConditions, "PropertyValidation.Conditions", AutomationFlags)
 	UObject* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
+	static TArray<TPair<FName, EDataValidationResult>> PropertyNames;
 END_DEFINE_SPEC(FAutomationSpec_ValidationConditions)
+
+TArray<TPair<FName, EDataValidationResult>> FAutomationSpec_ValidationConditions::PropertyNames
+{
+		{"NoMetaProperty",			EDataValidationResult::Valid},
+		{"NoMetaEditableProperty",	EDataValidationResult::Valid},
+		{"NonEditableProperty",		EDataValidationResult::Valid},
+		{"TransientProperty",			EDataValidationResult::Valid},
+		{"TransientEditableProperty",	EDataValidationResult::Valid},
+		{"EditAnywhereProperty",		EDataValidationResult::Invalid},
+		{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
+};
+
 void FAutomationSpec_ValidationConditions::Define()
 {
 	BeforeEach([this]()

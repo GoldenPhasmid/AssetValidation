@@ -1,11 +1,10 @@
 #include "PropertyValidationSettings.h"
 
-#include "AssetValidationDefines.h"
 #include "PropertyExtensionTypes.h"
 
 UPropertyValidationSettings::UPropertyValidationSettings(const FObjectInitializer& Initializer): Super(Initializer)
 {
-	UE_LOG(LogAssetValidation, Warning, TEXT(""));
+	
 }
 
 void UPropertyValidationSettings::PostInitProperties()

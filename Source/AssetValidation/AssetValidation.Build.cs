@@ -8,6 +8,7 @@ public class AssetValidation : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		OptimizeCode = CodeOptimization.Never;
+		bUseUnity = false;
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
