@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PropertyContainerValidator.h"
+#include "ContainerValidator.h"
 
 #include "StructContainerValidator.generated.h"
 
@@ -9,7 +9,7 @@
  * Other implementations may call 
  */
 UCLASS()
-class UStructContainerValidator: public UPropertyContainerValidator
+class UStructContainerValidator: public UContainerValidator
 {
 	GENERATED_BODY()
 public:

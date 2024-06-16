@@ -1,7 +1,7 @@
 #include "PropertyValidatorSubsystem.h"
 
 #include "PropertyValidationSettings.h"
-#include "ContainerValidators/PropertyContainerValidator.h"
+#include "ContainerValidators/ContainerValidator.h"
 #include "Editor/MetaDataSource.h"
 #include "Editor/ValidationEditorExtensionManager.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
@@ -38,7 +38,7 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		{
 			UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
 
-			auto& MapContainer = Validator->IsA<UPropertyContainerValidator>() ? ContainerValidators : PropertyValidators;
+			auto& MapContainer = Validator->IsA<UContainerValidator>() ? ContainerValidators : PropertyValidators;
 
 			if (auto Descriptor = Validator->GetDescriptor();
 				ensureAlwaysMsgf(Descriptor.IsValid(), TEXT("%s: validator %s has uninitialized descriptor."), *FString(__FUNCTION__), *GetNameSafe(Validator)))

@@ -63,7 +63,7 @@ public:
 private:
 	TVariant<FEmptyVariantState, FProperty*, FEnginePropertyExtension> Variant;
 };
-
+	
 template <>
 FORCEINLINE bool FMetaDataSource::IsType<FProperty>() const
 {

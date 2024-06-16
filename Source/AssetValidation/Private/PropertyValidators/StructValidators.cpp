@@ -11,17 +11,6 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-UStructValidator::UStructValidator()
-{
-	Descriptor = FStructProperty::StaticClass();
-}
-
-UScriptStruct* UStructValidator::GetNativeScriptStruct(FName StructName)
-{
-	static UPackage* CoreUObjectPkg = FindObjectChecked<UPackage>(nullptr, TEXT("/Script/CoreUObject"));
-	return (UScriptStruct*)StaticFindObjectFastInternal(UScriptStruct::StaticClass(), CoreUObjectPkg, StructName, false, RF_NoFlags, EInternalObjectFlags::None);
-}
-
 UStructValidator_SoftObjectPath::UStructValidator_SoftObjectPath()
 {
 	const FString CppType = GetNativeScriptStruct(TEXT("SoftObjectPath"))->GetStructCPPName();
@@ -300,9 +289,12 @@ void UContainerValidator_InstancedStruct::ValidateStructAsContainer(TNonNullPtr<
 		UScriptStruct* ScriptStruct = const_cast<UScriptStruct*>(InstancedStruct->GetScriptStruct());
 		const FString PropertyName = ScriptStruct->GetStructCPPName();
 
+		// create a fake struct property of an underlying type
+		// we only need a fraction functionality of a real property, like struct type, display name and so on
 		TSharedPtr<FStructProperty> InnerProperty{CastFieldChecked<FStructProperty>(FStructProperty::StaticClass()->Construct(StructProperty->GetOwnerUObject(), FName{PropertyName}, RF_NoFlags))};
 		InnerProperty->Struct = ScriptStruct;
 
+		// Ad hoc Validate meta so that struct value is validated as well. Don't rely it being present in MetaData, as it can be Container->InstancedStruct->Struct case. // @todo: make it pretty
 		const bool bHasMetaData = MetaData.HasMetaData(UE::AssetValidation::Validate);
 		MetaData.SetMetaData(UE::AssetValidation::Validate);
 		

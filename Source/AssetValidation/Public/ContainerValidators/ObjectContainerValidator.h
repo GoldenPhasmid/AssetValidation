@@ -1,11 +1,11 @@
 #pragma once
 
-#include "PropertyContainerValidator.h"
+#include "ContainerValidator.h"
 
 #include "ObjectContainerValidator.generated.h"
 
 UCLASS()
-class ASSETVALIDATION_API UObjectContainerValidator: public UPropertyContainerValidator
+class ASSETVALIDATION_API UObjectContainerValidator: public UContainerValidator
 {
 	GENERATED_BODY()
 public:

@@ -1,12 +1,12 @@
 #pragma once
 
-
-#include "PropertyContainerValidator.h"
+#include "CoreMinimal.h"
+#include "ContainerValidator.h"
 
 #include "MapContainerValidator.generated.h"
 
 UCLASS()
-class ASSETVALIDATION_API UMapContainerValidator: public UPropertyContainerValidator
+class ASSETVALIDATION_API UMapContainerValidator: public UContainerValidator
 {
 	GENERATED_BODY()
 public:
