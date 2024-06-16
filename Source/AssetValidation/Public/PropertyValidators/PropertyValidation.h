@@ -15,25 +15,25 @@ namespace UE::AssetValidation
 	 * Property validation meta specifiers
 	 * see Tests/MetaSpecifierTests.cpp/FAutomationTest_MetaSpecifiers::RunTest for more info
 	 */
-	static const FName Validate("Validate");
-	static const FName ValidateKey("ValidateKey");
-	static const FName ValidateValue("ValidateValue");
-	static const FName ValidateRecursive("ValidateRecursive");
-	static const FName FailureMessage("FailureMessage");
-	static const FName DisableEditOnTemplate("DisableEditOnTemplate");
+	ASSETVALIDATION_API static const FName Validate("Validate");
+	ASSETVALIDATION_API static const FName ValidateKey("ValidateKey");
+	ASSETVALIDATION_API static const FName ValidateValue("ValidateValue");
+	ASSETVALIDATION_API static const FName ValidateRecursive("ValidateRecursive");
+	ASSETVALIDATION_API static const FName FailureMessage("FailureMessage");
+	ASSETVALIDATION_API static const FName DisableEditOnTemplate("DisableEditOnTemplate");
 
-	const TStaticArray<FName, 6>& GetMetaKeys();
+	ASSETVALIDATION_API const TStaticArray<FName, 6>& GetMetaKeys();
 }
 
 namespace UE::AssetValidation
 {
 	/** */
-	bool PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property);
+	ASSETVALIDATION_API bool PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property);
 	/**
 	 * checks property meta data to see if any meta specifiers are placed incorrectly
 	 * @return true if all metas can be applied to a property, false otherwise
 	 */
-	bool CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled);
+	ASSETVALIDATION_API bool CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled);
 	/** @return true if "Validate" meta can be applied to given property */
 	bool CanApplyMeta_Validate(const FProperty* Property);
 	/** @return true if "ValidateRecursive" meta can be applied to given property */
@@ -46,19 +46,19 @@ namespace UE::AssetValidation
 	 * @return true if @MetaName can be applied to @Property type
 	 * Includes unwrapping container properties to check whether underlying type can be validated at all
 	 */
-	bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
+	ASSETVALIDATION_API bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
 	/** @return true if property value validation meta can be added to a property */
-	bool CanValidatePropertyValue(const FProperty* Property);
+	ASSETVALIDATION_API bool CanValidatePropertyValue(const FProperty* Property);
 	/** @return true if property can be validated recursively */
-	bool CanValidatePropertyRecursively(const FProperty* Property);
+	ASSETVALIDATION_API bool CanValidatePropertyRecursively(const FProperty* Property);
 	/** @return true if @Property an actor component with owner being a blueprint class */
-	bool IsBlueprintComponentProperty(const FProperty* Property);
+	ASSETVALIDATION_API bool IsBlueprintComponentProperty(const FProperty* Property);
 	/** @return whether property is visible in blueprints */
-	bool IsBlueprintVisibleProperty(const FProperty* Property);
+	ASSETVALIDATION_API bool IsBlueprintVisibleProperty(const FProperty* Property);
 	/** @return property display name set by user */
-	FString GetPropertyDisplayName(const FProperty* Property);
+	ASSETVALIDATION_API FString GetPropertyDisplayName(const FProperty* Property);
 	/** @return property underlying type name */
-	FString GetPropertyTypeName(const FProperty* Property);
+	ASSETVALIDATION_API FString GetPropertyTypeName(const FProperty* Property);
 
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property
@@ -69,19 +69,19 @@ namespace UE::AssetValidation
 	 * @param bAddIfPossible if set to true, update will rely only on property data. Otherwise meta data should be already present to stay
 	 * @return whether meta data is present on property
 	 */
-	bool UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible);
+	ASSETVALIDATION_API bool UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible);
 
 	/** @return true if property is a container property (array, set or map) */
-	bool IsContainerProperty(const FProperty* Property);
+	ASSETVALIDATION_API bool IsContainerProperty(const FProperty* Property);
 	
 	/** @return whether package is a blueprint package */
-	bool IsBlueprintGeneratedPackage(const FString& PackageName);
+	ASSETVALIDATION_API bool IsBlueprintGeneratedPackage(const FString& PackageName);
 }
 
 /**
  * Property Validation Context
  */
-class FPropertyValidationContext: public FNoncopyable
+class ASSETVALIDATION_API FPropertyValidationContext: public FNoncopyable
 {
 public:
 	

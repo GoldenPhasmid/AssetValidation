@@ -11,7 +11,7 @@ namespace UE::AssetValidation
  *  Provides access to meta data map for a single property
  *  Not a part of FPropertyValidationContext, because multiple properties may be validated as part of a single context
  */
-class FMetaDataSource
+class ASSETVALIDATION_API FMetaDataSource
 {
 public:
 	FMetaDataSource() = default;
