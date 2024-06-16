@@ -19,12 +19,23 @@ public:
 	
 protected:
 
+	/** @return script struct generated from a native non UHT compliant cpp struct */
+	static UScriptStruct* GetNativeScriptStruct(FName StructName);
+
+	/** @return typed struct memory */
 	template <typename T>
 	static const T* ConvertStructMemory(const uint8* Memory)
 	{
 		return static_cast<const T*>((const void*)Memory);
 	}
 
+	/** @return script struct cpp name */
+	template <typename T>
+	static FString GetStructCppName()
+	{
+		return TBaseStructure<T>::Get()->GetStructCPPName();
+	}
+	
 	FString CppType = "";
 };
 

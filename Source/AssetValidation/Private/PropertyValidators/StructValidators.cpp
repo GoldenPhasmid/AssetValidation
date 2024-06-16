@@ -9,15 +9,15 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-UScriptStruct* GetNativeScriptStruct(FName StructName)
-{
-	static UPackage* CoreUObjectPkg = FindObjectChecked<UPackage>(nullptr, TEXT("/Script/CoreUObject"));
-	return (UScriptStruct*)StaticFindObjectFastInternal(UScriptStruct::StaticClass(), CoreUObjectPkg, StructName, false, RF_NoFlags, EInternalObjectFlags::None);
-}
-
 UStructValidator::UStructValidator()
 {
 	PropertyClass = FStructProperty::StaticClass();
+}
+
+UScriptStruct* UStructValidator::GetNativeScriptStruct(FName StructName)
+{
+	static UPackage* CoreUObjectPkg = FindObjectChecked<UPackage>(nullptr, TEXT("/Script/CoreUObject"));
+	return (UScriptStruct*)StaticFindObjectFastInternal(UScriptStruct::StaticClass(), CoreUObjectPkg, StructName, false, RF_NoFlags, EInternalObjectFlags::None);
 }
 
 bool UStructValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
@@ -43,7 +43,9 @@ void UStructValidator_SoftObjectPath::ValidateProperty(TNonNullPtr<const uint8> 
 	{
 		if (const FString PackageName = ObjectPath->GetLongPackageName(); !FPackageName::DoesPackageExist(PackageName))
 		{
-			ValidationContext.PropertyFails(Property, LOCTEXT("SoftObjectPath_NotExists", "Soft object path: package doesn't exist on disk."));
+			const FText FailReason = FText::Format(LOCTEXT("SoftObjectPath_NotExists", "Soft object path {0}: package {1} doesn't exist on disk."),
+				FText::FromString(ObjectPath->ToString()), FText::FromString(PackageName));
+			ValidationContext.PropertyFails(Property, FailReason);
 		}
 	}
 }
@@ -66,13 +68,14 @@ void UStructValidator_SoftClassPath::ValidateProperty(TNonNullPtr<const uint8> P
 	else if (UObject*	Class = LoadClass<UObject>(nullptr, *ClassPath->ToString(), nullptr, LOAD_Quiet);
 						Class == nullptr)
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("SoftClassPath_NotExists", "Soft class path: failed to load class."));
+		const FText FailReason = FText::Format(LOCTEXT("SoftClassPath_NotExists", "Soft class path {0}: failed to load class."), FText::FromString(ClassPath->ToString()));
+		ValidationContext.PropertyFails(Property, FailReason);
 	}
 }
 
 UStructValidator_GameplayTag::UStructValidator_GameplayTag()
 {
-	CppType = StaticStruct<FGameplayTag>()->GetStructCPPName();
+	CppType = GetStructCppName<FGameplayTag>();
 }
 
 void ValidateGameplayTag(const FGameplayTag& Tag, const FProperty* Property, FPropertyValidationContext& ValidationContext)
@@ -80,7 +83,7 @@ void ValidateGameplayTag(const FGameplayTag& Tag, const FProperty* Property, FPr
 	const FGameplayTag NewTag = FGameplayTag::RequestGameplayTag(Tag.GetTagName(), false);
 	if (!NewTag.IsValid())
 	{
-		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("GameplayTag_Invalid", "Gameplay tag with name %s no longer exists."), FText::FromName(NewTag.GetTagName())));
+		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("GameplayTag_Invalid", "Gameplay tag with name {0} no longer exists."), FText::FromName(NewTag.GetTagName())));
 	}
 }
 
@@ -101,7 +104,7 @@ void UStructValidator_GameplayTag::ValidateProperty(TNonNullPtr<const uint8> Pro
 
 UStructValidator_GameplayTagContainer::UStructValidator_GameplayTagContainer()
 {
-	CppType = StaticStruct<FGameplayTagContainer>()->GetStructCPPName();
+	CppType = GetStructCppName<FGameplayTagContainer>();
 }
 
 void UStructValidator_GameplayTagContainer::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
@@ -117,7 +120,7 @@ void UStructValidator_GameplayTagContainer::ValidateProperty(TNonNullPtr<const u
 
 UStructValidator_GameplayTagQuery::UStructValidator_GameplayTagQuery()
 {
-	CppType = StaticStruct<FGameplayTagQuery>()->GetStructCPPName();
+	CppType = GetStructCppName<FGameplayTagQuery>();
 }
 
 void UStructValidator_GameplayTagQuery::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
@@ -133,7 +136,7 @@ void UStructValidator_GameplayTagQuery::ValidateProperty(TNonNullPtr<const uint8
 
 UStructValidator_GameplayAttribute::UStructValidator_GameplayAttribute()
 {
-	CppType = StaticStruct<FGameplayAttribute>()->GetStructCPPName();
+	CppType = GetStructCppName<FGameplayAttribute>();
 }
 
 void UStructValidator_GameplayAttribute::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
@@ -141,20 +144,20 @@ void UStructValidator_GameplayAttribute::ValidateProperty(TNonNullPtr<const uint
 	const FGameplayAttribute* GameplayAttribute = ConvertStructMemory<FGameplayAttribute>(PropertyMemory);
 	check(GameplayAttribute);
 
-	// @todo: additional attribute validation in case of property renaming
+	// @todo: additional attribute validation in case property is renamed
 	if (!GameplayAttribute->IsValid())
 	{
 		ValidationContext.PropertyFails(Property, LOCTEXT("GameplayAttribute_Empty", "Gameplay attribute property is not set."));
 	}
 	else if (UClass* AttributeSet = GameplayAttribute->GetAttributeSetClass(); AttributeSet == nullptr)
 	{
-		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("GameplayAttribute_Invalid", "Gameplay attribute with name %s no longer exists."), FText::FromString(GameplayAttribute->AttributeName)));
+		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("GameplayAttribute_Invalid", "Gameplay attribute with name {0} no longer exists."), FText::FromString(GameplayAttribute->AttributeName)));
 	}
 }
 
 UStructValidator_DataTableRowHandle::UStructValidator_DataTableRowHandle()
 {
-	CppType = StaticStruct<FDataTableRowHandle>()->GetStructCPPName();
+	CppType = GetStructCppName<FDataTableRowHandle>();
 }
 
 void UStructValidator_DataTableRowHandle::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
@@ -168,7 +171,8 @@ void UStructValidator_DataTableRowHandle::ValidateProperty(TNonNullPtr<const uin
 	}
 	else if (!DataTableRow->DataTable->GetRowMap().Find(DataTableRow->RowName))
 	{
-		ValidationContext.PropertyFails(Property, FText::Format(LOCTEXT("DataTableRow_Invalid", "Invalid row name %s for data table row property."), FText::FromName(DataTableRow->RowName)));
+		const FText FailReason = FText::Format(LOCTEXT("DataTableRow_Invalid", "Invalid row name {0} for data table row property."), FText::FromName(DataTableRow->RowName));
+		ValidationContext.PropertyFails(Property, FailReason);
 	}
 }
 
@@ -183,6 +187,12 @@ void UStructValidator_DirectoryPath::ValidateProperty(TNonNullPtr<const uint8> P
 	check(DirectoryPath);
 
 	FString RelativePath = DirectoryPath->Path;
+	if (RelativePath.IsEmpty())
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("DirectoryPath_Empty", "Directory path is empty."));
+		return;
+	}
+	
 	if (FPackageName::IsValidLongPackageName(DirectoryPath->Path))
 	{
 		FPackageName::TryConvertGameRelativePackagePathToLocalPath(DirectoryPath->Path, RelativePath);
@@ -194,9 +204,11 @@ void UStructValidator_DirectoryPath::ValidateProperty(TNonNullPtr<const uint8> P
 		FullPath = FPaths::ConvertRelativePathToFull(RelativePath);
 	}
 	
-	if (DirectoryPath->Path.IsEmpty() || !FPaths::DirectoryExists(FullPath))
+	if (!FPaths::DirectoryExists(FullPath))
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("DirectoryPath", "Directory path is invalid."));
+		const FText FailReason =	FText::Format(LOCTEXT("DirectoryPath", "Failed to convert file path {0}: disk path {1} is invalid or doesn't exist."),
+									FText::FromString(RelativePath), FText::FromString(FullPath));
+		ValidationContext.PropertyFails(Property, FailReason);
 	}
 }
 
@@ -210,9 +222,14 @@ void UStructValidator_FilePath::ValidateProperty(TNonNullPtr<const uint8> Proper
 	const FFilePath* FilePath = ConvertStructMemory<FFilePath>(PropertyMemory);
 	check(FilePath);
 	
-	if (FilePath->FilePath.IsEmpty() || !FPackageName::DoesPackageExist(FilePath->FilePath))
+	if (FilePath->FilePath.IsEmpty())
 	{
-		ValidationContext.PropertyFails(Property, LOCTEXT("FilePath", "File path is invalid."));
+		ValidationContext.PropertyFails(Property, LOCTEXT("FilePath_Empty", "File path is invalid."));
+	}
+	else if (!FPackageName::DoesPackageExist(FilePath->FilePath))
+	{
+		const FText FailReason = FText::Format(LOCTEXT("FilePath_NotExists", "File path {0} doesn't exist on disk."), FText::FromString(FilePath->FilePath));
+		ValidationContext.PropertyFails(Property, FailReason);
 	}
 }
 
@@ -235,14 +252,14 @@ void UStructValidator_PrimaryAssetId::ValidateProperty(TNonNullPtr<const uint8> 
 		FAssetData AssetData;
 		if (!AssetManager->GetPrimaryAssetData(*AssetID, AssetData))
 		{
-			ValidationContext.PropertyFails(Property, LOCTEXT("PrimaryAsset_Invalid", "Primary asset property stores invalid value."));
+			ValidationContext.PropertyFails(Property, LOCTEXT("PrimaryAsset_Invalid", "Primary asset property {0} stores invalid value."));
 		}
 	}
 }
 
 UStructValidator_Key::UStructValidator_Key()
 {
-	CppType = StaticStruct<FKey>()->GetStructCPPName();
+	CppType = GetStructCppName<FKey>();
 }
 
 void UStructValidator_Key::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
