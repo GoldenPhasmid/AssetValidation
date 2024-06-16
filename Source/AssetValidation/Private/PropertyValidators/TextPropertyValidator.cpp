@@ -4,7 +4,7 @@
 
 UTextPropertyValidator::UTextPropertyValidator()
 {
-	PropertyClass = FTextProperty::StaticClass();
+	Descriptor = FTextProperty::StaticClass();
 }
 
 void UTextPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const

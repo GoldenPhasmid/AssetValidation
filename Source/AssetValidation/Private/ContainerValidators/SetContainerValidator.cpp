@@ -7,7 +7,7 @@
 
 USetContainerValidator::USetContainerValidator()
 {
-	PropertyClass = FSetProperty::StaticClass();
+	Descriptor = FSetProperty::StaticClass();
 }
 
 bool USetContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const

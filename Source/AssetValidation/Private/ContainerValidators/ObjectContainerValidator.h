@@ -16,6 +16,4 @@ public:
 	virtual bool CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const override;
 	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
 	//~End ContainerPropertyValidator
-
-	FString FindObjectDisplayName(const UObject* Object) const;
 };

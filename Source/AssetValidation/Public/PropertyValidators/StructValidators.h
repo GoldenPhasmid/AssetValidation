@@ -11,12 +11,6 @@ class ASSETVALIDATION_API UStructValidator: public UPropertyValidatorBase
 public:
 	UStructValidator();
 
-	FORCEINLINE FString GetCppType() const { return CppType; }
-
-	//~Begin PropertyValidatorBase
-	virtual bool CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const override;
-	//~End PropertyValidatorBase
-	
 protected:
 
 	/** @return script struct generated from a native non UHT compliant cpp struct */
@@ -35,8 +29,6 @@ protected:
 	{
 		return TBaseStructure<T>::Get()->GetStructCPPName();
 	}
-	
-	FString CppType = "";
 };
 
 UCLASS()

@@ -77,6 +77,9 @@ class UValidationTestObject_SoftObjectPath: public UObject
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	TArray<FSoftObjectPath> EmptyPathArray;
 
+	UPROPERTY(EditAnywhere)
+	TArray<FSoftObjectPath> EmptyPathArray2;
+	
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FSoftObjectPathStruct Struct;
 };

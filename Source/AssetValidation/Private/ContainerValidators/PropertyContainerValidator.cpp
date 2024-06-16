@@ -3,5 +3,5 @@
 bool UPropertyContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
 	// do not require Validate meta in container validation by default
-	return Property && Property->IsA(PropertyClass);
+	return Descriptor.Matches(Property);
 }

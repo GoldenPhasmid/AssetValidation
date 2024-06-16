@@ -7,16 +7,16 @@
 
 UStructContainerValidator::UStructContainerValidator()
 {
-	PropertyClass = FStructProperty::StaticClass();
+	Descriptor = FStructProperty::StaticClass();
 }
 
 bool UStructContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
 	if (Super::CanValidateProperty(Property, MetaData))
 	{
-		// do not require meta = (Validate) to perform validation for struct properties.
-		// Use Validate meta for structs when you want to validate struct "value", not the underlying struct properties
-		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || MetaData.HasMetaData(UE::AssetValidation::Validate);
+		// Use meta = (Validate) to validate struct "value"
+		// Use eta = (ValidateRecursive) to validate underlying struct properties
+		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || MetaData.HasMetaData(UE::AssetValidation::ValidateRecursive);
 	}
 
 	return false;

@@ -104,6 +104,7 @@ bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 UValidationTestObject_SoftObjectPath::UValidationTestObject_SoftObjectPath()
 {
 	EmptyPathArray.AddDefaulted();
+	EmptyPathArray2.AddDefaulted();
 	BadPath			= TEXT("/Temp/Path/That/Doesnt/Exist");
 	Struct.BadPath	= TEXT("/Temp/Path/That/Doesnt/Exist");
 }

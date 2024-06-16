@@ -337,8 +337,10 @@ void FAutomationSpec_ValidateMetas::Define()
 
 		FString CustomMessage = Property->GetMetaData(UE::AssetValidation::FailureMessage);
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
-		TestEqual("NumErrors", Result.Errors.Num(), 1);
-		TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));
+		if (TestEqual("NumErrors", Result.Errors.Num(), 1))
+		{
+			TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));
+		}
 	});
 
 	It("map property with ValidateKey meta", [this]

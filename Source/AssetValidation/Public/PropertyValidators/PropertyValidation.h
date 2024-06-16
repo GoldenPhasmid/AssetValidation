@@ -59,6 +59,8 @@ namespace UE::AssetValidation
 	ASSETVALIDATION_API FString GetPropertyDisplayName(const FProperty* Property);
 	/** @return property underlying type name */
 	ASSETVALIDATION_API FString GetPropertyTypeName(const FProperty* Property);
+	/** @return object display name */
+	ASSETVALIDATION_API FString ResolveObjectDisplayName(const UObject* Object, FPropertyValidationContext& ValidationContext);
 
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property

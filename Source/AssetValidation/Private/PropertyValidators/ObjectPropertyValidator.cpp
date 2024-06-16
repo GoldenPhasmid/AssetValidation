@@ -4,7 +4,7 @@
 
 UObjectPropertyValidator::UObjectPropertyValidator()
 {
-	PropertyClass = FObjectProperty::StaticClass();
+	Descriptor = FObjectProperty::StaticClass();
 }
 
 void UObjectPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
