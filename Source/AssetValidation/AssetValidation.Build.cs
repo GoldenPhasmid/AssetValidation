@@ -50,6 +50,7 @@ public class AssetValidation : ModuleRules
 				"UMG",
 				"UMGEditor", 
 				"AIModule",
+				"StructUtils",
 			}
 		);
 	}

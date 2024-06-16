@@ -2,6 +2,8 @@
 
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
+#include "InstancedStruct.h"
+#include "Editor/MetaDataSource.h"
 #include "Engine/AssetManager.h"
 
 #include "PropertyValidators/PropertyValidation.h"
@@ -268,6 +270,49 @@ void UStructValidator_Key::ValidateProperty(TNonNullPtr<const uint8> PropertyMem
 	check(Key);
 
 	ValidationContext.FailOnCondition(!Key->IsValid(), Property, LOCTEXT("Key", "Key property is not set."));
+}
+
+UStructValidator_InstancedStruct::UStructValidator_InstancedStruct()
+{
+	Descriptor = FPropertyValidatorDescriptor{FStructProperty::StaticClass(), GetStructCppName<FInstancedStruct>()};
+}
+
+void UStructValidator_InstancedStruct::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
+	const FInstancedStruct* InstancedStruct = ConvertStructMemory<FInstancedStruct>(PropertyMemory);
+	check(InstancedStruct);
+	
+	ValidationContext.FailOnCondition(!InstancedStruct->IsValid(), Property, LOCTEXT("InstancedStruct", "Instanced struct property is not set."));
+}
+
+UContainerValidator_InstancedStruct::UContainerValidator_InstancedStruct()
+{
+	Descriptor = FPropertyValidatorDescriptor{FStructProperty::StaticClass(), GetStructCppName<FInstancedStruct>()};
+}
+
+void UContainerValidator_InstancedStruct::ValidateStructAsContainer(TNonNullPtr<const uint8> PropertyMemory, const FStructProperty* StructProperty, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
+	const FInstancedStruct* InstancedStruct = ConvertStructMemory<FInstancedStruct>(PropertyMemory);
+	check(InstancedStruct);
+
+	if (InstancedStruct->IsValid())
+	{
+		UScriptStruct* ScriptStruct = const_cast<UScriptStruct*>(InstancedStruct->GetScriptStruct());
+		const FString PropertyName = ScriptStruct->GetStructCPPName();
+
+		TSharedPtr<FStructProperty> InnerProperty{CastFieldChecked<FStructProperty>(FStructProperty::StaticClass()->Construct(StructProperty->GetOwnerUObject(), FName{PropertyName}, RF_NoFlags))};
+		InnerProperty->Struct = ScriptStruct;
+
+		const bool bHasMetaData = MetaData.HasMetaData(UE::AssetValidation::Validate);
+		MetaData.SetMetaData(UE::AssetValidation::Validate);
+		
+		ValidationContext.IsPropertyValueValid(InstancedStruct->GetMemory(), InnerProperty.Get(), MetaData);
+
+		if (bHasMetaData == false)
+		{
+			MetaData.RemoveMetaData(UE::AssetValidation::Validate);
+		}
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

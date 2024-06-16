@@ -250,3 +250,15 @@ const typename TPropertyType::TCppType* GetPropertyValuePtr(const void* Property
 {
 	return CastFieldChecked<TPropertyType>(Property)->GetPropertyValuePtr(PropertyMemory);
 }
+
+template <typename T>
+static FString GetStructCppName()
+{
+	return TBaseStructure<T>::Get()->GetStructCPPName();
+}
+
+template <typename T>
+static const T* ConvertStructMemory(const uint8* Memory)
+{
+	return static_cast<const T*>((const void*)Memory);
+}

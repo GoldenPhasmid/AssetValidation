@@ -56,6 +56,7 @@ public:
 	
 	FString GetMetaData(const FName& Key) const;
 	bool HasMetaData(const FName& Key) const;
+	void SetMetaData(const FName& Key);
 	void SetMetaData(const FName& Key, const FString& Value);
 	void RemoveMetaData(const FName& Key);
 

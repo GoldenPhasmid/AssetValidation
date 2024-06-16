@@ -1,6 +1,5 @@
-#include "ArrayContainerValidator.h"
+#include "ContainerValidators/ArrayContainerValidator.h"
 
-#include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Editor/MetaDataSource.h"
 #include "PropertyValidators/PropertyValidation.h"

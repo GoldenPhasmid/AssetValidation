@@ -1,4 +1,4 @@
-#include "StructContainerValidator.h"
+#include "ContainerValidators/StructContainerValidator.h"
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
@@ -14,8 +14,8 @@ bool UStructContainerValidator::CanValidateProperty(const FProperty* Property, F
 {
 	if (Super::CanValidateProperty(Property, MetaData))
 	{
-		// Use meta = (Validate) to validate struct "value"
-		// Use eta = (ValidateRecursive) to validate underlying struct properties
+		// Use meta = (Validate) for value validation, e.g. to validate struct "value"
+		// Use meta = (ValidateRecursive) for container validation, e.g. to validate underlying struct properties
 		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || MetaData.HasMetaData(UE::AssetValidation::ValidateRecursive);
 	}
 
@@ -31,7 +31,12 @@ void UStructContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Proper
 	// handles 'struct inside array' type of cases
 	const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(StructProperty);
 	FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, !bContainerProperty};
-	
+
+	ValidateStructAsContainer(PropertyMemory, StructProperty, MetaData, ValidationContext);
+}
+
+void UStructContainerValidator::ValidateStructAsContainer(TNonNullPtr<const uint8> PropertyMemory, const FStructProperty* StructProperty, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
 	// validate underlying struct properties: structure becomes a property container
 	ValidationContext.IsPropertyContainerValid(PropertyMemory, StructProperty->Struct);
 }

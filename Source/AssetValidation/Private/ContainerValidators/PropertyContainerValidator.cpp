@@ -1,4 +1,4 @@
-#include "PropertyContainerValidator.h"
+#include "ContainerValidators/PropertyContainerValidator.h"
 
 bool UPropertyContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
