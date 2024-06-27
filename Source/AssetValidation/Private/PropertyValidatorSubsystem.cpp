@@ -396,31 +396,37 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 	}
 
 	const UObject* SourceObject = ValidationContext.GetSourceObject();
+	const bool bAsset = UE::AssetValidation::IsAssetOrAssetFragment(SourceObject);
+	
+	// assets ignore EditDefaultsOnly and EditInstanceOnly specifics
+	if (bAsset == true)
+	{
+		
+		return true;
+	}
+	
 	constexpr EObjectFlags TemplateFlags = RF_ArchetypeObject | RF_ClassDefaultObject;
 	// don't use IsTemplate, as it checks outer chain as well
 	// we're only interested whether this object is template or not
 	const bool bTemplate = SourceObject->HasAnyFlags(TemplateFlags);
-	
-	// assets ignore EditDefaultsOnly and EditInstanceOnly specifics
-	if (SourceObject->IsAsset() == false)
+		
+	// user can disable property validation on template
+	// @todo: sometimes template related-checks will skip editable properties, because engine is inconsistent with its template flag
+	if (MetaData.IsType<FEnginePropertyExtension>() && MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
 	{
-		// user can disable property validation on template
-		if (MetaData.IsType<FEnginePropertyExtension>() && MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
-		{
-			return false;
-		}
+		return false;
+	}
 		
-		// EditDefaultsOnly property for instance object (not template and not asset)
-		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnInstance) && !bTemplate)
-		{
-			return false;
-		}
+	// EditDefaultsOnly property for instance object (not template and not asset)
+	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnInstance) && !bTemplate)
+	{
+		return false;
+	}
 		
-		// EditInstanceOnly property for template object
-		if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnTemplate) && bTemplate)
-		{
-			return false;
-		}
+	// EditInstanceOnly property for template object
+	if (Property->HasAnyPropertyFlags(EPropertyFlags::CPF_DisableEditOnTemplate) && bTemplate)
+	{
+		return false;
 	}
 
 	return true;

@@ -54,12 +54,14 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 	ResetValidationState();
 
 	FMessageLog DataValidationLog{UE::DataValidation::MessageLogName};
-	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save)
+	// do not open log message for save and script validation use case. Save is handled by ValidateOnSave, Script is handled separately
+	if (InSettings.ValidationUsecase != EDataValidationUsecase::Save && InSettings.ValidationUsecase != EDataValidationUsecase::Script) 
 	{
 		// epic's forgot to open a new page when validation is manual
 		// very useful "DataValidation refactor", thanks
 		DataValidationLog.NewPage(InSettings.MessageLogPageTitle);
 	}
+	DataValidationLog.Message(EMessageSeverity::Info, InSettings.MessageLogPageTitle);
 
 	CurrentSettings = TOptional{InSettings};
 	FValidateAssetsResults PrevResults = OutResults;

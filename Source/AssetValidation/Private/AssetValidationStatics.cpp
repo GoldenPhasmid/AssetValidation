@@ -146,14 +146,11 @@ namespace UE::AssetValidation
 			}
 		}
 		
-		FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
-		DataValidationLog.NewPage(LOCTEXT("ValidatePackages", "Validate Packages"));
-		
 		// Step 5: Validate Source Control Modified Packages
 		{
 			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckContentTask", "Checking content..."));
 			SlowTask.MakeDialog();
-
+			
 			ValidatePackages(ModifiedPackages, DeletedPackages, InSettings, OutResults);
 		}
 
@@ -161,7 +158,7 @@ namespace UE::AssetValidation
 		{
 			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
 			SlowTask.MakeDialog();
-		
+			
 			ValidateProjectSettings(InSettings, OutResults);
 		}
 		
@@ -221,11 +218,9 @@ namespace UE::AssetValidation
 	
 		const UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
 		check(ValidatorSubsystem);
-
-#if 0
-		FLogMessageGatherer Gatherer; // @todo: it is an open question whether it works when multiple data validation logs are opened
-#endif
+		
 		FValidateAssetsSettings Settings = InSettings;
+		Settings.MessageLogPageTitle = LOCTEXT("ValidateProjectSettings", "Validating Project Settings...");
 		ValidatorSubsystem->ValidateAssetsWithSettings(Assets, Settings, OutResults);
 	}
 
@@ -286,9 +281,6 @@ namespace UE::AssetValidation
 		
 		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
 
-		FMessageLog ValidationLog("AssetCheck");
-		ValidationLog.NewPage(LOCTEXT("ValidatePackages", "Validate Packages"));
-
 		TArray<FString> AllPackages{ModifiedPackages};
 		for (const FString& DeletedPackage: DeletedPackages)
 		{
@@ -305,6 +297,8 @@ namespace UE::AssetValidation
 				}
 			}
 		}
+
+		FMessageLog ValidationLog{UE::DataValidation::MessageLogName};
 		
 		TArray<FAssetData> AssetsToValidate;
 		for (const FString& PackageName: AllPackages)
@@ -332,17 +326,14 @@ namespace UE::AssetValidation
 			}
 		}
 		ValidationLog.Flush();
-#if 0
-		FLogMessageGatherer Gatherer; // @todo: it is an open question whether it works when multiple data validation logs are opened
-#endif
-	
+
 		FValidateAssetsSettings Settings = InSettings;
 		Settings.bCaptureAssetLoadLogs = false;		// do not capture asset load logs
 		Settings.bSkipExcludedDirectories = true;	// skip excluded directories
+		Settings.MessageLogPageTitle = LOCTEXT("ValidatePackages", "Validating Packages...");
 		
 		UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
-		FValidateAssetsResults Results;
-		ValidatorSubsystem->ValidateAssetsWithSettings(AssetsToValidate, Settings, Results);
+		ValidatorSubsystem->ValidateAssetsWithSettings(AssetsToValidate, Settings, OutResults);
 	}
 
 	bool ShouldValidatePackage(const FString& PackageName)
