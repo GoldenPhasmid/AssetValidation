@@ -41,7 +41,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	FString SourceFilename;
 	if (!FPackageName::DoesPackageExist(PackageName, &SourceFilename))
 	{
-		if (!PackageName.StartsWith(TEXT("/Script/")))
+		if (!FPackageName::IsScriptPackage(PackageName))
 		{
 			// in memory but not yet saved, and its not a script package
 			UE_LOG(LogAssetValidation, Warning, TEXT("Package %s is in memory but not yet saved (no source file)"), *PackageName);
