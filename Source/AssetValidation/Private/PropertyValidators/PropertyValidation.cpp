@@ -82,6 +82,17 @@ bool UE::AssetValidation::PassesEditCondition(UStruct* Struct, TNonNullPtr<const
 	return false;
 }
 
+bool UE::AssetValidation::IsAssetOrAssetFragment(const UObject* Object)
+{
+	bool bIsAsset = false;
+	for (const UObject* OuterChain = Object; bIsAsset == false && OuterChain != nullptr; OuterChain = OuterChain->GetOuter())
+	{
+		bIsAsset = OuterChain->IsAsset();	
+	}
+	
+	return bIsAsset;
+}
+
 bool UE::AssetValidation::CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled)
 {
 	static TMap<const FProperty*, bool> CheckedProperties;

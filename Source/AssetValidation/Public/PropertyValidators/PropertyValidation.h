@@ -29,6 +29,8 @@ namespace UE::AssetValidation
 {
 	/** */
 	bool PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property);
+	/** @return true if object is an asset or a part of another asset through the outer chain */
+	bool IsAssetOrAssetFragment(const UObject* Object);
 	/**
 	 * checks property meta data to see if any meta specifiers are placed incorrectly
 	 * @return true if all metas can be applied to a property, false otherwise
@@ -196,6 +198,20 @@ public:
 	{
 		check(Objects.Num() > 0);
 		return Objects.Last().Get();
+	}
+
+	template <typename T>
+	FORCEINLINE bool ForEachSourceObject(T&& Pred) const
+	{
+		for (const TWeakObjectPtr<const UObject> SourceObject: Objects)
+		{
+			if (SourceObject.IsValid() && Pred(SourceObject.Get()))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 private:
