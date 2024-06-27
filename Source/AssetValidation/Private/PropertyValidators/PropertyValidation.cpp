@@ -25,6 +25,12 @@ struct TMetaKeysWrapper
 	TStaticArray<FName, NumElements> MetaKeys;
 };
 
+const TStaticArray<FName, 4>& UE::AssetValidation::GetValidationMetaKeys()
+{
+	static TMetaKeysWrapper<4> Wrapper{Validate, ValidateKey, ValidateValue, ValidateRecursive};
+	return Wrapper.MetaKeys;
+}
+
 const TStaticArray<FName, 6>& UE::AssetValidation::GetMetaKeys()
 {
 	static TMetaKeysWrapper<6> Wrapper{Validate, ValidateKey, ValidateValue, ValidateRecursive, FailureMessage, DisableEditOnTemplate};

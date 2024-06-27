@@ -22,6 +22,7 @@ namespace UE::AssetValidation
 	static const FName FailureMessage("FailureMessage");
 	static const FName DisableEditOnTemplate("DisableEditOnTemplate");
 
+	ASSETVALIDATION_API const TStaticArray<FName, 4>& GetValidationMetaKeys();
 	ASSETVALIDATION_API const TStaticArray<FName, 6>& GetMetaKeys();
 }
 
