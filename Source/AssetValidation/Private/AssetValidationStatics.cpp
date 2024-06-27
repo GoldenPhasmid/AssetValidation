@@ -175,6 +175,7 @@ namespace UE::AssetValidation
 				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("SourceControl_PartialFailure", "Content validation fount {0} warnings. Check output log for more details."),
 					FText::AsNumber(OutResults.NumWarnings)));
 			}
+			else
 			{
 				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("SourceControl_Failure", "Content validation found {0} errors, {1} warnings. Check output log for more details."),
 					FText::AsNumber(OutResults.NumInvalid), FText::AsNumber(OutResults.NumWarnings)));
