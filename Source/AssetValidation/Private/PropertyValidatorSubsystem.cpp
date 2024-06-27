@@ -64,7 +64,7 @@ void LazyEmpty(Types&&... Vals)
 void UPropertyValidatorSubsystem::Deinitialize()
 {
 	LazyEmpty(PropertyValidators, ContainerValidators, AllValidators);
-
+	
 	ExtensionManager->Cleanup();
 	ExtensionManager = nullptr;
 	
@@ -437,6 +437,8 @@ const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidato
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindValidator(const TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*>& Container, const FProperty* PropertyType)
 {
+	check(!Container.IsEmpty()); // we don't expect validator container to be empty, so this is probably a bug
+	
 	const FFieldClass* PropertyClass = PropertyType->GetClass();
 	// find suitable validator for property value
 	if (PropertyType->IsA<FStructProperty>())
