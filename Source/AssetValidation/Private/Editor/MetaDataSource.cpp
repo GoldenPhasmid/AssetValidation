@@ -37,7 +37,12 @@ bool FMetaDataSource::HasMetaData(const FName& Key) const
 	checkNoEntry();
 	return false;
 }
-	
+
+void FMetaDataSource::SetMetaData(const FName& Key)
+{
+	SetMetaData(Key, {});
+}
+
 void FMetaDataSource::SetMetaData(const FName& Key, const FString& Value)
 {
 	if (auto PropertyPtr = Variant.TryGet<FProperty*>())

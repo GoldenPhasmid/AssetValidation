@@ -4,7 +4,7 @@
 
 UStringPropertyValidator::UStringPropertyValidator()
 {
-	PropertyClass = FStrProperty::StaticClass();
+	Descriptor = FStrProperty::StaticClass();
 }
 
 void UStringPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const

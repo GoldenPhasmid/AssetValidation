@@ -4,7 +4,7 @@
 
 UNamePropertyValidator::UNamePropertyValidator()
 {
-	PropertyClass = FNameProperty::StaticClass();
+	Descriptor = FNameProperty::StaticClass();
 }
 
 void UNamePropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const

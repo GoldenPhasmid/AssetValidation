@@ -1,13 +1,12 @@
-#include "MapContainerValidator.h"
+#include "ContainerValidators/MapContainerValidator.h"
 
 #include "PropertyValidationSettings.h"
-#include "PropertyValidatorSubsystem.h"
 #include "Editor/MetaDataSource.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UMapContainerValidator::UMapContainerValidator()
 {
-	PropertyClass = FMapProperty::StaticClass();
+	Descriptor = FMapProperty::StaticClass();
 }
 
 bool UMapContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const

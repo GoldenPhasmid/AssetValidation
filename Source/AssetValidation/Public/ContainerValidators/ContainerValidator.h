@@ -3,12 +3,12 @@
 #include "CoreMinimal.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 
-#include "PropertyContainerValidator.generated.h"
+#include "ContainerValidator.generated.h"
 
 class FPropertyValidationContext;
 
 UCLASS(Abstract)
-class ASSETVALIDATION_API UPropertyContainerValidator: public UPropertyValidatorBase
+class ASSETVALIDATION_API UContainerValidator: public UPropertyValidatorBase
 {
 	GENERATED_BODY()
 public:

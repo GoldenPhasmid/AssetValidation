@@ -8,6 +8,12 @@ public class AssetValidation : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		OptimizeCode = CodeOptimization.Never;
+		bUseUnity = false;
+		
+		PrivateDefinitions.AddRange(new string[]
+		{
+            "WITH_ASSET_VALIDATION_TESTS=1"
+		});
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -44,6 +50,7 @@ public class AssetValidation : ModuleRules
 				"UMG",
 				"UMGEditor", 
 				"AIModule",
+				"StructUtils",
 			}
 		);
 	}

@@ -11,7 +11,7 @@ namespace UE::AssetValidation
  *  Provides access to meta data map for a single property
  *  Not a part of FPropertyValidationContext, because multiple properties may be validated as part of a single context
  */
-class FMetaDataSource
+class ASSETVALIDATION_API FMetaDataSource
 {
 public:
 	FMetaDataSource() = default;
@@ -56,13 +56,14 @@ public:
 	
 	FString GetMetaData(const FName& Key) const;
 	bool HasMetaData(const FName& Key) const;
+	void SetMetaData(const FName& Key);
 	void SetMetaData(const FName& Key, const FString& Value);
 	void RemoveMetaData(const FName& Key);
 
 private:
 	TVariant<FEmptyVariantState, FProperty*, FEnginePropertyExtension> Variant;
 };
-
+	
 template <>
 FORCEINLINE bool FMetaDataSource::IsType<FProperty>() const
 {

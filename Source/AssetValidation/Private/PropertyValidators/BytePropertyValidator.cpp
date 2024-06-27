@@ -4,7 +4,7 @@
 
 UBytePropertyValidator::UBytePropertyValidator()
 {
-	PropertyClass = FByteProperty::StaticClass();
+	Descriptor = FPropertyValidatorDescriptor{FByteProperty::StaticClass()};
 }
 
 bool UBytePropertyValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const

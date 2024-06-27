@@ -2,6 +2,8 @@
 
 #include "AssetValidationDefines.h"
 #include "PropertyValidatorSubsystem.h"
+#include "BehaviorTree/BTNode.h"
+#include "Components/Widget.h"
 #include "EditCondition/EditConditionContext.h"
 #include "EditCondition/EditConditionParser.h"
 #include "Editor/MetaDataSource.h"
@@ -287,6 +289,29 @@ FString UE::AssetValidation::GetPropertyTypeName(const FProperty* Property)
 	}
 
 	return Property->GetCPPType();
+}
+
+FString UE::AssetValidation::ResolveObjectDisplayName(const UObject* Object, FPropertyValidationContext& ValidationContext)
+{
+	if (const UBTNode* BTNode = Cast<UBTNode>(Object))
+	{
+		return BTNode->NodeName.IsEmpty() ? Object->GetClass()->GetName() : BTNode->NodeName;
+	}
+	else if (const AActor* Actor = Cast<AActor>(Object))
+	{
+		return Actor->GetActorNameOrLabel();
+	}
+	else if (const UWidget* Widget = Cast<UWidget>(Object))
+	{
+		if (FString DisplayLabel = Widget->GetDisplayLabel(); !DisplayLabel.IsEmpty())
+		{
+			return DisplayLabel;
+		}
+		
+		return Widget->GetName();
+	}
+
+	return Object->GetName();
 }
 
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)

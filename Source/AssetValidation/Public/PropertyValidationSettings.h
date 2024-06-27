@@ -1,11 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/DeveloperSettings.h"
 
 #include "PropertyValidationSettings.generated.h"
 
-class UStruct;
-class UUserDefinedStruct;
 struct FPropertyExtensionConfig;
 struct FEnginePropertyExtension;
 struct FEngineClassExtension;

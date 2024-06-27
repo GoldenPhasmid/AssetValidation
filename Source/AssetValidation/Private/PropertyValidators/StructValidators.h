@@ -1,32 +1,10 @@
 #pragma once
 
-#include "PropertyValidatorBase.h"
+#include "PropertyValidators/PropertyValidatorBase.h"
+#include "PropertyValidators/StructValidator.h"
+#include "ContainerValidators/StructContainerValidator.h"
 
 #include "StructValidators.generated.h"
-
-UCLASS(Abstract)
-class ASSETVALIDATION_API UStructValidator: public UPropertyValidatorBase
-{
-	GENERATED_BODY()
-public:
-	UStructValidator();
-
-	FORCEINLINE FString GetCppType() const { return CppType; }
-
-	//~Begin PropertyValidatorBase
-	virtual bool CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const override;
-	//~End PropertyValidatorBase
-	
-protected:
-
-	template <typename T>
-	static const T* ConvertStructMemory(const uint8* Memory)
-	{
-		return static_cast<const T*>((const void*)Memory);
-	}
-
-	FString CppType = "";
-};
 
 UCLASS()
 class ASSETVALIDATION_API UStructValidator_SoftObjectPath: public UStructValidator
@@ -159,4 +137,29 @@ public:
 	//~Begin PropertyValidatorBase
 	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
 	//~End PropertyValidatorBase
+};
+
+UCLASS()
+class ASSETVALIDATION_API UStructValidator_InstancedStruct: public UStructValidator
+{
+	GENERATED_BODY()
+public:
+	UStructValidator_InstancedStruct();
+
+	//~Begin PropertyValidatorBase
+	virtual void ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
+	//~End PropertyValidatorBase
+};
+
+UCLASS(Config = Editor)
+class ASSETVALIDATION_API UContainerValidator_InstancedStruct: public UStructContainerValidator
+{
+	GENERATED_BODY()
+public:
+	UContainerValidator_InstancedStruct();
+
+	virtual void ValidateStructAsContainer(TNonNullPtr<const uint8> PropertyMemory, const FStructProperty* StructProperty, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const override;
+
+	UPROPERTY(Config)
+	bool bAlwaysValidateInnerPropertyValue = true;
 };

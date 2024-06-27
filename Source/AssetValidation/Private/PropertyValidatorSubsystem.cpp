@@ -1,16 +1,11 @@
 #include "PropertyValidatorSubsystem.h"
 
 #include "PropertyValidationSettings.h"
-#include "ContainerValidators/PropertyContainerValidator.h"
+#include "ContainerValidators/ContainerValidator.h"
 #include "Editor/MetaDataSource.h"
 #include "Editor/ValidationEditorExtensionManager.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
-#include "PropertyValidators/StructValidators.h"
-
-#ifndef WITH_ASSET_VALIDATION_TESTS
-#define WITH_ASSET_VALIDATION_TESTS 1
-#endif
 
 UPropertyValidatorSubsystem* UPropertyValidatorSubsystem::Get()
 {
@@ -42,18 +37,16 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		if (!ValidatorClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
 		{
 			UPropertyValidatorBase* Validator = NewObject<UPropertyValidatorBase>(GetTransientPackage(), ValidatorClass);
-			if (Validator->IsA<UPropertyContainerValidator>())
+
+			auto& MapContainer = Validator->IsA<UContainerValidator>() ? ContainerValidators : PropertyValidators;
+
+			if (auto Descriptor = Validator->GetDescriptor();
+				ensureAlwaysMsgf(Descriptor.IsValid(), TEXT("%s: validator %s has uninitialized descriptor."), *FString(__FUNCTION__), *GetNameSafe(Validator)))
 			{
-				ContainerValidators.Add(Validator->GetPropertyClass(), Validator);
+				MapContainer.Add(Descriptor, Validator);
 			}
-			else if (Validator->IsA<UStructValidator>())
-			{
-				StructValidators.Add(CastChecked<UStructValidator>(Validator)->GetCppType(), Validator);
-			}
-			else
-			{
-				PropertyValidators.Add(Validator->GetPropertyClass(), Validator);
-			}
+			
+
 			AllValidators.Add(Validator);
 		}
 	}
@@ -70,7 +63,7 @@ void LazyEmpty(Types&&... Vals)
 
 void UPropertyValidatorSubsystem::Deinitialize()
 {
-	LazyEmpty(PropertyValidators, ContainerValidators, StructValidators, AllValidators);
+	LazyEmpty(PropertyValidators, ContainerValidators, AllValidators);
 
 	ExtensionManager->Cleanup();
 	ExtensionManager = nullptr;
@@ -434,52 +427,37 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindPropertyValidator(const FProperty* PropertyType) const
 {
-	const UPropertyValidatorBase* PropertyValidator = nullptr;
-	// find suitable validator for property value
-	if (PropertyType->IsA<FStructProperty>())
-	{
-		const FString Key = PropertyType->GetCPPType();
-		if (auto ValidatorPtr = StructValidators.Find(Key))
-		{
-			PropertyValidator = *ValidatorPtr;
-		}
-	}
-	else
-	{
-		const FFieldClass* PropertyClass = PropertyType->GetClass();
-		while (PropertyClass && !PropertyClass->HasAnyClassFlags(CLASS_Abstract))
-		{
-			if (auto ValidatorPtr = PropertyValidators.Find(PropertyClass))
-			{
-				PropertyValidator = *ValidatorPtr;
-				break;
-			}
-			else
-			{
-				PropertyClass = PropertyClass->GetSuperClass();
-			}
-		}
-	}
-
-	return PropertyValidator;
+	return FindValidator(PropertyValidators, PropertyType);
 }
 
 const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindContainerValidator(const FProperty* PropertyType) const
 {
+	return FindValidator(ContainerValidators, PropertyType);
+}
+
+const UPropertyValidatorBase* UPropertyValidatorSubsystem::FindValidator(const TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*>& Container, const FProperty* PropertyType)
+{
 	const FFieldClass* PropertyClass = PropertyType->GetClass();
-	while (PropertyClass && !PropertyClass->HasAnyClassFlags(CLASS_Abstract))
+	// find suitable validator for property value
+	if (PropertyType->IsA<FStructProperty>())
 	{
-		if (auto ValidatorPtr = ContainerValidators.Find(PropertyClass))
+		FPropertyValidatorDescriptor Descriptor{PropertyType->GetClass(), FName{PropertyType->GetCPPType()}};
+		if (auto ValidatorPtr = Container.Find(Descriptor))
 		{
 			return *ValidatorPtr;
 		}
-		else
+	}
+
+	while (PropertyClass && !PropertyClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		FPropertyValidatorDescriptor Descriptor{PropertyClass};
+		if (auto ValidatorPtr = Container.Find(Descriptor))
 		{
-			PropertyClass = PropertyClass->GetSuperClass();
+			return *ValidatorPtr;
 		}
+		
+		PropertyClass = PropertyClass->GetSuperClass();
 	}
 
 	return nullptr;
 }
-
-#undef WITH_ASSET_VALIDATION_TESTS

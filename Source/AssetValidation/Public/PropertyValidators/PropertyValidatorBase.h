@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include "CoreMinimal.h"
-#include "Editor/BlueprintVariableCustomization.h"
 #include "Templates/NonNullPointer.h"
 #include "UObject/Object.h"
 
@@ -14,6 +12,46 @@ namespace UE::AssetValidation
 	class FMetaDataSource;
 }
 using FMetaDataSource = UE::AssetValidation::FMetaDataSource;
+
+/**
+ * Property validator descriptor
+ */
+USTRUCT()
+struct ASSETVALIDATION_API FPropertyValidatorDescriptor
+{
+	GENERATED_BODY()
+
+	FPropertyValidatorDescriptor() = default;
+	FPropertyValidatorDescriptor(const FFieldClass* InPropertyClass, FName InCppType = NAME_None)
+		: PropertyClass(InPropertyClass)
+		, CppType(InCppType)
+	{}
+	FPropertyValidatorDescriptor(const FFieldClass* InPropertyClass, FString InCppType)
+		: PropertyClass(InPropertyClass)
+		, CppType(InCppType)
+	{}
+
+	FORCEINLINE bool IsValid() const { return PropertyClass != nullptr; }
+	FORCEINLINE FName GetCppType() const { return CppType; }
+	FORCEINLINE const FFieldClass* GetPropertyClass() const { return PropertyClass; }
+
+	bool Matches(const FProperty* Property) const;
+
+private:
+
+	const FFieldClass* PropertyClass = nullptr;
+	FName CppType = NAME_None;
+};
+
+FORCEINLINE uint32 GetTypeHash(const FPropertyValidatorDescriptor& Descriptor)
+{
+	return HashCombine(GetTypeHash(Descriptor.GetCppType()), PointerHash(Descriptor.GetPropertyClass()));
+}
+
+FORCEINLINE bool operator==(const FPropertyValidatorDescriptor& Lhs, const FPropertyValidatorDescriptor& Rhs)
+{
+	return Lhs.GetPropertyClass() == Rhs.GetPropertyClass() && Lhs.GetCppType() == Rhs.GetCppType();
+}
 
 /**
  * PropertyValidatorBase verifies that a property value meets non-empty requirements
@@ -28,7 +66,7 @@ class ASSETVALIDATION_API UPropertyValidatorBase: public UObject
 public:
 
 	/** @return property class that this validator operates on */
-	FFieldClass* GetPropertyClass() const;
+	FORCEINLINE FPropertyValidatorDescriptor GetDescriptor() const { return Descriptor; }
 	
 	/**
 	 * @brief Determines whether given property can be validated by this validator
@@ -50,5 +88,5 @@ public:
 
 protected:
 
-	FFieldClass* PropertyClass = nullptr;
+	FPropertyValidatorDescriptor Descriptor;
 };
