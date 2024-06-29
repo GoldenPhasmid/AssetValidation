@@ -283,16 +283,16 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 
 void UPropertyValidatorSubsystem::ValidatePropertyWithContext(TNonNullPtr<const uint8> ContainerMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
 {
-	// check whether we should validate property at all
-	if (!ShouldValidateProperty(Property, MetaData, ValidationContext))
-	{
-		return;
-	}
-
 	if (UPropertyValidationSettings::Get()->bReportIncorrectMetaUsage)
 	{
 		// check whether metadata is valid
 		UE::AssetValidation::CheckPropertyMetaData(Property, MetaData, true);
+	}
+	
+	// check whether we should validate property at all
+	if (!ShouldValidateProperty(Property, MetaData, ValidationContext))
+	{
+		return;
 	}
 	
 	UStruct* Struct = Property->GetOwnerStruct();
@@ -364,7 +364,7 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 		return false;
 	}
 	
-	bool bTransient = MetaData.IsType<FEnginePropertyExtension>() || Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient);
+	bool bTransient = MetaData.IsType<FProperty>() && Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Transient);
 	if (bTransient)
 	{
 		// do not validate transient properties, unless it is property extension
@@ -394,7 +394,6 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 	// assets ignore EditDefaultsOnly and EditInstanceOnly specifics
 	if (bAsset == true)
 	{
-		
 		return true;
 	}
 	
