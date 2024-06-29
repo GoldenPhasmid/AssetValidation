@@ -21,9 +21,19 @@ public:
 	FORCEINLINE static const UPropertyValidationSettings* Get()		{ return GetDefault<UPropertyValidationSettings>(); }
 	FORCEINLINE static UPropertyValidationSettings* GetMutable()	{ return GetMutableDefault<UPropertyValidationSettings>(); }
 	
+	static const TArray<FEnginePropertyExtension>& GetPropertyExtensions(const UStruct* Struct);
+
+	/** package traits query */
+	static bool ShouldSkipPackage(const UPackage* Package);
+	static bool ShouldIgnorePackage(const UPackage* Package);
+	static bool ShouldIteratePackage(const UPackage* Package);
+	static FSimpleMulticastDelegate OnPackageTraitsChanged;
+
+	//~Begin Object interface
 	virtual void PostInitProperties() override;
 	virtual void PostReloadConfig(FProperty* PropertyThatWasLoaded) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	//~End Object interface
 
 	/**
 	 * List of packages asset property validator will ignore
@@ -95,8 +105,6 @@ public:
 
 	UPROPERTY(Config)
 	TArray<FPropertyExtensionConfig> PropertyExtensions;
-	
-	static const TArray<FEnginePropertyExtension>& GetExtensions(const UStruct* Struct);
 
 protected:
 

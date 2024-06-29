@@ -141,6 +141,35 @@ protected:
 	TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*> ContainerValidators;
 	UPROPERTY(Transient)
 	TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*> PropertyValidators;
+	
+	struct alignas(int32) FPackageTraits
+	{
+	private:
+		enum EPackageTraits: uint8
+		{
+			NotSet = 0,
+			No,
+			Yes,
+		};
+		
+		EPackageTraits bShouldIgnore	= EPackageTraits::NotSet;
+		EPackageTraits bShouldSkip		= EPackageTraits::NotSet;
+		EPackageTraits bShouldIterate	= EPackageTraits::NotSet;
+	public:
+		
+		bool IgnorePackageSet() const	{ return bShouldIgnore != NotSet; }
+		bool ShouldIgnore() const	{ return bShouldIgnore == Yes; }
+		void SetShouldIgnore(bool InShouldIgnore) { bShouldIgnore = InShouldIgnore ? Yes : No; }
+		
+		bool SkipPackageSet() const		{ return bShouldSkip != NotSet; }
+		bool ShouldSkip() const		{ return bShouldSkip == Yes; }
+		void SetShouldSkip(bool InShouldSkip) { bShouldSkip = InShouldSkip ? Yes : No; }
+
+		bool IteratePackageSet() const	{ return bShouldIterate != NotSet; }
+		bool ShouldIterate() const { return bShouldIterate == Yes; }
+		void SetShouldIterate(bool InShouldIterate) { bShouldIterate = InShouldIterate ? Yes : No; }
+	};
+	mutable TMap<FObjectKey, FPackageTraits> CachedPackageTraits;
 
 	/** List of all active validators */
 	UPROPERTY(Transient)

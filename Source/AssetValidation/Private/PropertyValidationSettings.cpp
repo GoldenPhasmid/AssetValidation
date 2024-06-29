@@ -1,6 +1,7 @@
 #include "PropertyValidationSettings.h"
 
 #include "PropertyExtensionTypes.h"
+#include "PropertyValidators/PropertyValidation.h"
 
 UPropertyValidationSettings::UPropertyValidationSettings(const FObjectInitializer& Initializer): Super(Initializer)
 {
@@ -24,13 +25,68 @@ void UPropertyValidationSettings::PostReloadConfig(FProperty* PropertyThatWasLoa
 	}
 }
 
-const TArray<FEnginePropertyExtension>& UPropertyValidationSettings::GetExtensions(const UStruct* Struct)
+const TArray<FEnginePropertyExtension>& UPropertyValidationSettings::GetPropertyExtensions(const UStruct* Struct)
 {
 	auto Settings = Get();
 	Settings->UpdatePropertyExtensionMap();
 	
 	const TArray<FEnginePropertyExtension> EmptyArray;
 	return Settings->PropertyExtensionMap.FindOrAdd(FSoftObjectPath{Struct});
+}
+
+bool UPropertyValidationSettings::ShouldSkipPackage(const UPackage* Package)
+{
+	check(Package);
+	return Get()->bSkipBlueprintGeneratedClasses && UE::AssetValidation::IsBlueprintGeneratedPackage(Package->GetName());
+}
+
+bool UPropertyValidationSettings::ShouldIgnorePackage(const UPackage* Package)
+{
+	check(Package);
+	const FString PackageName = Package->GetName();
+	// always allow validation for project package
+	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
+	if (PackageName.StartsWith(ProjectPackage))
+	{
+		return false;
+	}
+	
+#if WITH_ASSET_VALIDATION_TESTS
+	if (PackageName.StartsWith("/Script/AssetValidation") || PackageName.StartsWith("/AssetValidation"))
+	{
+		return false;
+	}
+#endif
+	
+	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
+	return Get()->PackagesToIgnore.ContainsByPredicate([PackageName](const FString& ModulePath)
+	{
+		return PackageName.StartsWith(ModulePath);
+	});
+}
+
+bool UPropertyValidationSettings::ShouldIteratePackage(const UPackage* Package)
+{
+	check(Package);
+	const FString PackageName = Package->GetName();
+	// allow validation for project package
+	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
+	if (PackageName.StartsWith(ProjectPackage))
+	{
+		return true;
+	}
+	
+#if WITH_ASSET_VALIDATION_TESTS
+	if (PackageName.StartsWith("/Script/AssetValidation") || PackageName.StartsWith("/AssetValidation"))
+	{
+		return true;
+	}
+#endif
+	
+	return Get()->PackagesToIterate.ContainsByPredicate([PackageName](const FString& ModulePath)
+	{
+		return PackageName.StartsWith(ModulePath);
+	});
 }
 
 void UPropertyValidationSettings::LoadConfig()
@@ -160,9 +216,15 @@ void UPropertyValidationSettings::PostEditChangeProperty(FPropertyChangedEvent& 
 		}
 	}
 
-	FName PropertyName = PropertyChangedEvent.GetMemberPropertyName();
+	const FName PropertyName = PropertyChangedEvent.GetMemberPropertyName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(ThisClass, ClassExtensions) || PropertyName == GET_MEMBER_NAME_CHECKED(ThisClass, StructExtensions))
 	{
 		StoreConfig();
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(ThisClass, PackagesToIgnore) ||
+			PropertyName == GET_MEMBER_NAME_CHECKED(ThisClass, PackagesToIterate) ||
+			PropertyName == GET_MEMBER_NAME_CHECKED(ThisClass, bSkipBlueprintGeneratedClasses))
+	{
+		OnPackageTraitsChanged.Broadcast();
 	}
 }

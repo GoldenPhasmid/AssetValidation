@@ -53,6 +53,11 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 
 	ExtensionManager = NewObject<UValidationEditorExtensionManager>(this);
 	ExtensionManager->Initialize();
+
+	UPropertyValidationSettings::OnPackageTraitsChanged.AddWeakLambda(this, [this]
+	{
+		CachedPackageTraits.Empty();
+	});
 }
 
 template <typename ...Types>
@@ -67,6 +72,8 @@ void UPropertyValidatorSubsystem::Deinitialize()
 	
 	ExtensionManager->Cleanup();
 	ExtensionManager = nullptr;
+	
+	UPropertyValidationSettings::OnPackageTraitsChanged.RemoveAll(this);
 	
 	Super::Deinitialize();
 }
@@ -165,58 +172,35 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStructProperty(co
 
 bool UPropertyValidatorSubsystem::ShouldIgnorePackage(const UPackage* Package) const
 {
-	const FString PackageName = Package->GetName();
-
-	// allow validation for project package
-	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
-	if (PackageName.StartsWith(ProjectPackage))
+	FPackageTraits& PackageTraits = CachedPackageTraits.FindOrAdd(FObjectKey{Package});
+	if (!PackageTraits.IgnorePackageSet())
 	{
-		return false;
+		PackageTraits.SetShouldIgnore(UPropertyValidationSettings::ShouldIgnorePackage(Package));
 	}
-	
-#if WITH_ASSET_VALIDATION_TESTS
-	if (PackageName.StartsWith("/Script/AssetValidation") || PackageName.StartsWith("/AssetValidation"))
-	{
-		return false;
-	}
-#endif
 
-	auto Settings = UPropertyValidationSettings::Get();
-	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
-	return Settings->PackagesToIgnore.ContainsByPredicate([PackageName](const FString& ModulePath)
-	{
-		return PackageName.StartsWith(ModulePath);
-	});
+	return PackageTraits.ShouldIgnore();
 }
 
 bool UPropertyValidatorSubsystem::ShouldIteratePackageProperties(const UPackage* Package) const
 {
-	const FString PackageName = Package->GetName();
-	// allow validation for project package
-	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
-	if (PackageName.StartsWith(ProjectPackage))
+	FPackageTraits& PackageTraits = CachedPackageTraits.FindOrAdd(FObjectKey{Package});
+	if (!PackageTraits.IteratePackageSet())
 	{
-		return true;
+		PackageTraits.SetShouldIterate(UPropertyValidationSettings::ShouldIteratePackage(Package));
 	}
-	
-#if WITH_ASSET_VALIDATION_TESTS
-	if (PackageName.StartsWith("/Script/AssetValidation") || PackageName.StartsWith("/AssetValidation"))
-	{
-		return true;
-	}
-#endif
-	
-	auto Settings = UPropertyValidationSettings::Get();
-	return Settings->PackagesToIterate.ContainsByPredicate([PackageName](const FString& ModulePath)
-	{
-		return PackageName.StartsWith(ModulePath);
-	});
+
+	return PackageTraits.ShouldIterate();
 }
 
 bool UPropertyValidatorSubsystem::ShouldSkipPackage(const UPackage* Package) const
 {
-	auto Settings = UPropertyValidationSettings::Get();
-	return Settings->bSkipBlueprintGeneratedClasses && UE::AssetValidation::IsBlueprintGeneratedPackage(Package->GetName());
+	FPackageTraits& PackageTraits = CachedPackageTraits.FindOrAdd(FObjectKey{Package});
+	if (!PackageTraits.SkipPackageSet())
+	{
+		PackageTraits.SetShouldSkip(UPropertyValidationSettings::ShouldSkipPackage(Package));
+	}
+	
+	return PackageTraits.ShouldSkip();
 }
 
 bool UPropertyValidatorSubsystem::HasValidatorForPropertyType(const FProperty* PropertyType) const
@@ -267,7 +251,7 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 		}
 
 		// query property extensions for current Struct and run validation on them
-		for (const FEnginePropertyExtension& Extension: UPropertyValidationSettings::GetExtensions(Struct))
+		for (const FEnginePropertyExtension& Extension: UPropertyValidationSettings::GetPropertyExtensions(Struct))
 		{
 			UE::AssetValidation::FMetaDataSource MetaData{Extension};
 			ValidatePropertyWithContext(ContainerMemory, Extension.GetProperty(), MetaData, ValidationContext);
