@@ -104,6 +104,7 @@ bool FAutomationTest_StructValidation::RunTest(const FString& Parameters)
 UValidationTestObject_SoftObjectPath::UValidationTestObject_SoftObjectPath()
 {
 	EmptyPathArray.AddDefaulted();
+	EmptyPathArray2.AddDefaulted();
 	BadPath			= TEXT("/Temp/Path/That/Doesnt/Exist");
 	Struct.BadPath	= TEXT("/Temp/Path/That/Doesnt/Exist");
 }
@@ -242,5 +243,25 @@ IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_PrimaryAssetId, FStructV
 bool FAutomationTest_PrimaryAssetId::RunTest(const FString& Parameters)
 {
 	// PrimaryAssetID struct value should be validated
-	return ValidateObject<UValidationTestObject_PrimaryAssetId>(5);
+	return ValidateObject<UValidationTestObject_PrimaryAssetId>(6);
+}
+
+UValidationTestObject_InstancedStruct::UValidationTestObject_InstancedStruct()
+{
+	EmptyStructArray.AddDefaulted();
+	CompositeArray.AddDefaulted();
+
+	InvalidStruct = FInstancedStruct::Make<FGameplayTag>(CreateInvalidTag());
+	InvalidStructArray.Add(InvalidStruct);
+	InvalidComposite.InstancedStruct = InvalidStruct;
+	InvalidCompositeArray.Add(InvalidComposite);
+}
+
+IMPLEMENT_CUSTOM_SIMPLE_AUTOMATION_TEST(FAutomationTest_InstancedStruct, FStructValidatorAutomationTest,
+										"PropertyValidation.StructValidators.InstancedStruct", AutomationFlags)
+
+bool FAutomationTest_InstancedStruct::RunTest(const FString& Parameters)
+{
+	// PrimaryAssetID struct value should be validated
+	return ValidateObject<UValidationTestObject_InstancedStruct>(8);
 }

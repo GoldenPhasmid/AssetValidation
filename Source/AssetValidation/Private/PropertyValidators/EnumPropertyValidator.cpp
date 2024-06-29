@@ -4,7 +4,7 @@
 
 UEnumPropertyValidator::UEnumPropertyValidator()
 {
-	PropertyClass = FEnumProperty::StaticClass();
+	Descriptor = FEnumProperty::StaticClass();
 }
 
 void UEnumPropertyValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const

@@ -1,4 +1,4 @@
-#include "SetContainerValidator.h"
+#include "ContainerValidators/SetContainerValidator.h"
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
@@ -7,7 +7,7 @@
 
 USetContainerValidator::USetContainerValidator()
 {
-	PropertyClass = FSetProperty::StaticClass();
+	Descriptor = FSetProperty::StaticClass();
 }
 
 bool USetContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const

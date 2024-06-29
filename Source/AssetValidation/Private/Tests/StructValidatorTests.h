@@ -2,10 +2,11 @@
 
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
+#include "InstancedStruct.h"
 
 #include "StructValidatorTests.generated.h"
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FValidationStruct
 {
 	GENERATED_BODY()
@@ -49,7 +50,7 @@ class UValidationTestObject_StructValidation: public UObject
 	TMap<FValidationStruct, FValidationStruct> StructMap;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FSoftObjectPathStruct
 {
 	GENERATED_BODY()
@@ -77,11 +78,14 @@ class UValidationTestObject_SoftObjectPath: public UObject
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	TArray<FSoftObjectPath> EmptyPathArray;
 
+	UPROPERTY(EditAnywhere)
+	TArray<FSoftObjectPath> EmptyPathArray2;
+	
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	FSoftObjectPathStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FSoftClassPathStruct
 {
 	GENERATED_BODY()
@@ -113,8 +117,7 @@ class UValidationTestObject_SoftClassPath: public UObject
 	FSoftClassPathStruct Struct;
 };
 
-
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FGameplayTagStruct
 {
 	GENERATED_BODY()
@@ -146,7 +149,7 @@ class UValidationTestObject_GameplayTag: public UObject
 	FGameplayTagStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FGameplayTagContainerStruct
 {
 	GENERATED_BODY()
@@ -172,7 +175,7 @@ class UValidationTestObject_GameplayTagContainer: public UObject
 	FGameplayTagContainerStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FGameplayTagQueryStruct
 {
 	GENERATED_BODY()
@@ -198,7 +201,7 @@ class UValidationTestObject_GameplayTagQuery: public UObject
 	FGameplayTagQueryStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FGameplayAttributeStruct
 {
 	GENERATED_BODY()
@@ -227,7 +230,7 @@ class UValidationTestObject_GameplayAttribute: public UObject
 	FGameplayAttributeStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FDataTableRowStruct
 {
 	GENERATED_BODY()
@@ -256,7 +259,7 @@ class UValidationTestObject_DataTableRow: public UObject
 	FDataTableRowStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FDirectoryPathStruct
 {
 	GENERATED_BODY()
@@ -293,7 +296,7 @@ class UValidationTestObject_DirectoryPath: public UObject
 	FDirectoryPathStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FFilePathStruct
 {
 	GENERATED_BODY()
@@ -331,7 +334,7 @@ class UValidationTestObject_FilePath: public UObject
 	FFilePathStruct Struct;
 };
 
-USTRUCT()
+USTRUCT(meta = (Hidden))
 struct FPrimaryAssetIdStruct
 {
 	GENERATED_BODY()
@@ -348,6 +351,8 @@ class UValidationTestObject_PrimaryAssetId: public UObject
 	UValidationTestObject_PrimaryAssetId()
 	{
 		InvalidID = FPrimaryAssetId{TEXT("UnknownType"), TEXT("UnknownName")};
+		InvalidIDArray.Add(InvalidID);
+		
 		EmptyIDArray.AddDefaulted();
 		StructArray.AddDefaulted();
 	}
@@ -362,8 +367,52 @@ class UValidationTestObject_PrimaryAssetId: public UObject
 	TArray<FPrimaryAssetId> EmptyIDArray;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FPrimaryAssetId> InvalidIDArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
 	FPrimaryAssetIdStruct Struct;
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
 	TArray<FPrimaryAssetIdStruct> StructArray;
+};
+
+USTRUCT(meta = (Hidden))
+struct FCompositeInstancedStruct
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FInstancedStruct InstancedStruct;
+};
+
+UCLASS(HideDropdown)
+class UValidationTestObject_InstancedStruct: public UObject
+{
+	GENERATED_BODY()
+
+	UValidationTestObject_InstancedStruct();
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FInstancedStruct EmptyStruct;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FInstancedStruct> EmptyStructArray;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	FCompositeInstancedStruct EmptyComposite;
+
+	UPROPERTY(EditAnywhere, meta = (Validate))
+	TArray<FCompositeInstancedStruct> CompositeArray;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateRecursive))
+	FInstancedStruct InvalidStruct;
+	
+	UPROPERTY(EditAnywhere, meta = (ValidateRecursive))
+	TArray<FInstancedStruct> InvalidStructArray;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateRecursive))
+	FCompositeInstancedStruct InvalidComposite;
+
+	UPROPERTY(EditAnywhere, meta = (ValidateRecursive))
+	TArray<FCompositeInstancedStruct> InvalidCompositeArray;
 };

@@ -23,7 +23,7 @@
 #include "Misc/ScopedSlowTask.h"
 #include "WorldPartition/WorldPartitionActorDescUtils.h"
 
-#define LOCTEXT_NAMESPACE "FAssetValidationModule"
+#define LOCTEXT_NAMESPACE "AssetValidation"
 
 using UE::AssetValidation::ISourceControlProxy;
 
@@ -336,9 +336,12 @@ void FAssetValidationModule::CheckContent()
 	}
 
 	FValidateAssetsSettings Settings;
-	Settings.ValidationUsecase = EDataValidationUsecase::Manual;
+	Settings.ValidationUsecase = EDataValidationUsecase::Script;
 	Settings.bSkipExcludedDirectories = true;
 	Settings.bShowIfNoFailures = true;
+
+	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+	DataValidationLog.NewPage(LOCTEXT("CheckContent", "Check Content"));
 	
 	FValidateAssetsResults Results;
 	UE::AssetValidation::ValidateCheckedOutAssets(true, Settings, Results);
@@ -350,9 +353,12 @@ void FAssetValidationModule::CheckProjectSettings()
 	SlowTask.MakeDialog();
 		
 	FValidateAssetsSettings Settings;
-	Settings.ValidationUsecase = EDataValidationUsecase::Manual;
+	Settings.ValidationUsecase = EDataValidationUsecase::Script;
 	Settings.bSkipExcludedDirectories = true;
 	Settings.bShowIfNoFailures = true;
+	
+	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+	DataValidationLog.NewPage(LOCTEXT("CheckProjectSettings", "Check Project Settings"));
 	
 	FValidateAssetsResults Results;
 	UE::AssetValidation::ValidateProjectSettings(Settings, Results);

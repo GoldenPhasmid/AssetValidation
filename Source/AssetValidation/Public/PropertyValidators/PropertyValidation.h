@@ -22,18 +22,21 @@ namespace UE::AssetValidation
 	static const FName FailureMessage("FailureMessage");
 	static const FName DisableEditOnTemplate("DisableEditOnTemplate");
 
-	const TStaticArray<FName, 6>& GetMetaKeys();
+	ASSETVALIDATION_API const TStaticArray<FName, 4>& GetValidationMetaKeys();
+	ASSETVALIDATION_API const TStaticArray<FName, 6>& GetMetaKeys();
 }
 
 namespace UE::AssetValidation
 {
 	/** */
-	bool PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property);
+	ASSETVALIDATION_API bool PassesEditCondition(UStruct* Struct, TNonNullPtr<const uint8> Container, const FProperty* Property);
+	/** @return true if object is an asset or a part of another asset through the outer chain */
+	ASSETVALIDATION_API bool IsAssetOrAssetFragment(const UObject* Object);	
 	/**
 	 * checks property meta data to see if any meta specifiers are placed incorrectly
 	 * @return true if all metas can be applied to a property, false otherwise
 	 */
-	bool CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled);
+	ASSETVALIDATION_API bool CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled);
 	/** @return true if "Validate" meta can be applied to given property */
 	bool CanApplyMeta_Validate(const FProperty* Property);
 	/** @return true if "ValidateRecursive" meta can be applied to given property */
@@ -46,19 +49,21 @@ namespace UE::AssetValidation
 	 * @return true if @MetaName can be applied to @Property type
 	 * Includes unwrapping container properties to check whether underlying type can be validated at all
 	 */
-	bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
+	ASSETVALIDATION_API bool CanApplyMeta(const FProperty* Property, const FName& MetaName);
 	/** @return true if property value validation meta can be added to a property */
-	bool CanValidatePropertyValue(const FProperty* Property);
+	ASSETVALIDATION_API bool CanValidatePropertyValue(const FProperty* Property);
 	/** @return true if property can be validated recursively */
-	bool CanValidatePropertyRecursively(const FProperty* Property);
+	ASSETVALIDATION_API bool CanValidatePropertyRecursively(const FProperty* Property);
 	/** @return true if @Property an actor component with owner being a blueprint class */
-	bool IsBlueprintComponentProperty(const FProperty* Property);
+	ASSETVALIDATION_API bool IsBlueprintComponentProperty(const FProperty* Property);
 	/** @return whether property is visible in blueprints */
-	bool IsBlueprintVisibleProperty(const FProperty* Property);
+	ASSETVALIDATION_API bool IsBlueprintVisibleProperty(const FProperty* Property);
 	/** @return property display name set by user */
-	FString GetPropertyDisplayName(const FProperty* Property);
+	ASSETVALIDATION_API FString GetPropertyDisplayName(const FProperty* Property);
 	/** @return property underlying type name */
-	FString GetPropertyTypeName(const FProperty* Property);
+	ASSETVALIDATION_API FString GetPropertyTypeName(const FProperty* Property);
+	/** @return object display name */
+	ASSETVALIDATION_API FString ResolveObjectDisplayName(const UObject* Object, FPropertyValidationContext& ValidationContext);
 
 	/**
 	 * Update single meta data key represented by @MetaName on variable defined by @Property
@@ -69,19 +74,19 @@ namespace UE::AssetValidation
 	 * @param bAddIfPossible if set to true, update will rely only on property data. Otherwise meta data should be already present to stay
 	 * @return whether meta data is present on property
 	 */
-	bool UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible);
+	ASSETVALIDATION_API bool UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible);
 
 	/** @return true if property is a container property (array, set or map) */
-	bool IsContainerProperty(const FProperty* Property);
+	ASSETVALIDATION_API bool IsContainerProperty(const FProperty* Property);
 	
 	/** @return whether package is a blueprint package */
-	bool IsBlueprintGeneratedPackage(const FString& PackageName);
+	ASSETVALIDATION_API bool IsBlueprintGeneratedPackage(const FString& PackageName);
 }
 
 /**
  * Property Validation Context
  */
-class FPropertyValidationContext: public FNoncopyable
+class ASSETVALIDATION_API FPropertyValidationContext: public FNoncopyable
 {
 public:
 	
@@ -198,6 +203,20 @@ public:
 		return Objects.Last().Get();
 	}
 
+	template <typename T>
+	FORCEINLINE bool ForEachSourceObject(T&& Pred) const
+	{
+		for (const TWeakObjectPtr<const UObject> SourceObject: Objects)
+		{
+			if (SourceObject.IsValid() && Pred(SourceObject.Get()))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 private:
 
 	FORCEINLINE void PushSource(const UObject* InObject)
@@ -247,4 +266,16 @@ template <typename TPropertyType>
 const typename TPropertyType::TCppType* GetPropertyValuePtr(const void* PropertyMemory, const FProperty* Property)
 {
 	return CastFieldChecked<TPropertyType>(Property)->GetPropertyValuePtr(PropertyMemory);
+}
+
+template <typename T>
+static FString GetStructCppName()
+{
+	return TBaseStructure<T>::Get()->GetStructCPPName();
+}
+
+template <typename T>
+static const T* ConvertStructMemory(const uint8* Memory)
+{
+	return static_cast<const T*>((const void*)Memory);
 }

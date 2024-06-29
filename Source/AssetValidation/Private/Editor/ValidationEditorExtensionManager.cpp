@@ -200,7 +200,7 @@ void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBluepri
 	const FProperty* VarProperty = FindFProperty<FProperty>(Blueprint->SkeletonGeneratedClass, VarName);
 	check(VarProperty);
 
-	for (FName MetaKey: UE::AssetValidation::GetMetaKeys())
+	for (FName MetaKey: UE::AssetValidation::GetValidationMetaKeys())
 	{
 		UE::AssetValidation::UpdateBlueprintVarMetaData(Blueprint, VarProperty, VarName, MetaKey, bAddIfPossible);
 	}

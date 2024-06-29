@@ -1,4 +1,4 @@
-#include "StructContainerValidator.h"
+#include "ContainerValidators/StructContainerValidator.h"
 
 #include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
@@ -7,16 +7,16 @@
 
 UStructContainerValidator::UStructContainerValidator()
 {
-	PropertyClass = FStructProperty::StaticClass();
+	Descriptor = FStructProperty::StaticClass();
 }
 
 bool UStructContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
 {
 	if (Super::CanValidateProperty(Property, MetaData))
 	{
-		// do not require meta = (Validate) to perform validation for struct properties.
-		// Use Validate meta for structs when you want to validate struct "value", not the underlying struct properties
-		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || MetaData.HasMetaData(UE::AssetValidation::Validate);
+		// Use meta = (Validate) for value validation, e.g. to validate struct "value"
+		// Use meta = (ValidateRecursive) for container validation, e.g. to validate underlying struct properties
+		return UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties || MetaData.HasMetaData(UE::AssetValidation::ValidateRecursive);
 	}
 
 	return false;
@@ -31,7 +31,12 @@ void UStructContainerValidator::ValidateProperty(TNonNullPtr<const uint8> Proper
 	// handles 'struct inside array' type of cases
 	const FString Prefix = UE::AssetValidation::GetPropertyDisplayName(StructProperty);
 	FPropertyValidationContext::FConditionalPrefix ScopedPrefix{ValidationContext, Prefix, !bContainerProperty};
-	
+
+	ValidateStructAsContainer(PropertyMemory, StructProperty, MetaData, ValidationContext);
+}
+
+void UStructContainerValidator::ValidateStructAsContainer(TNonNullPtr<const uint8> PropertyMemory, const FStructProperty* StructProperty, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
 	// validate underlying struct properties: structure becomes a property container
 	ValidationContext.IsPropertyContainerValid(PropertyMemory, StructProperty->Struct);
 }

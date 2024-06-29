@@ -2,6 +2,8 @@
 
 #include "AssetValidationDefines.h"
 #include "PropertyValidatorSubsystem.h"
+#include "BehaviorTree/BTNode.h"
+#include "Components/Widget.h"
 #include "EditCondition/EditConditionContext.h"
 #include "EditCondition/EditConditionParser.h"
 #include "Editor/MetaDataSource.h"
@@ -22,6 +24,12 @@ struct TMetaKeysWrapper
 		
 	TStaticArray<FName, NumElements> MetaKeys;
 };
+
+const TStaticArray<FName, 4>& UE::AssetValidation::GetValidationMetaKeys()
+{
+	static TMetaKeysWrapper<4> Wrapper{Validate, ValidateKey, ValidateValue, ValidateRecursive};
+	return Wrapper.MetaKeys;
+}
 
 const TStaticArray<FName, 6>& UE::AssetValidation::GetMetaKeys()
 {
@@ -80,6 +88,17 @@ bool UE::AssetValidation::PassesEditCondition(UStruct* Struct, TNonNullPtr<const
 	}
 
 	return false;
+}
+
+bool UE::AssetValidation::IsAssetOrAssetFragment(const UObject* Object)
+{
+	bool bIsAsset = false;
+	for (const UObject* OuterChain = Object; bIsAsset == false && OuterChain != nullptr; OuterChain = OuterChain->GetOuter())
+	{
+		bIsAsset = OuterChain->IsAsset();	
+	}
+	
+	return bIsAsset;
 }
 
 bool UE::AssetValidation::CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled)
@@ -276,6 +295,29 @@ FString UE::AssetValidation::GetPropertyTypeName(const FProperty* Property)
 	}
 
 	return Property->GetCPPType();
+}
+
+FString UE::AssetValidation::ResolveObjectDisplayName(const UObject* Object, FPropertyValidationContext& ValidationContext)
+{
+	if (const UBTNode* BTNode = Cast<UBTNode>(Object))
+	{
+		return BTNode->NodeName.IsEmpty() ? Object->GetClass()->GetName() : BTNode->NodeName;
+	}
+	else if (const AActor* Actor = Cast<AActor>(Object))
+	{
+		return Actor->GetActorNameOrLabel();
+	}
+	else if (const UWidget* Widget = Cast<UWidget>(Object))
+	{
+		if (FString DisplayLabel = Widget->GetDisplayLabel(); !DisplayLabel.IsEmpty())
+		{
+			return DisplayLabel;
+		}
+		
+		return Widget->GetName();
+	}
+
+	return Object->GetName();
 }
 
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)

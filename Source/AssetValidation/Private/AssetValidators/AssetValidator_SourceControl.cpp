@@ -21,7 +21,9 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	const FString PackageName = InAsset->GetPackage()->GetName();
 	// cache filename to use for source control queries and avoid SourceControlHelpers::PackageFilename
 	FString PackageFilename{}; 
-	if (!FPackageName::DoesPackageExist(PackageName, &PackageFilename) && !PackageName.StartsWith("/Script/"))
+	if (!FPackageName::DoesPackageExist(PackageName, &PackageFilename)
+		&& !FPackageName::IsScriptPackage(PackageName)
+		&& !PackageName.StartsWith(TEXT("/Engine/Transient")))
 	{
 		const FText FailReason = FText::Format(LOCTEXT("SourceControl_InvalidAsset", "Asset {0} is part of package {1} which doesn't exist"),
                                    FText::FromString(InAsset->GetName()), FText::FromString(PackageName));
@@ -48,7 +50,7 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	for (FName DependencyName: Dependencies)
 	{
 		FString Dependency = DependencyName.ToString();
-		if (!Dependency.StartsWith(TEXT("/Script/")))
+		if (!FPackageName::IsScriptPackage(PackageName))
 		{
 			FSourceControlStatePtr DependencyState = SCCProvider.GetState(SourceControlHelpers::PackageFilename(Dependency), EStateCacheUsage::Use);
 			if (!DependencyState.IsValid())

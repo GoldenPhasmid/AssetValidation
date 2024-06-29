@@ -1,13 +1,12 @@
-#include "ArrayContainerValidator.h"
+#include "ContainerValidators/ArrayContainerValidator.h"
 
-#include "PropertyValidationSettings.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Editor/MetaDataSource.h"
 #include "PropertyValidators/PropertyValidation.h"
 
 UArrayContainerValidator::UArrayContainerValidator()
 {
-	PropertyClass = FArrayProperty::StaticClass();
+	Descriptor = FArrayProperty::StaticClass();
 }
 
 bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const
@@ -18,7 +17,7 @@ bool UArrayContainerValidator::CanValidateProperty(const FProperty* Property, FM
 		const FArrayProperty* ArrayProperty = CastFieldChecked<FArrayProperty>(Property);
 		const FProperty* InnerProperty = ArrayProperty->Inner;
 		
-		if (UPropertyValidationSettings::Get()->bAutoValidateStructInnerProperties && InnerProperty->IsA<FStructProperty>())
+		if (InnerProperty->IsA<FStructProperty>())
 		{
 			// allow struct properties to be recursively validated without meta specifier
 			return true;

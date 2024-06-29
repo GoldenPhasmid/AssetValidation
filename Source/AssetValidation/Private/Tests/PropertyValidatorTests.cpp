@@ -7,21 +7,24 @@
 
 using UE::AssetValidation::AutomationFlags;
 
-static TArray<TPair<FName, EDataValidationResult>> PropertyNames
-{
-	{"NoMetaProperty",			EDataValidationResult::Valid},
-	{"NoMetaEditableProperty",	EDataValidationResult::Valid},
-	{"NonEditableProperty",		EDataValidationResult::Valid},
-	{"TransientProperty",			EDataValidationResult::Valid},
-	{"TransientEditableProperty",	EDataValidationResult::Valid},
-	{"EditAnywhereProperty",		EDataValidationResult::Invalid},
-	{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
-};
 
 BEGIN_DEFINE_SPEC(FAutomationSpec_ValidationConditions, "PropertyValidation.Conditions", AutomationFlags)
 	UObject* TestObject;
 	UPropertyValidatorSubsystem* ValidationSubsystem;
+	static TArray<TPair<FName, EDataValidationResult>> PropertyNames;
 END_DEFINE_SPEC(FAutomationSpec_ValidationConditions)
+
+TArray<TPair<FName, EDataValidationResult>> FAutomationSpec_ValidationConditions::PropertyNames
+{
+		{"NoMetaProperty",			EDataValidationResult::Valid},
+		{"NoMetaEditableProperty",	EDataValidationResult::Valid},
+		{"NonEditableProperty",		EDataValidationResult::Valid},
+		{"TransientProperty",			EDataValidationResult::Valid},
+		{"TransientEditableProperty",	EDataValidationResult::Valid},
+		{"EditAnywhereProperty",		EDataValidationResult::Invalid},
+		{"EditInstanceOnlyProperty",	EDataValidationResult::Invalid}
+};
+
 void FAutomationSpec_ValidationConditions::Define()
 {
 	BeforeEach([this]()
@@ -334,8 +337,10 @@ void FAutomationSpec_ValidateMetas::Define()
 
 		FString CustomMessage = Property->GetMetaData(UE::AssetValidation::FailureMessage);
 		TestEqual("ValidationResult", Result.ValidationResult, EDataValidationResult::Invalid);
-		TestEqual("NumErrors", Result.Errors.Num(), 1);
-		TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));
+		if (TestEqual("NumErrors", Result.Errors.Num(), 1))
+		{
+			TestTrue("Message", Result.Errors[0].ToString().Contains(CustomMessage));
+		}
 	});
 
 	It("map property with ValidateKey meta", [this]

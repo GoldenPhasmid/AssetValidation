@@ -1,16 +1,16 @@
 #pragma once
 
+#include "ContainerValidator.h"
 
-#include "PropertyContainerValidator.h"
-
-#include "MapContainerValidator.generated.h"
+#include "ObjectContainerValidator.generated.h"
 
 UCLASS()
-class ASSETVALIDATION_API UMapContainerValidator: public UPropertyContainerValidator
+class ASSETVALIDATION_API UObjectContainerValidator: public UContainerValidator
 {
 	GENERATED_BODY()
 public:
-	UMapContainerValidator();
+
+	UObjectContainerValidator();
 
 	//~Begin ContainerPropertyValidator
 	virtual bool CanValidateProperty(const FProperty* Property, FMetaDataSource& MetaData) const override;

@@ -2,6 +2,7 @@
 
 #include "BlueprintComponentCustomization.h"
 #include "BlueprintEditor.h"
+#include "BlueprintVariableCustomization.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "PropertyValidationDetailsBuilder.h"

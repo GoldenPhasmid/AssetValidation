@@ -23,27 +23,14 @@ public:
 	static bool IsPackageAlreadyLoaded(const FName& PackageName);
 	
 	//~Begin EditorValidatorSubsystem interface
-#if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
 	virtual int32 ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
-#else
-	virtual int32 ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
-#endif
-	
 	virtual EDataValidationResult IsAssetValidWithContext(const FAssetData& AssetData, FDataValidationContext& InContext) const override;
 	virtual EDataValidationResult IsObjectValidWithContext(UObject* InAsset, FDataValidationContext& InContext) const override;
-	
-#if WITH_DATA_VALIDATION_UPDATE
 	virtual EDataValidationResult ValidateChangelist(UDataValidationChangelist* InChangelist, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
 	virtual EDataValidationResult ValidateChangelists(const TArray<UDataValidationChangelist*> InChangelists, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
 	virtual void GatherAssetsToValidateFromChangelist(UDataValidationChangelist* InChangelist, const FValidateAssetsSettings& Settings, TSet<FAssetData>& OutAssets, FDataValidationContext& InContext) const override;
-#endif
 	//~End EditorValidatorSubsystem interface
-
-#if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
-	/** run asset validation on a standalone actor */
-	virtual EDataValidationResult IsStandaloneActorValid(AActor* Actor, FDataValidationContext& Context) const;
-#endif
-
+	
 protected:
 	
 	bool IsEmptyChangelist(UDataValidationChangelist* Changelist) const;
@@ -87,9 +74,4 @@ protected:
 	mutable TOptional<FValidateAssetsSettings> CurrentSettings;
 	/** Packages that are loaded as a part of running validation request */
 	TSet<FName> LoadedPackageNames;
-	
-#if !WITH_DATA_VALIDATION_UPDATE // world actor validation was fixed in 5.4
-	/** */
-	EDataValidationResult IsActorValid(AActor* Actor, FDataValidationContext& Context) const;
-#endif
 };

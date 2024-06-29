@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
-#include "Editor/BlueprintVariableCustomization.h"
+#include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidationResult.h"
 #include "Templates/NonNullPointer.h"
 
@@ -19,6 +19,7 @@ class UPropertyValidatorBase;
 class FPropertyValidationContext;
 class UValidationEditorExtensionManager;
 struct FPropertyValidationResult;
+struct FPropertyValidatorDescriptor;
 struct FSubobjectData;
 
 /**
@@ -130,13 +131,16 @@ protected:
 
 	/** @return property validator for a given property type */
 	const UPropertyValidatorBase* FindPropertyValidator(const FProperty* PropertyType) const;
-	/** @return container  validator for a given property type */
+	/** @return container validator for a given property type */
 	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
+	/** @return validator from container a given property type */
+	static const UPropertyValidatorBase* FindValidator(const TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*>& Container, const FProperty* PropertyType);
 	
 	/** property validators mapped by their respective use */
-	TMap<FFieldClass*, UPropertyValidatorBase*> ContainerValidators;
-	TMap<FFieldClass*, UPropertyValidatorBase*> PropertyValidators;
-	TMap<FString, UPropertyValidatorBase*> StructValidators;
+	UPROPERTY(Transient)
+	TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*> ContainerValidators;
+	UPROPERTY(Transient)
+	TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*> PropertyValidators;
 
 	/** List of all active validators */
 	UPROPERTY(Transient)

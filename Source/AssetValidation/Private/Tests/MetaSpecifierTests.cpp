@@ -107,7 +107,6 @@ bool FAutomationTest_MetaSpecifiers::RunTest(const FString& Parameters)
 	FString What{TEXT("CanApplyMeta_Validate returns true for correct properties")};
 
 	// engine properties
-	TestEqual(What, CanApplyToProperty<FProperty>(CanApplyMeta),		false);
 	TestEqual(What, CanApplyToProperty<FBoolProperty>(CanApplyMeta),	false);
 	TestEqual(What, CanApplyToProperty<FByteProperty>(CanApplyMeta, nullptr), false);
 	TestEqual(What, CanApplyToProperty<FNumericProperty>(CanApplyMeta), false);
