@@ -3,6 +3,8 @@
 #include "PropertyExtensionTypes.h"
 #include "PropertyValidators/PropertyValidation.h"
 
+FSimpleMulticastDelegate UPropertyValidationSettings::OnPackageTraitsChanged;
+
 UPropertyValidationSettings::UPropertyValidationSettings(const FObjectInitializer& Initializer): Super(Initializer)
 {
 	

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Tests/AutomationHelpers.h"
+#include "AutomationHelpers.h"
 
 #include "PropertyValidatorTests.generated.h"
 

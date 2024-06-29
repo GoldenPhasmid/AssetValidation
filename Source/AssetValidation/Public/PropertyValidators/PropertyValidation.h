@@ -38,13 +38,13 @@ namespace UE::AssetValidation
 	 */
 	ASSETVALIDATION_API bool CheckPropertyMetaData(const FProperty* Property, const FMetaDataSource& MetaData, bool bLoggingEnabled);
 	/** @return true if "Validate" meta can be applied to given property */
-	bool CanApplyMeta_Validate(const FProperty* Property);
+	ASSETVALIDATION_API bool CanApplyMeta_Validate(const FProperty* Property);
 	/** @return true if "ValidateRecursive" meta can be applied to given property */
-	bool CanApplyMeta_ValidateRecursive(const FProperty* Property);
+	ASSETVALIDATION_API bool CanApplyMeta_ValidateRecursive(const FProperty* Property);
 	/** @return true if "ValidateKey" meta can be applied to given property */
-	bool CanApplyMeta_ValidateKey(const FProperty* Property);
+	ASSETVALIDATION_API bool CanApplyMeta_ValidateKey(const FProperty* Property);
 	/** @return true if "ValidateValue" meta can be applied to given property */
-	bool CanApplyMeta_ValidateValue(const FProperty* Property);
+	ASSETVALIDATION_API bool CanApplyMeta_ValidateValue(const FProperty* Property);
 	/**
 	 * @return true if @MetaName can be applied to @Property type
 	 * Includes unwrapping container properties to check whether underlying type can be validated at all

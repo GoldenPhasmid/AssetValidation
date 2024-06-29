@@ -24,8 +24,6 @@ public class AssetValidation : ModuleRules
 				"SlateCore",
 				"DataValidation",
 				"EditorSubsystem",
-				"GameplayAbilities",
-				"GameplayTags",
 			}
 		);
 		
@@ -35,11 +33,11 @@ public class AssetValidation : ModuleRules
 				"Projects",
 				"InputCore",
 				"EditorFramework",
-				"UnrealEd",
 				"ToolMenus",
 				"Engine",
 				"DeveloperToolSettings",
 				"SourceControl",
+				"UnrealEd",
 				"DeveloperSettings",
 				"Kismet",
 				"SubobjectDataInterface", 
@@ -51,6 +49,8 @@ public class AssetValidation : ModuleRules
 				"UMGEditor", 
 				"AIModule",
 				"StructUtils",
+				"GameplayAbilities",
+				"GameplayTags",
 			}
 		);
 	}

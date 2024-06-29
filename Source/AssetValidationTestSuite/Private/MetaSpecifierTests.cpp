@@ -3,6 +3,7 @@
 #include "GameplayTagContainer.h"
 #include "PropertyValidators/PropertyValidation.h"
 #include "AutomationHelpers.h"
+#include "InstancedStruct.h"
 
 using UE::AssetValidation::AutomationFlags;
 
@@ -134,6 +135,7 @@ bool FAutomationTest_MetaSpecifiers::RunTest(const FString& Parameters)
 	TestEqual(What, CanApplyToProperty<FStructProperty>(CanApplyMeta, FGameplayAttribute::StaticStruct()), true);
 	TestEqual(What, CanApplyToProperty<FStructProperty>(CanApplyMeta, FGameplayTag::StaticStruct()), true);
 	TestEqual(What, CanApplyToProperty<FStructProperty>(CanApplyMeta, FDataTableRowHandle::StaticStruct()), true);
+	TestEqual(What, CanApplyToProperty<FStructProperty>(CanApplyMeta, FInstancedStruct::StaticStruct()), true);
 
 	// container properties
 	{
