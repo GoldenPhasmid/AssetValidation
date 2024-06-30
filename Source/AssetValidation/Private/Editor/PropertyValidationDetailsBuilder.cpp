@@ -105,7 +105,8 @@ void FPropertyValidationDetailsBuilder::GenerateHeaderRowContent(FDetailWidgetRo
 void FPropertyValidationDetailsBuilder::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
 {
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this, PropertyHandle->GetProperty());
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+		[&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return ChildrenBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});

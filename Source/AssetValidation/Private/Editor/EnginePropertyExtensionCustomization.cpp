@@ -131,7 +131,8 @@ void FEnginePropertyExtensionCustomization::CustomizeChildren(TSharedRef<IProper
 	}
 
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildBuilder](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, Property->GetDisplayNameText(),
+		[&ChildBuilder](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return ChildBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});

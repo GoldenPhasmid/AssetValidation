@@ -209,7 +209,8 @@ void FBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 	IDetailCategoryBuilder& ValidationCategory = DetailLayout.EditCategory(CategoryName);
 	
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ValidationCategory](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+		[&ValidationCategory](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return ValidationCategory.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});
@@ -240,7 +241,8 @@ void FBlueprintVariableCustomization::GenerateHeaderRowContent(FDetailWidgetRow&
 void FBlueprintVariableCustomization::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
 {
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+		[&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return ChildrenBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});

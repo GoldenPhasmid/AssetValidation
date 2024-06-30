@@ -7,13 +7,13 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE::AssetValidation::ICustomizationTarget> Target, TFunctionRef<FDetailWidgetRow&(const FText&)> GetCustomRow)
+void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE::AssetValidation::ICustomizationTarget> Target, const FText& SearchString, TFunctionRef<FDetailWidgetRow&(const FText&)> GetCustomRow)
 {
 	using ICustomizationTarget = UE::AssetValidation::ICustomizationTarget;
 	const FSlateFontInfo DetailFont = IDetailLayoutBuilder::GetDetailFont();
 
 	// create Validate checkbox
-	GetCustomRow(LOCTEXT("ValidateRowName", "Validate"))
+	GetCustomRow(SearchString)
 	.Visibility(TAttribute<EVisibility>::CreateSP(Target.Get(), &ICustomizationTarget::GetMetaVisibility, UE::AssetValidation::Validate))
 	.IsEnabled(TAttribute<bool>::CreateSP(Target.Get(), &ICustomizationTarget::IsMetaEditable, UE::AssetValidation::Validate))
 	.NameContent()
@@ -31,7 +31,7 @@ void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE
 	];
 
 	// create ValidateKey checkbox for map properties
-	GetCustomRow(LOCTEXT("ValidateKeyRowName", "ValidateKey"))
+	GetCustomRow(SearchString)
 	.Visibility(TAttribute<EVisibility>::CreateSP(Target.Get(), &ICustomizationTarget::GetMetaVisibility, UE::AssetValidation::ValidateKey))
 	.IsEnabled(TAttribute<bool>::CreateSP(Target.Get(), &ICustomizationTarget::IsMetaEditable, UE::AssetValidation::ValidateKey))
 	.NameContent()
@@ -49,7 +49,7 @@ void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE
 	];
 
 	// create ValidateValue checkbox for map properties
-	GetCustomRow(LOCTEXT("ValidateValueRowName", "ValidateValue"))
+	GetCustomRow(SearchString)
 	.Visibility(TAttribute<EVisibility>::CreateSP(Target.Get(), &ICustomizationTarget::GetMetaVisibility, UE::AssetValidation::ValidateValue))
 	.IsEnabled(TAttribute<bool>::CreateSP(Target.Get(), &ICustomizationTarget::IsMetaEditable, UE::AssetValidation::ValidateValue))
 	.NameContent()
@@ -67,7 +67,7 @@ void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE
 	];
 
 	// create ValidateRecursive checkbox for simple object properties and objects inside containers
-	GetCustomRow(LOCTEXT("ValidateRecursiveRowName", "ValidateRecursive"))
+	GetCustomRow(SearchString)
 	.Visibility(TAttribute<EVisibility>::CreateSP(Target.Get(), &ICustomizationTarget::GetMetaVisibility, UE::AssetValidation::ValidateRecursive))
 	.IsEnabled(TAttribute<bool>::CreateSP(Target.Get(), &ICustomizationTarget::IsMetaEditable, UE::AssetValidation::ValidateRecursive))
 	.NameContent()
@@ -85,7 +85,7 @@ void UE::AssetValidation::ICustomizationTarget::CustomizeForObject(TSharedPtr<UE
 	];
 	
 	// create FailureMessage text box. Appears if property value can be validated
-	GetCustomRow(LOCTEXT("ValidateFailureMessage", "FailureMessage"))
+	GetCustomRow(SearchString)
 	.Visibility(TAttribute<EVisibility>::CreateSP(Target.Get(), &ICustomizationTarget::GetMetaVisibility, UE::AssetValidation::FailureMessage))
 	.IsEnabled(TAttribute<bool>::CreateSP(Target.Get(), &ICustomizationTarget::IsMetaEditable, UE::AssetValidation::FailureMessage))
 	.NameContent()

@@ -19,7 +19,7 @@ class ICustomizationTarget: public TSharedFromThis<ICustomizationTarget>
 {
 public:
 
-	static void CustomizeForObject(TSharedPtr<ICustomizationTarget> Target, TFunctionRef<FDetailWidgetRow&(const FText&)> GetCustomRow);
+	static void CustomizeForObject(TSharedPtr<ICustomizationTarget> Target, const FText& SearchString, TFunctionRef<FDetailWidgetRow&(const FText&)> CustomRowCallback);
 
 	FORCEINLINE ECheckBoxState GetMetaState(FName MetaKey) const
 	{

@@ -74,7 +74,8 @@ void FBlueprintComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 		ECategoryPriority::Variable).InitiallyCollapsed(false);
 
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&Category](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+		[&Category](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return Category.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});	
@@ -102,7 +103,8 @@ void FBlueprintComponentCustomization::GenerateHeaderRowContent(FDetailWidgetRow
 void FBlueprintComponentCustomization::GenerateChildContent(IDetailChildrenBuilder& ChildrenBuilder)
 {
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, [&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+		[&ChildrenBuilder](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return ChildrenBuilder.AddCustomRow(SearchString).ShouldAutoExpand(true);
 	});	
