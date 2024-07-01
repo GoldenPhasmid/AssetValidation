@@ -1,6 +1,5 @@
 #include "ValidationEditorExtensionManager.h"
 
-#include "AssetValidationSettings.h"
 #include "BlueprintEditor.h"
 #include "BlueprintEditorCustomization.h"
 #include "BlueprintEditorModule.h"
@@ -40,27 +39,33 @@ void UValidationEditorExtensionManager::Tick(float DeltaTime)
 
 			if (FOnGetDetailCustomizationInstance Delegate = PropertyView->GetGenericLayoutDetailsDelegate(); !Delegate.IsBoundToObject(this))
 			{
-				FOnGetDetailCustomizationInstance ProxyDelegate = FOnGetDetailCustomizationInstance::CreateUObject(this, &ThisClass::HandleInspectorDefaultLayoutRequested, BlueprintEditor, Delegate);
+				// do not capture blueprint editor by hard reference, as it is responsible for a lot of stuff that should be destroyed once editor closed
+				FOnGetDetailCustomizationInstance ProxyDelegate = FOnGetDetailCustomizationInstance::CreateUObject(this, &ThisClass::HandleInspectorDefaultLayoutRequested, BlueprintEditor.ToWeakPtr(), Delegate);
 				PropertyView->SetGenericLayoutDetailsDelegate(ProxyDelegate);
 			}
 		}
 	}
 }
 
-TSharedRef<IDetailCustomization> UValidationEditorExtensionManager::HandleInspectorDefaultLayoutRequested(TSharedRef<FBlueprintEditor> BlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate)
+TSharedRef<IDetailCustomization> UValidationEditorExtensionManager::HandleInspectorDefaultLayoutRequested(TWeakPtr<FBlueprintEditor> WeakEditor, FOnGetDetailCustomizationInstance ChildDelegate)
 {
 	struct FEmptyDetailCustomization: public IDetailCustomization
 	{
 		virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override {}
 	};
-	// this chain is ugly but seems to always work
-	for (TWeakObjectPtr<UObject> SelectedObject: BlueprintEditor->GetInspector()->GetPropertyView()->GetSelectedObjects())
+
+	if (WeakEditor.IsValid())
 	{
-		if (SelectedObject.IsValid() && SelectedObject->IsA<UActorComponent>())
+		// this chain is ugly but seems to always work
+		for (TWeakObjectPtr<UObject> SelectedObject: WeakEditor.Pin()->GetInspector()->GetPropertyView()->GetSelectedObjects())
 		{
-			return UE::AssetValidation::FBlueprintComponentCustomization::MakeInstance(BlueprintEditor, ChildDelegate).ToSharedRef();
+			if (SelectedObject.IsValid() && SelectedObject->IsA<UActorComponent>())
+			{
+				return UE::AssetValidation::FBlueprintComponentCustomization::MakeInstance(WeakEditor.Pin(), ChildDelegate).ToSharedRef();
+			}
 		}
 	}
+
 	
 	if (ChildDelegate.IsBound())
 	{

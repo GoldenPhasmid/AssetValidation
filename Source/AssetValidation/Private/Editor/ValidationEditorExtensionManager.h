@@ -69,7 +69,7 @@ private:
 	void HandleVariableRenamed(UBlueprint* Blueprint, const FName& OldName, const FName& NewName) {};
 	void HandleVariableTypeChanged(UBlueprint* Blueprint, const FName& VarName, FEdGraphPinType OldPinType, FEdGraphPinType NewPinType);
 
-	TSharedRef<IDetailCustomization> HandleInspectorDefaultLayoutRequested(TSharedRef<FBlueprintEditor> BlueprintEditor, FOnGetDetailCustomizationInstance ChildDelegate);
+	TSharedRef<IDetailCustomization> HandleInspectorDefaultLayoutRequested(TWeakPtr<FBlueprintEditor> WeakEditor, FOnGetDetailCustomizationInstance ChildDelegate);
 
 	/** Pre blueprint change callback */
 	void PreBlueprintChange(UObject* ModifiedObject);
