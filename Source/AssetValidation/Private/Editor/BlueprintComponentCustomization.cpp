@@ -67,14 +67,14 @@ void FBlueprintComponentCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 
 	EditingNode = Nodes[0];
 	check(EditingNode.IsValid());
-
+	
 	IDetailCategoryBuilder& Category = DetailLayout.EditCategory(
 		"Validation",
 		NSLOCTEXT("AssetValidation", "ValidationCategoryTitle", "Validation"),
 		ECategoryPriority::Variable).InitiallyCollapsed(false);
 
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, FText::FromString(TEXT("Validation")),
 		[&Category](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return Category.AddCustomRow(SearchString).ShouldAutoExpand(true);

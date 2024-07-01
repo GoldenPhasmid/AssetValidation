@@ -209,7 +209,7 @@ void FBlueprintVariableCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 	IDetailCategoryBuilder& ValidationCategory = DetailLayout.EditCategory(CategoryName);
 	
 	CustomizationTarget = MakeShared<FCustomizationTarget>(*this);
-	CustomizationTarget->CustomizeForObject(CustomizationTarget, PropertyHandle->GetPropertyDisplayName(),
+	CustomizationTarget->CustomizeForObject(CustomizationTarget, FText::FromString(TEXT("Validation")),
 		[&ValidationCategory](const FText& SearchString) -> FDetailWidgetRow&
 	{
 		return ValidationCategory.AddCustomRow(SearchString).ShouldAutoExpand(true);
