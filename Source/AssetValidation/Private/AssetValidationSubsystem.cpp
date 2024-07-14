@@ -153,7 +153,9 @@ bool UAssetValidationSubsystem::IsEmptyChangelist(UDataValidationChangelist* Cha
 	{
 		ISourceControlProvider& Provider = ISourceControlModule::Get().GetProvider();
 		FSourceControlChangelistStatePtr ChangelistStatePtr = Provider.GetState(Changelist->Changelist.ToSharedRef(), EStateCacheUsage::Use);
-		return ChangelistStatePtr.IsValid();
+
+		// not valid changelist state would mean source control implementation doesn't use changelists (like git)
+		return !ChangelistStatePtr.IsValid();
 	}
 
 	bool bEmpty = Changelist->ModifiedPackageNames.IsEmpty();
@@ -262,8 +264,8 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 		WaitForAssetCompilationIfNecessary(InSettings.ValidationUsecase);
 	}
 
-	int32 NumChecked	= OutResults.NumChecked;
-	int32 NumFailed		= OutResults.NumInvalid;
+	int32 PrevNumChecked	= OutResults.NumChecked;
+	int32 PrevNumInvalid	= OutResults.NumInvalid;
 	OutResults.NumRequested = AssetDataList.Num();
 	
 	// Now add to map or update as needed
@@ -331,23 +333,31 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 
 		const bool bAnyWarnings = ValidationContext.GetNumWarnings() > 0;
 
+		++OutResults.NumChecked;
 		if (AssetResult == EDataValidationResult::Valid)
 		{
 			if (bAnyWarnings)
 			{
+				++OutResults.NumWarnings;
 				DataValidationLog.Warning()
 				->AddToken(FAssetDataToken::Create(AssetData))
 				->AddToken(FTextToken::Create(LOCTEXT("ContainsWarningsResult", "contains valid data, but has warnings.")));
 			}
+			else
+			{
+				++OutResults.NumValid;
+			}
 		}
 		else if (AssetResult == EDataValidationResult::Invalid)
 		{
+			++OutResults.NumInvalid;
 			DataValidationLog.Error()
 			->AddToken(FAssetDataToken::Create(AssetData))
 			->AddToken(FTextToken::Create(LOCTEXT("InvalidDataResult", "contains invalid data.")));
 		}
 		else if (AssetResult == EDataValidationResult::NotValidated)
 		{
+			++OutResults.NumSkipped;
 			if (InSettings.bShowIfNoFailures)
 			{
 				DataValidationLog.Info()
@@ -383,16 +393,16 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 	}
 
 	// calculate and return validation result
-	if (OutResults.NumInvalid > NumFailed)
+	if (OutResults.NumInvalid > PrevNumInvalid)
 	{
 		return EDataValidationResult::Invalid;
 	}
-	if (OutResults.NumChecked > NumChecked)
+	if (OutResults.NumChecked > PrevNumChecked)
 	{
 		return EDataValidationResult::Valid;
 	}
 
-	return EDataValidationResult::NotValidated;;
+	return EDataValidationResult::NotValidated;
 }
 
 EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(

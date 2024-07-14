@@ -5,12 +5,13 @@
 #include "ISourceControlProvider.h"
 #include "SourceControlHelpers.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Misc/DataValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
 bool UAssetValidator_SourceControl::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InObject != nullptr;
+	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext) && InAssetData.IsTopLevelAsset() && InObject != nullptr;
 }
 
 EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
@@ -23,21 +24,23 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	FString PackageFilename{}; 
 	if (!FPackageName::DoesPackageExist(PackageName, &PackageFilename)
 		&& !FPackageName::IsScriptPackage(PackageName)
-		&& !PackageName.StartsWith(TEXT("/Engine/Transient")))
+		&& !PackageName.StartsWith(TEXT("/Engine/Transient"))
+		&& !PackageName.StartsWith(TEXT("/Temp"))) // game temp packages @todo investigate
 	{
-		const FText FailReason = FText::Format(LOCTEXT("SourceControl_InvalidAsset", "Asset {0} is part of package {1} which doesn't exist"),
-                                   FText::FromString(InAsset->GetName()), FText::FromString(PackageName));
-		AssetFails(InAsset, FailReason);
+		const FText FailReason = FText::Format(LOCTEXT("SourceControl_InvalidAsset", " is part of package {0} which doesn't exist"), FText::FromString(PackageName));
+		
+		Context.AddMessage(InAsset, EMessageSeverity::Error, FailReason);
 		return EDataValidationResult::Invalid;
 	}
 
 	ISourceControlProvider& SCCProvider = ISourceControlModule::Get().GetProvider();
 	FSourceControlStatePtr AssetState = SCCProvider.GetState(PackageFilename, EStateCacheUsage::Use);
-
+	
+	EDataValidationResult Result = EDataValidationResult::Valid;
 	if (!AssetState.IsValid() || !AssetState->IsSourceControlled())
 	{
 		AssetPasses(InAsset);
-		return EDataValidationResult::Valid;
+		return Result;
 	}
 	
 	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
@@ -50,40 +53,43 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	for (FName DependencyName: Dependencies)
 	{
 		FString Dependency = DependencyName.ToString();
-		if (!FPackageName::IsScriptPackage(PackageName))
+		if (!FPackageName::IsScriptPackage(Dependency))
 		{
 			FSourceControlStatePtr DependencyState = SCCProvider.GetState(SourceControlHelpers::PackageFilename(Dependency), EStateCacheUsage::Use);
 			if (!DependencyState.IsValid())
 			{
 				continue;
 			}
+
 			if (!DependencyState->IsSourceControlled() && !DependencyState->IsUnknown())
 			{
 				// ignore engine assets as we're not allowed to change them anyway or they can be under different repo
 				if (!bIgnoreEngineDependencies || !Dependency.Contains(TEXT("/Engine/")))
 				{
-					const FText FailReason =	FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "Asset {0} references {1} which is not marked for add to source control"),
-												FText::FromString(PackageName), FText::FromString(Dependency));
+					const FText FailReason = FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "references {0} which is not marked for add to source control"), FText::FromString(Dependency));
 					// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
-					AssetFails(InAsset, FailReason);
+					Context.AddMessage(InAsset, EMessageSeverity::Error, FailReason);
+					Result &= EDataValidationResult::Invalid;
 				}
-
 			}
 			if (!DependencyState->IsCurrent()) // @todo: this check is not implemented for git :)
 			{
-				const FText FailReason =	FText::Format(LOCTEXT("SourceControl_NotLatestRevision", "Asset {0} references {1} which is not on latest revision"),
-											FText::FromString(PackageName), FText::FromString(Dependency));
-				AssetFails(InAsset, FailReason);
+				const FString FullName = InAssetData.AssetName.ToString();
+				const FString AssetName = InAssetData.IsTopLevelAsset() ? PackageName : FullName;
+				const FText FailReason = FText::Format(LOCTEXT("SourceControl_NotLatestRevision", "references {0} which is not on latest revision"), FText::FromString(Dependency));
+				
+				Context.AddMessage(InAsset, EMessageSeverity::Error, FailReason);
+				Result &= EDataValidationResult::Invalid;
 			}
 		}
 	}
 	
-	if (GetValidationResult() != EDataValidationResult::Invalid)
+	if (Result != EDataValidationResult::Invalid)
 	{
 		AssetPasses(InAsset);
 	}
 
-	return GetValidationResult();
+	return Result;
 }
 
 #undef LOCTEXT_NAMESPACE

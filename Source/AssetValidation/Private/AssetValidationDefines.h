@@ -9,3 +9,8 @@
 ASSETVALIDATION_API DECLARE_LOG_CATEGORY_EXTERN(LogAssetValidation, Log, All);
 /** asset validation trace channel */
 UE_TRACE_CHANNEL_EXTERN(AssetValidationChannel);
+
+FORCEINLINE void operator&=(EDataValidationResult& Lhs, EDataValidationResult Rhs)
+{
+	Lhs = CombineDataValidationResults(Lhs, Rhs);
+}

@@ -24,9 +24,15 @@ protected:
 
 	EDataValidationResult ValidateWorld(const FAssetData& AssetData, UWorld* World, FDataValidationContext& Context);
 	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context);
+
+	/** @return approximate asset count that would be validated as part of world validation */
+	int32 EstimateWorldAssetCount(const UWorld* World) const;
 	
 	bool bRecursiveGuard = false;
 
-	UPROPERTY(Config)
+	UPROPERTY(EditAnywhere, Category = "Asset Validation")
 	bool bEnsureInactiveWorld = false;
+
+	UPROPERTY(EditAnywhere, Category = "Asset Validation")
+	int32 ValidateOnSaveAssetCountThreshold = 800;
 };

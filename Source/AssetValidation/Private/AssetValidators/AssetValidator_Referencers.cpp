@@ -87,7 +87,8 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 				}
 				
 				FSoftClassPath ClassPath{Asset.AssetClassPath.ToString()};
-				if (ClassPath.TryLoadClass<UObject>()->IsChildOf(AssetClass))
+				// class path may be unresolved or ill formed, so we should check whether class can be successfully loaded
+				if (const UClass* Class = ClassPath.TryLoadClass<UObject>(); Class && Class->IsChildOf(AssetClass))
 				{
 					// add package to referencers only if it contains asset with a similar class type as validating dependency
 					// this makes blueprints check other blueprints, material functions check material functions and so on

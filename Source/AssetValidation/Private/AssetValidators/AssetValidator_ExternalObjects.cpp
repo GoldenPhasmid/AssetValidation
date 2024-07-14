@@ -43,7 +43,8 @@ EDataValidationResult UAssetValidator_ExternalObjects::ValidateAssetInternal(con
 		}
 		else
 		{
-			AppendAssetValidationMessages(InContext, AssetData, EMessageSeverity::Error, {TEXT("Failed to load object")});
+			InContext.AddMessage(AssetData, EMessageSeverity::Error, FText::FromString(TEXT("Failed to load asset.")));
+			Result &= EDataValidationResult::Invalid;
 		}
 	}
 

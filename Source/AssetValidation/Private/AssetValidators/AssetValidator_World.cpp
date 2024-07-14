@@ -8,28 +8,62 @@
 #include "WorldPartition/DataLayer/DataLayerManager.h"
 #include "WorldPartition/LoaderAdapter/LoaderAdapterShape.h"
 
-#include "AssetValidationModule.h"
 #include "AssetValidationSubsystem.h"
-#include "EngineUtils.h"
+#include "LevelUtils.h"
 #include "PackageTools.h"
 #include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationMapCheckErrorHandler.h"
 
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
-	EDataValidationUsecase Usecase = InContext.GetValidationUsecase();
-	if (InContext.GetAssociatedExternalObjects().Num() > 0 && Usecase == EDataValidationUsecase::Save)
-	{
-		// saving WP actors would result in this validator attempting to run with world asset
-		// don't validate on save, wait until PreSubmit or Manual
-		return false;
-	}
-
 	if (InObject != nullptr && !InObject->IsA<UWorld>())
 	{
 		return false;
 	}
+	
+	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save)
+	{
+		if (InContext.GetAssociatedExternalObjects().Num() > 0)
+		{
+			// saving WP actors would result in this validator attempting to run with world asset
+			// don't validate on save, wait until PreSubmit or Manual
+			return false;
+		}
+
+		if (UWorld* World = CastChecked<UWorld>(InObject, ECastCheckedType::NullAllowed))
+		{
+			// don't validate worlds on save if they have a lot of actors
+			if (EstimateWorldAssetCount(World) > ValidateOnSaveAssetCountThreshold)
+			{
+				return false;
+			}
+		}
+	}
+
 	return true;
 }
+
+int32 UAssetValidator_World::EstimateWorldAssetCount(const UWorld* World) const
+{
+	check(World);
+	// rough estimation of a number of assets that are going to be validated as part of world validation
+	// world, level script blueprint, level script actor, world partition
+	int32 WorldAssetCount = 4; 
+	// for each streaming level, validate script blueprint and script actor
+	WorldAssetCount += World->GetStreamingLevels().Num() * 2;
+	// for each level, validate actors
+	for (const ULevel* Level: World->GetLevels())
+	{
+		WorldAssetCount += Level->Actors.Num();
+	}
+	// sublevel worlds are not initialized so we have to handle persistent level separately
+	if (!World->bIsWorldInitialized)
+	{
+		WorldAssetCount += World->PersistentLevel->Actors.Num();
+	}
+
+	return WorldAssetCount;
+}
+
 
 EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
 {
@@ -64,16 +98,21 @@ EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(
 	TUniquePtr<FScopedEditorWorld> ScopedWorld{};
 	if (!World->bIsWorldInitialized)
 	{
-		UWorld::InitializationValues IVS;
-		IVS.RequiresHitProxies(false);
-		IVS.ShouldSimulatePhysics(false);
-		IVS.EnableTraceCollision(false);
-		IVS.CreateNavigation(false);
-		IVS.CreateAISystem(false);
-		IVS.AllowAudioPlayback(false);
-		IVS.CreatePhysicsScene(true);
+		// ensure that world is not a sublevel.
+		// Sublevel worlds in editor are not initialize, so we can't initialize/cleanup them either
+		if (FLevelUtils::FindStreamingLevel(World->PersistentLevel) == nullptr)
+		{
+			UWorld::InitializationValues IVS;
+			IVS.RequiresHitProxies(false);
+			IVS.ShouldSimulatePhysics(false);
+			IVS.EnableTraceCollision(false);
+			IVS.CreateNavigation(false);
+			IVS.CreateAISystem(false);
+			IVS.AllowAudioPlayback(false);
+			IVS.CreatePhysicsScene(true);
 
-		ScopedWorld = MakeUnique<FScopedEditorWorld>(World, IVS, EWorldType::Editor);
+			ScopedWorld = MakeUnique<FScopedEditorWorld>(World, IVS, EWorldType::Editor);
+		}
 	}
 	else if (bEnsureInactiveWorld)
 	{
@@ -106,7 +145,6 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 		UDataLayerManager* DataLayerManager = WorldPartition->GetDataLayerManager();
 		DataLayerManager->ForEachDataLayerInstance([](UDataLayerInstance* DataLayer)
 		{
-				
 			DataLayer->SetIsLoadedInEditor(true, false);
 			if (!IsRunningCommandlet() || IsAllowCommandletRendering())
 			{
@@ -131,6 +169,11 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	UAssetValidationSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
 	check(Subsystem);
 
+	// notify number of assets that validate as a part of world asset validation
+	Context.AddMessage(EMessageSeverity::Info,
+		FText::Format(NSLOCTEXT("AssetValidation", "WorldValidation_AdditionalInfo", "Validating {0} assets as a part of {1}"),
+		FText::FromString(FString::FromInt(EstimateWorldAssetCount(World))), FText::FromName(AssetData.AssetName)));
+	
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	// don't validate world settings explicitly, actor iterator will walk over it
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
@@ -156,11 +199,21 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 
 	// starting from 5.4 world calls IsDataValid on actor using FActorIterator, so we don't call it.
 	// Otherwise we would be calling AActor::IsDataValid twice
-	
-	for (FActorIterator It{World, AActor::StaticClass(), EActorIteratorFlags::AllActors}; It; ++It)
+	for (const ULevel* Level: World->GetLevels())
 	{
-		AActor* Actor = *It;
-		Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
+		for (AActor* Actor: Level->Actors)
+		{
+			Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
+		}
+	}
+
+	// sublevel worlds are not initialized, so we can't use an actor iterator on them
+	if (!World->bIsWorldInitialized)
+	{
+		for (AActor* Actor: World->PersistentLevel->Actors)
+		{
+			Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
+		}
 	}
 
 	// @todo: validate level instances?

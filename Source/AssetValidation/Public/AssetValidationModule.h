@@ -12,11 +12,6 @@ namespace UE::AssetValidation
 	class ISourceControlProxy;
 }
 
-FORCEINLINE void operator&=(EDataValidationResult& Lhs, EDataValidationResult Rhs)
-{
-	Lhs = CombineDataValidationResults(Lhs, Rhs);
-}
-
 class ASSETVALIDATION_API IAssetValidationModule: public IModuleInterface
 {
 public:

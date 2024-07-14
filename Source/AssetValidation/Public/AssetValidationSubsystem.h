@@ -64,9 +64,9 @@ protected:
 	/** */
 	void ResetValidationState() const;
 	void ResetValidationState();
-	/** */
+	/** number of assets checked, stored as a part of running asset validation */
 	mutable int32 CheckedAssetsCount = 0;
-	/** */
+	/** asset validation results, stored as a part of running asset validation */
 	mutable TStaticArray<int32, 3> ValidationResults{InPlace, 0};
 	/** guard for recursive validation requests to this subsystem */
 	mutable bool bRecursiveCall = false;
