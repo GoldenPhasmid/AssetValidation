@@ -1,6 +1,5 @@
 #include "AssetValidators/AssetValidator_World.h"
 
-#include "EditorValidatorSubsystem.h"
 #include "EditorWorldUtils.h"
 #include "Engine/LevelScriptActor.h"
 #include "Engine/LevelScriptBlueprint.h"
@@ -8,10 +7,14 @@
 #include "WorldPartition/DataLayer/DataLayerManager.h"
 #include "WorldPartition/LoaderAdapter/LoaderAdapterShape.h"
 
+#include "AssetValidationDefines.h"
+#include "AssetValidationStatics.h"
 #include "AssetValidationSubsystem.h"
 #include "LevelUtils.h"
 #include "PackageTools.h"
 #include "WorldPartition/ErrorHandling/WorldPartitionStreamingGenerationMapCheckErrorHandler.h"
+
+#define LOCTEXT_NAMESPACE "AssetValidation"
 
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
@@ -22,14 +25,15 @@ bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& In
 	
 	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save)
 	{
-		if (InContext.GetAssociatedExternalObjects().Num() > 0)
+		if (InContext.GetAssociatedExternalObjects().Num() == 0)
 		{
 			// saving WP actors would result in this validator attempting to run with world asset
-			// don't validate on save, wait until PreSubmit or Manual
+			// don't validate whole world on save, only external actors, wait until PreSubmit or Manual
 			return false;
 		}
 
-		if (UWorld* World = CastChecked<UWorld>(InObject, ECastCheckedType::NullAllowed))
+		if (const UWorld* World = CastChecked<UWorld>(InObject, ECastCheckedType::NullAllowed);
+			World && !World->IsPartitionedWorld())
 		{
 			// don't validate worlds on save if they have a lot of actors
 			if (EstimateWorldAssetCount(World) > ValidateOnSaveAssetCountThreshold)
@@ -68,6 +72,11 @@ int32 UAssetValidator_World::EstimateWorldAssetCount(const UWorld* World) const
 EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const FAssetData& AssetData, FDataValidationContext& Context)
 {
 	check(AssetData.IsValid());
+
+	if (Context.GetValidationUsecase() == EDataValidationUsecase::Save && Context.GetAssociatedExternalObjects().Num() > 0)
+	{
+		return ValidateExternalAssets(AssetData, Context);
+	}
 	
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	if (UPackage* WorldPackage = LoadWorldPackageForEditor(AssetData.PackageName.ToString(), EWorldType::Editor))
@@ -86,7 +95,12 @@ EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const 
 EDataValidationResult UAssetValidator_World::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)
 {
 	check(bRecursiveGuard == false);
-	check(InAsset);
+	check(InAsset && InAssetData.IsValid());
+
+	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save && InContext.GetAssociatedExternalObjects().Num() > 0)
+	{
+		return ValidateExternalAssets(InAssetData, InContext);
+	}
 
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_ValidateWorld, AssetValidationChannel);
 
@@ -212,7 +226,7 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	{
 		for (AActor* Actor: World->PersistentLevel->Actors)
 		{
-			Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
+			Result &= ValidateAssetInternal(*Subsystem, FAssetData{Actor}, Actor, Context);
 		}
 	}
 
@@ -224,7 +238,50 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 EDataValidationResult UAssetValidator_World::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
 {
 	FAssetData AssetData{Asset};
+	return ValidateAssetInternal(ValidationSubsystem, AssetData, Asset, Context);
+}
+
+EDataValidationResult UAssetValidator_World::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, const FAssetData& AssetData, UObject* Asset, FDataValidationContext& Context)
+{
 	LogValidatingAssetMessage(AssetData, Context);
 	
 	return ValidationSubsystem.IsAssetValidWithContext(AssetData, Context);
 }
+
+EDataValidationResult UAssetValidator_World::ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& InContext)
+{
+	using namespace UE::AssetValidation;
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_ExternalAssets, AssetValidationChannel);
+	
+	UAssetValidationSubsystem* Subsystem = UAssetValidationSubsystem::Get();
+
+	const uint32 NumValidationErrors = InContext.GetNumErrors();
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	for (const FAssetData& ExternalAsset: InContext.GetAssociatedExternalObjects())
+	{
+		// gather error and warning messages produced by loading an external asset
+		FScopedLogMessageGatherer Gatherer{ExternalAsset, InContext};
+		if (UObject* Asset = ExternalAsset.GetAsset({ULevel::LoadAllExternalObjectsTag}))
+		{
+			TGuardValue AssetGuard{CurrentExternalAsset, Asset};
+
+			Result &= ValidateAssetInternal(*Subsystem, ExternalAsset, Asset, InContext);
+		}
+		else
+		{
+			InContext.AddMessage(ExternalAsset, EMessageSeverity::Error, FText::Format(LOCTEXT("AssetLoadFailed", "Failed to load asset {0}"), FText::FromName(ExternalAsset.AssetName)));
+			Result &= EDataValidationResult::Invalid;
+		}
+	}
+
+	if (Result == EDataValidationResult::Invalid)
+	{
+		check(InContext.GetNumErrors() > NumValidationErrors);
+		const FText FailReason = FText::Format(LOCTEXT("AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromName(InAssetData.AssetName));
+		InContext.AddMessage(InAssetData, EMessageSeverity::Error, FailReason);
+	}
+
+	return Result;
+}
+
+#undef LOCTEXT_NAMESPACE

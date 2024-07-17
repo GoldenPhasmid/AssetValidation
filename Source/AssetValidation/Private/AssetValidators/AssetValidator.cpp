@@ -1,9 +1,9 @@
 #include "AssetValidators/AssetValidator.h"
 
 #include "Misc/DataValidation.h"
-#include "AssetValidationModule.h"
+#include "AssetValidationDefines.h"
 #include "AssetValidationSettings.h"
-#include "AssetRegistry/AssetDataToken.h"
+
 
 UAssetValidator::UAssetValidator()
 {

@@ -23,12 +23,17 @@ public:
 protected:
 
 	EDataValidationResult ValidateWorld(const FAssetData& AssetData, UWorld* World, FDataValidationContext& Context);
-	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context);
 
+	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context);
+	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, const FAssetData& AssetData, UObject* Asset, FDataValidationContext& Context);
+
+	EDataValidationResult ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& InContext);
 	/** @return approximate asset count that would be validated as part of world validation */
 	int32 EstimateWorldAssetCount(const UWorld* World) const;
 	
 	bool bRecursiveGuard = false;
+	UPROPERTY()
+	UObject* CurrentExternalAsset = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Asset Validation")
 	bool bEnsureInactiveWorld = false;

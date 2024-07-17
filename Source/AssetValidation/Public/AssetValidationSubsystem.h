@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "EditorValidatorSubsystem.h"
-#include "AssetValidationDefines.h"
 
 #include "AssetValidationSubsystem.generated.h"
 
@@ -61,6 +60,8 @@ protected:
 	/** @return true if asset should be pre loaded for validation */
 	bool ShouldLoadAsset(const FAssetData& AssetData) const;
 
+	void MarkAssetDataValidated(const FAssetData& AssetData, EDataValidationResult Result) const;
+	
 	/** */
 	void ResetValidationState() const;
 	void ResetValidationState();
@@ -72,6 +73,8 @@ protected:
 	mutable bool bRecursiveCall = false;
 	/** Settings for running validation request */
 	mutable TOptional<FValidateAssetsSettings> CurrentSettings;
-	/** Packages that are loaded as a part of running validation request */
+	/** Packages that are loaded as a part of a running validation request */
 	TSet<FName> LoadedPackageNames;
+	/** Assets validated as a part of a running validation request */
+	mutable TSet<FAssetData> ValidatedAssets;
 };

@@ -225,7 +225,8 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 		FEditorDelegates::OnPreAssetValidation.Broadcast();
 	}
 	
-	// Filter external objects out from the asset data list to be validated indirectly via their outers
+	// Add external object owners to the asset data list.
+	// External objects are removed and their validation should be handled by the outer assets
 	// ASSET VALIDATION BEGIN replace set iteration with array iteration
 	TMap<FAssetData, TArray<FAssetData>> AssetsToExternalObjects;
 	for (int32 Index = AssetDataList.Num() - 1; Index >= 0; --Index)
@@ -238,25 +239,32 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 			if (OuterAsset.IsValid())
 			{
 				AssetsToExternalObjects.FindOrAdd(OuterAsset).Add(AssetData);
+				AssetDataList.AddUnique(OuterAsset);
 			}
+
 			AssetDataList.RemoveAtSwap(Index);
 		}
 	}
 	// ASSET VALIDATION END
-	
-	// Add any packages which contain those external objects to be validated
+
+	// ASSET VALIDATION BEGIN replace map iteration with array iteration
 	{
+		// clear assets that we shouldn't validate
 		FDataValidationContext ValidationContext(false, InSettings.ValidationUsecase, {});
-		for (const TPair<FAssetData, TArray<FAssetData>>& Pair : AssetsToExternalObjects)
+		AssetDataList.SetNum(Algo::RemoveIf(AssetDataList, [this, &InSettings, &ValidationContext](const FAssetData& AssetData)
 		{
-			if (ShouldValidateAsset(Pair.Key, InSettings, ValidationContext))
+			if (!ShouldValidateAsset(AssetData, InSettings, ValidationContext))
 			{
-				AssetDataList.Add(Pair.Key);
+				UE_LOG(LogAssetValidation, Verbose, TEXT("Excluding asset %s from validation"), *AssetData.GetSoftObjectPath().ToString());
+				return true;
 			}
-		}
+
+			return false;
+		}));
 		UE::AssetValidation::AppendAssetValidationMessages(DataValidationLog, ValidationContext);
 		DataValidationLog.Flush();
 	}
+	// ASSET VALIDATION END
 
 	// Dont let other async compilation warnings be attributed incorrectly to the package that is loading.
 	{
@@ -503,13 +511,19 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	{
 		return Result;
 	}
+
+	if (ValidatedAssets.Contains(AssetData))
+	{
+		// asset has already been validated, skipping
+		return Result;
+	}
 	
 	if (!CurrentSettings.IsSet())
 	{
 		// @todo: use settings from AssetValidationSettings
 		CurrentSettings = UAssetValidationSettings::Get()->DefaultSettings;
 	}
-
+	
 	// explicitly increase validated assets count
 	++CheckedAssetsCount; 
 	
@@ -556,7 +570,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 		});
 	}
 
-	ValidationResults[static_cast<uint8>(Result)] += 1;
+	MarkAssetDataValidated(AssetData, Result);
 	return Result;
 }
 
@@ -584,6 +598,12 @@ bool UAssetValidationSubsystem::ShouldLoadAsset(const FAssetData& AssetData) con
 	return !AssetData.HasAnyPackageFlags(PKG_ContainsMap | PKG_ContainsMapData | PKG_Cooked);
 }
 
+void UAssetValidationSubsystem::MarkAssetDataValidated(const FAssetData& AssetData, EDataValidationResult Result) const
+{
+	ValidatedAssets.Add(AssetData);
+	ValidationResults[static_cast<uint8>(Result)] += 1;
+}
+
 void UAssetValidationSubsystem::ResetValidationState() const
 {
 	const_cast<UAssetValidationSubsystem&>(*this).ResetValidationState();
@@ -593,6 +613,7 @@ void UAssetValidationSubsystem::ResetValidationState()
 {
 	CheckedAssetsCount = 0;
 	LoadedPackageNames.Empty(32);
+	ValidatedAssets.Empty(32);
 	FMemory::Memzero(ValidationResults.GetData(), ValidationResults.Num() * sizeof(int32));
 
 	CurrentSettings.Reset();

@@ -1,9 +1,13 @@
 #include "AssetValidators/AssetValidator_ExternalObjects.h"
 
 #include "AssetValidationSubsystem.h"
-#include "AssetValidationModule.h"
 #include "AssetValidationStatics.h"
 #include "Misc/DataValidation.h"
+
+UAssetValidator_ExternalObjects::UAssetValidator_ExternalObjects()
+{
+	bIsEnabled = false;
+}
 
 bool UAssetValidator_ExternalObjects::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
 {
