@@ -25,18 +25,15 @@ bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& In
 	
 	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save)
 	{
-		if (InContext.GetAssociatedExternalObjects().Num() == 0)
+		if (const UWorld* World = CastChecked<UWorld>(InObject, ECastCheckedType::NullAllowed))
 		{
-			// saving WP actors would result in this validator attempting to run with world asset
-			// don't validate whole world on save, only external actors, wait until PreSubmit or Manual
-			return false;
-		}
-
-		if (const UWorld* World = CastChecked<UWorld>(InObject, ECastCheckedType::NullAllowed);
-			World && !World->IsPartitionedWorld())
-		{
-			// don't validate worlds on save if they have a lot of actors
-			if (EstimateWorldAssetCount(World) > ValidateOnSaveAssetCountThreshold)
+			if (World->IsPartitionedWorld() && InContext.GetAssociatedExternalObjects().Num() == 0)
+			{
+				// saving WP actors would result in this validator attempting to run with world asset
+				// don't validate whole world on save, only external actors, wait until PreSubmit or Manual
+				return false;
+			}
+			else if (EstimateWorldAssetCount(World) > ValidateOnSaveAssetCountThreshold)
 			{
 				return false;
 			}
