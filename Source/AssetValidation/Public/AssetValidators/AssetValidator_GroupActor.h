@@ -20,9 +20,9 @@ public:
 
 protected:
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
 	FText GroupActorSubmitFailedText;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
 	FText ActorInGroupSubmitFailedText;
 };
