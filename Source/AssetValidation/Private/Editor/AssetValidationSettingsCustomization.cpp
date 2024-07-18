@@ -48,7 +48,7 @@ void FAssetValidationSettingsCustomization::CustomizeDetails(IDetailLayoutBuilde
 	// filter validators: remove abstract, deprecated and validators without config properties.
 	ValidatorClasses.RemoveAll([](const UClass* Class)
 	{
-		if (Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+		if (Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_HideDropDown | CLASS_Hidden))
 		{
 			return true;
 		}

@@ -9,7 +9,7 @@
  * External Object Validator
  * Routes asset validation for DataValidationContext external objects
  */
-UCLASS()
+UCLASS(HideDropdown)
 class UAssetValidator_ExternalObjects: public UAssetValidator
 {
 	GENERATED_BODY()
