@@ -7,7 +7,39 @@
 
 UAssetValidator::UAssetValidator()
 {
+
 }
+
+void UAssetValidator::PostLoad()
+{
+	Super::PostLoad();
+
+	bIsEnabled = !bIsConfigDisabled;
+	bOnlyPrintCustomMessage = bLogCustomMessageOnly;
+}
+
+void UAssetValidator::PostInitProperties()
+{
+	Super::PostInitProperties();
+}
+
+void UAssetValidator::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	const FName PropertyName = PropertyChangedEvent.GetMemberPropertyName();
+	if (PropertyName == TEXT("bIsEnabled"))
+	{
+		bIsConfigDisabled = !bIsEnabled;
+		TryUpdateDefaultConfigFile();
+	}
+	else if (PropertyName == TEXT("bOnlyPrintCustomMessage"))
+	{
+		bLogCustomMessageOnly = bOnlyPrintCustomMessage;
+		TryUpdateDefaultConfigFile();
+	}
+}
+
 
 bool UAssetValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {

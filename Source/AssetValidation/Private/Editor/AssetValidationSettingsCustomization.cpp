@@ -6,6 +6,7 @@
 #include "DetailWidgetRow.h"
 #include "EditorValidatorBase.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetValidators/AssetValidator.h"
 
 namespace UE::AssetValidation
 {
@@ -42,7 +43,7 @@ void FAssetValidationSettingsCustomization::CustomizeDetails(IDetailLayoutBuilde
 	}
 
 	// gather native validators
-	GetDerivedClasses(UEditorValidatorBase::StaticClass(), ValidatorClasses, true);
+	GetDerivedClasses(UAssetValidator::StaticClass(), ValidatorClasses, true);
 
 	// filter validators: remove abstract, deprecated and validators without config properties.
 	ValidatorClasses.RemoveAll([](const UClass* Class)
@@ -70,7 +71,8 @@ void FAssetValidationSettingsCustomization::CustomizeDetails(IDetailLayoutBuilde
 	{
 		UObject* DefaultValidator = ValidatorClass->GetDefaultObject();
 
-		IDetailPropertyRow* Row = Category.AddExternalObjects({DefaultValidator}, EPropertyLocation::Default, FAddPropertyParams{}.UniqueId(ValidatorClass->GetFName()));
+		FAddPropertyParams Params = FAddPropertyParams{}.UniqueId(ValidatorClass->GetFName()).CreateCategoryNodes(false);
+		IDetailPropertyRow* Row = Category.AddExternalObjects({DefaultValidator}, EPropertyLocation::Default, Params);
 		check(Row);
 
 		Row->CustomWidget()
