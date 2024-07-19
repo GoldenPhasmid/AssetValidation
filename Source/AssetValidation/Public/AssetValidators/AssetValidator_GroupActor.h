@@ -25,4 +25,8 @@ protected:
 	
 	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
 	FText ActorInGroupSubmitFailedText;
+
+	/** A list of worlds that this validator should be applied to */
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation", meta = (Validate, MetaClass = "/Script/Engine.World"))
+	TArray<FSoftObjectPath> WorldFilter;
 };

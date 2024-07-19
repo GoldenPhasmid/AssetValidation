@@ -5,6 +5,7 @@
 #include "AssetValidationDefines.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
+
 UAssetValidator_GroupActor::UAssetValidator_GroupActor()
 {
 	GroupActorSubmitFailedText = LOCTEXT(
@@ -15,6 +16,7 @@ UAssetValidator_GroupActor::UAssetValidator_GroupActor()
 		"AssetValidator_ActorInGroup",
 		"Actor is part of an active group. Please ungroup all actors before submitting to the source control."
 	);
+	bIsConfigDisabled = true; // disabled by default
 }
 
 bool UAssetValidator_GroupActor::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
@@ -25,6 +27,23 @@ bool UAssetValidator_GroupActor::CanValidateAsset_Implementation(const FAssetDat
 	}
 	
 	if (InContext.GetValidationUsecase() != EDataValidationUsecase::PreSubmit)
+	{
+		return false;
+	}
+
+	const AActor* Actor = Cast<AActor>(InObject);
+	if (Actor == nullptr)
+	{
+		return false;
+	}
+	
+	FSoftObjectPath OuterAssetPath{InAssetData.GetSoftObjectPath().GetAssetPath(), {}};
+	if (OuterAssetPath.IsNull())
+	{
+		return false;
+	}
+	
+	if (WorldFilter.Num() > 0 && !WorldFilter.Contains(OuterAssetPath))
 	{
 		return false;
 	}
@@ -50,4 +69,5 @@ EDataValidationResult UAssetValidator_GroupActor::ValidateLoadedAsset_Implementa
 
 	return EDataValidationResult::Valid;
 }
+
 #undef LOCTEXT_NAMESPACE
