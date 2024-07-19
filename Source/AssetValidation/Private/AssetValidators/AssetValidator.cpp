@@ -21,6 +21,9 @@ void UAssetValidator::PostLoad()
 void UAssetValidator::PostInitProperties()
 {
 	Super::PostInitProperties();
+
+	bIsEnabled = !bIsConfigDisabled;
+	bOnlyPrintCustomMessage = bLogCustomMessageOnly;
 }
 
 void UAssetValidator::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
