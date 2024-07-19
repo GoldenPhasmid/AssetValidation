@@ -251,10 +251,16 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 	{
 		// clear assets that we shouldn't validate
 		FDataValidationContext ValidationContext(false, InSettings.ValidationUsecase, {});
-		AssetDataList.SetNum(Algo::RemoveIf(AssetDataList, [this, &InSettings, &ValidationContext](const FAssetData& AssetData)
+		AssetDataList.SetNum(Algo::RemoveIf(AssetDataList, [this, &InSettings, &ValidationContext, &DataValidationLog](const FAssetData& AssetData)
 		{
 			if (!ShouldValidateAsset(AssetData, InSettings, ValidationContext))
 			{
+				if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging)
+				{
+					DataValidationLog.Info()
+					->AddToken(FAssetDataToken::Create(AssetData))
+					->AddToken(FTextToken::Create(LOCTEXT("ValidatingAsset", "Asset is excluded from validation, ShouldValidateAsset() returned false.")));
+				}
 				UE_LOG(LogAssetValidation, Verbose, TEXT("Excluding asset %s from validation"), *AssetData.GetSoftObjectPath().ToString());
 				return true;
 			}
@@ -299,6 +305,12 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 		// Check exclusion path
 		if (InSettings.bSkipExcludedDirectories && IsPathExcludedFromValidation(AssetData.PackageName.ToString()))
 		{
+			if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging)
+			{
+				DataValidationLog.Info()
+				->AddToken(FAssetDataToken::Create(AssetData))
+				->AddToken(FTextToken::Create(LOCTEXT("ValidatingAsset", "Skipping asset, directory is excluded.")));
+			}
 			++OutResults.NumSkipped;
 			continue;
 		}
