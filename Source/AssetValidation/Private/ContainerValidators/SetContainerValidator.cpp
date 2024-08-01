@@ -43,9 +43,14 @@ void USetContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	const FProperty* ValueProperty = SetProperty->ElementProp;
 	const FScriptSetLayout Layout = Set->GetScriptLayout(ValueProperty->GetSize(), ValueProperty->GetMinAlignment());
 	
-	const uint32 Num = Set->Num();
+	const uint32 Num = Set->GetMaxIndex();
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
+		if (!Set->IsValidIndex(Index))
+		{
+			continue;
+		}
+		
 		const uint8* Data = static_cast<const uint8*>(Set->GetData(Index, Layout));
 
 		// add scoped set property prefix

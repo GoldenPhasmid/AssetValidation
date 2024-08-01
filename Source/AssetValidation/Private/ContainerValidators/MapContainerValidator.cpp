@@ -59,6 +59,11 @@ void UMapContainerValidator::ValidateProperty(TNonNullPtr<const uint8> PropertyM
 	const uint32 Num = Map->GetMaxIndex();
 	for (uint32 Index = 0; Index < Num; ++Index)
 	{
+		if (!Map->IsValidIndex(Index))
+		{
+			continue;
+		}
+		
 		const uint8* Data = static_cast<const uint8*>(Map->GetData(Index, MapLayout));
 
 		// add scoped map property prefix
