@@ -6,7 +6,7 @@
 
 UAssetValidator_ExternalObjects::UAssetValidator_ExternalObjects()
 {
-	bIsEnabled = false;
+	bIsConfigDisabled = true; // disabled and hidden, will be removed in future versions
 }
 
 bool UAssetValidator_ExternalObjects::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
