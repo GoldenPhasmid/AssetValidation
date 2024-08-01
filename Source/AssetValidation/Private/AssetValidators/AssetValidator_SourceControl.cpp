@@ -1,6 +1,7 @@
 #include "AssetValidators/AssetValidator_SourceControl.h"
 
 #include "AssetValidationDefines.h"
+#include "AssetValidationStatics.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlHelpers.h"
@@ -49,12 +50,18 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	// analyze dependencies 
 	TArray<FName> Dependencies;
 	AssetRegistry.GetDependencies(FName(PackageName), Dependencies, UE::AssetRegistry::EDependencyCategory::Package);
-		
+
+	const bool bWorldAsset = UE::AssetValidation::IsWorldAsset(InAssetData);
 	for (FName DependencyName: Dependencies)
 	{
 		FString Dependency = DependencyName.ToString();
 		if (!FPackageName::IsScriptPackage(Dependency))
 		{
+			if (bWorldAsset && UE::AssetValidation::IsExternalAsset(Dependency))
+			{
+				continue;
+			}
+			
 			FSourceControlStatePtr DependencyState = SCCProvider.GetState(SourceControlHelpers::PackageFilename(Dependency), EStateCacheUsage::Use);
 			if (!DependencyState.IsValid())
 			{
