@@ -38,17 +38,12 @@ bool UAssetValidator_GroupActor::CanValidateAsset_Implementation(const FAssetDat
 	}
 	
 	FSoftObjectPath OuterAssetPath{InAssetData.GetSoftObjectPath().GetAssetPath(), {}};
-	if (OuterAssetPath.IsNull())
-	{
-		return false;
-	}
-	
-	if (WorldFilter.Num() > 0 && !WorldFilter.Contains(OuterAssetPath))
+	if (OuterAssetPath.IsNull() || (WorldFilter.Num() > 0 && !WorldFilter.Contains(OuterAssetPath)))
 	{
 		return false;
 	}
 
-	return InObject != nullptr && InObject->IsA<AActor>();
+	return true;
 }
 
 EDataValidationResult UAssetValidator_GroupActor::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)

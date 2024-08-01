@@ -20,10 +20,10 @@ public:
 
 protected:
 
-	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation", meta = (Validate))
 	FText GroupActorSubmitFailedText;
 	
-	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation", meta = (Validate))
 	FText ActorInGroupSubmitFailedText;
 
 	/** A list of worlds that this validator should be applied to */

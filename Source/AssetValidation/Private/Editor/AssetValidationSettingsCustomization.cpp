@@ -25,8 +25,6 @@ void FAssetValidationSettingsCustomization::CustomizeDetails(IDetailLayoutBuilde
 {
 	DetailBuilder.EditCategory(UAssetValidationSettings::StaticClass()->GetFName(), FText::GetEmpty(), ECategoryPriority::Important);
 	
-	FARFilter Filter;
-	Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
 	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
 	
 	TArray<FAssetData> BlueprintAssets;
