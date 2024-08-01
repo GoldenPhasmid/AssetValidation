@@ -104,6 +104,8 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelists(const TArra
 	// Choose a specific message log page for this output, flushing in case other recursive calls also write to this log 
 	FMessageLog DataValidationLog{UE::DataValidation::MessageLogName};
 	DataValidationLog.SetCurrentPage(InSettings.MessageLogPageTitle);
+	// clear log from previous validation messages on the same changelist
+	UE::AssetValidation::ClearLogMessages(DataValidationLog);
 
 	CurrentSettings = TOptional{InSettings};
 	FValidateAssetsResults PrevResults = OutResults;
@@ -540,7 +542,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	++CheckedAssetsCount; 
 	
 	const UObject* Asset = AssetData.FastGetAsset(false);
-	if (Asset == nullptr && ShouldLoadAsset(Asset))
+	if (Asset == nullptr && ShouldLoadAsset(AssetData))
 	{
 		UE_LOG(LogAssetValidation, Verbose, TEXT("Loading asset %s for validation"), *AssetData.ToSoftObjectPath().ToString());
 		UE::DataValidation::FScopedLogMessageGatherer LogGatherer{CurrentSettings->bCaptureAssetLoadLogs};

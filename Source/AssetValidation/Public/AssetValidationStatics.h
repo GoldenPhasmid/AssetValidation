@@ -6,6 +6,7 @@
 #include "EditorValidatorHelpers.h"
 #include "Misc/DataValidation.h"
 
+class UEditorValidatorBase;
 struct FValidateAssetsResults;
 struct FValidateAssetsSettings;
 
@@ -59,9 +60,13 @@ namespace UE::AssetValidation
 	 * @param InSettings data validation settings
 	 * @param OutResults data validation results
 	 */
-	void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
+	ASSETVALIDATION_API void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults);
 
-	bool ShouldValidatePackage(const FString& PackageName);
+	/** @return true if assets defined by @PackageName should be validated */
+	ASSETVALIDATION_API bool ShouldValidatePackage(const FString& PackageName);
+
+	/** Enable or disable a given editor validator */
+	void SetValidatorEnabled(UEditorValidatorBase* Validator, bool bEnabled);
 
 	/** validate source control file state for an empty package */
 	FString ValidateEmptyPackage(const FString& PackageName);
@@ -69,10 +74,17 @@ namespace UE::AssetValidation
 	/** Given a package, return if package contains a UWorld or an external world object */
 	bool IsWorldOrWorldExternalPackage(UPackage* Package);
 
+	/** @return whether asset data represents a world asset */
+	bool IsWorldAsset(const FAssetData& AssetData);
+
+	bool IsExternalAsset(const FString& PackagePath);
+	bool IsExternalAsset(const FAssetData& AssetData);
+
 	/** @return true if filename is a C++ source file */
 	bool IsCppFile(const FString& Filename);
 
 	/** Add validation messages to validation context in "data validation format" */
+	ASSETVALIDATION_API void ClearLogMessages(FMessageLog& MessageLog);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);

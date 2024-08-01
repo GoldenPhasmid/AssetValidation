@@ -2,22 +2,23 @@
 
 #include "AssetValidationDefines.h"
 #include "AssetValidationModule.h"
+#include "AssetValidationSettings.h"
 #include "DataValidationModule.h"
 #include "EditorValidatorHelpers.h"
 #include "EditorValidatorSubsystem.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "ShaderCompiler.h"
-#include "SourceControlHelpers.h"
 #include "SourceControlProxy.h"
-#include "AssetRegistry/AssetDataToken.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Logging/MessageLog.h"
 #include "Misc/ScopedSlowTask.h"
-#include "Misc/UObjectToken.h"
 #include "Settings/ProjectPackagingSettings.h"
 
 #include "StudioTelemetry.h"
+#include "AssetValidators/AssetValidator.h"
+#include "IMessageLogListing.h"
+#include "Presentation/MessageLogListingViewModel.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -230,6 +231,17 @@ namespace UE::AssetValidation
 		return Filename.EndsWith(TEXT(".h")) || Filename.EndsWith(TEXT(".cpp")) || Filename.EndsWith(TEXT(".hpp"));
 	}
 
+	void ClearLogMessages(FMessageLog& MessageLog)
+	{
+		if (auto OnGetLog = MessageLog.OnGetLog(); OnGetLog.IsBound())
+		{
+			TSharedRef<IMessageLog> Log = OnGetLog.Execute(UE::DataValidation::MessageLogName);
+			
+			TSharedRef<FMessageLogListingViewModel> LogListing = StaticCastSharedRef<FMessageLogListingViewModel>(Log);
+			LogListing->ClearMessages();
+		}
+	}
+
 	void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext)
 	{
 		for (const FDataValidationContext::FIssue& Issue : ValidationContext.GetIssues())
@@ -349,15 +361,34 @@ namespace UE::AssetValidation
 				return false;
 			}
 		}
-
-		if (PackageName.StartsWith(TEXT("/Game/Developers/")))
+		
+		for (const FDirectoryPath& Directory: UAssetValidationSettings::Get()->ExcludedDirectories)
 		{
-			return false;
+			const FString& Folder = Directory.Path;
+			if (PackageName.StartsWith(Folder))
+			{
+				return false;
+			}
 		}
-
+		
 		return true;
 	}
-	
+
+	void SetValidatorEnabled(UEditorValidatorBase* Validator, bool bEnabled)
+	{
+		if (UAssetValidator* AssetValidator = Cast<UAssetValidator>(Validator))
+		{
+			// do it the correct way
+			AssetValidator->SetEnabled(bEnabled);
+		}
+		else
+		{
+			// do it the unreal way, because everything we need is always protected or private without a getter/setter
+			const FBoolProperty* Property = CastFieldChecked<FBoolProperty>(Validator->GetClass()->FindPropertyByName(TEXT("bIsEnabled")));
+			Property->SetPropertyValue(Validator, bEnabled);
+		}
+	}
+
 	FString ValidateEmptyPackage(const FString& PackageName)
 	{
 		FString Message{};
@@ -394,6 +425,21 @@ namespace UE::AssetValidation
 	bool IsWorldOrWorldExternalPackage(UPackage* Package)
 	{
 		return UWorld::IsWorldOrWorldExternalPackage(Package);
+	}
+
+	bool IsWorldAsset(const FAssetData& AssetData)
+	{
+		return AssetData.AssetClassPath == UWorld::StaticClass()->GetClassPathName();
+	}
+
+	bool IsExternalAsset(const FString& PackagePath)
+	{
+		return PackagePath.Contains(FPackagePath::GetExternalActorsFolderName()) || PackagePath.Contains(FPackagePath::GetExternalObjectsFolderName());
+	}
+
+	bool IsExternalAsset(const FAssetData& AssetData)
+	{
+		return IsExternalAsset(AssetData.PackagePath.ToString());
 	}
 } // UE::AssetValidation
 

@@ -17,9 +17,17 @@ public:
 		return GetDefault<UAssetValidationSettings>();
 	}
 
+	static UAssetValidationSettings* GetMutable()
+	{
+		return GetMutableDefault<UAssetValidationSettings>();
+	}
+
 	/** Default settings used for simple IsAssetValid/IsObjectValid validation requests */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	FValidateAssetsSettings DefaultSettings;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (ContentDir))
+	TArray<FDirectoryPath> ExcludedDirectories;
 
 	/** If true, will fill validation log with messages like "Validating thingy" or "Done validating thingy" */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
