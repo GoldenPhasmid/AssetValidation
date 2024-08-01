@@ -18,6 +18,16 @@
 
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
+	if (!Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext))
+	{
+		return false;
+	}
+	
+	if (InAssetData.AssetClassPath != UWorld::StaticClass()->GetClassPathName())
+	{
+		return false;
+	}
+	
 	if (InObject != nullptr && !InObject->IsA<UWorld>())
 	{
 		return false;
@@ -47,10 +57,10 @@ int32 UAssetValidator_World::EstimateWorldAssetCount(const UWorld* World) const
 {
 	check(World);
 	// rough estimation of a number of assets that are going to be validated as part of world validation
-	// world, level script blueprint, level script actor, world partition
-	int32 WorldAssetCount = 4; 
-	// for each streaming level, validate script blueprint and script actor
-	WorldAssetCount += World->GetStreamingLevels().Num() * 2;
+	// world, persistent level, level script blueprint, level script actor, world partition
+	int32 WorldAssetCount = 5; 
+	// for each streaming level, validate level, script blueprint and script actor
+	WorldAssetCount += World->GetStreamingLevels().Num() * 3;
 	// for each level, validate actors
 	for (const ULevel* Level: World->GetLevels())
 	{
@@ -187,6 +197,7 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	// don't validate world settings explicitly, actor iterator will walk over it
+	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel, Context);
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
 	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->GetLevelScriptActor(), Context);
 	
@@ -200,9 +211,10 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 		// validate sublevel level blueprints
         for (const ULevelStreaming* LevelStreaming: World->GetStreamingLevels())
         {
-        	if (const ULevel* Level = LevelStreaming->GetLoadedLevel())
+        	if (ULevel* Level = LevelStreaming->GetLoadedLevel())
         	{
-        		Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
+        		Result &= ValidateAssetInternal(*Subsystem, Level, Context);
+        		Result &= ValidateAssetInternal(*Subsystem, Level->LevelScriptBlueprint, Context);
         		Result &= ValidateAssetInternal(*Subsystem, Level->GetLevelScriptActor(), Context);
         	}
         }
@@ -276,9 +288,11 @@ EDataValidationResult UAssetValidator_World::ValidateExternalAssets(const FAsset
 		check(InContext.GetNumErrors() > NumValidationErrors);
 		const FText FailReason = FText::Format(LOCTEXT("AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromName(InAssetData.AssetName));
 		InContext.AddMessage(InAssetData, EMessageSeverity::Error, FailReason);
+
+		return EDataValidationResult::Invalid;
 	}
 
-	return Result;
+	return EDataValidationResult::Valid;
 }
 
 #undef LOCTEXT_NAMESPACE
