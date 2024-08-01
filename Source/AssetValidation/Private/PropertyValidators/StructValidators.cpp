@@ -3,6 +3,7 @@
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 #include "InstancedStruct.h"
+#include "BehaviorTree/BehaviorTreeTypes.h"
 #include "Editor/MetaDataSource.h"
 #include "Engine/AssetManager.h"
 
@@ -259,6 +260,19 @@ void UStructValidator_Key::ValidateProperty(TNonNullPtr<const uint8> PropertyMem
 	check(Key);
 
 	ValidationContext.FailOnCondition(!Key->IsValid(), Property, LOCTEXT("Key", "Key property is not set."));
+}
+
+UStructValidator_BlackboardKeySelector::UStructValidator_BlackboardKeySelector()
+{
+	Descriptor = FPropertyValidatorDescriptor{FStructProperty::StaticClass(), GetStructCppName<FBlackboardKeySelector>()};
+}
+
+void UStructValidator_BlackboardKeySelector::ValidateProperty(TNonNullPtr<const uint8> PropertyMemory, const FProperty* Property, FMetaDataSource& MetaData, FPropertyValidationContext& ValidationContext) const
+{
+	const FBlackboardKeySelector* BlackboardKey = ConvertStructMemory<FBlackboardKeySelector>(PropertyMemory);
+	check(BlackboardKey);
+	
+	ValidationContext.FailOnCondition(!BlackboardKey->IsSet(), Property, LOCTEXT("BlackboardKeySelector", "Blackboard key is not set."));
 }
 
 UStructValidator_InstancedStruct::UStructValidator_InstancedStruct()
