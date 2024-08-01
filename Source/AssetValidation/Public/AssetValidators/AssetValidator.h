@@ -24,6 +24,11 @@ public:
 		return EDataValidationResult::NotValidated;
 	}
 
+	FORCEINLINE void SetEnabled(bool bNewEnabled)
+	{
+		bIsEnabled = bNewEnabled;
+	}
+
 protected:
 	void LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context);
 
