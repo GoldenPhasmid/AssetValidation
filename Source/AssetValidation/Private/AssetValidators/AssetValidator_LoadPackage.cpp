@@ -1,12 +1,10 @@
 #include "AssetValidators/AssetValidator_LoadPackage.h"
 
 #include "AssetCompilingManager.h"
-#include "AssetValidationSettings.h"
+#include "AssetValidationDefines.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationSubsystem.h"
 #include "DataValidationModule.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
 
 bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageName, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 {

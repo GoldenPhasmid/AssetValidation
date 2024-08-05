@@ -1,5 +1,6 @@
 #include "AssetValidators/AssetValidator_Referencers.h"
 
+#include "AssetValidationDefines.h"
 #include "AssetValidationStatics.h"
 #include "Algo/RemoveIf.h"
 #include "AssetRegistry/IAssetRegistry.h"

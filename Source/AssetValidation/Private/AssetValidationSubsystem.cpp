@@ -1,5 +1,6 @@
 #include "AssetValidationSubsystem.h"
 
+#include "AssetValidationDefines.h"
 #include "AssetValidationModule.h"
 #include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"

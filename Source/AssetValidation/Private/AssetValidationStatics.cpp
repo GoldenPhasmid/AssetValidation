@@ -18,6 +18,7 @@
 #include "StudioTelemetry.h"
 #include "AssetValidators/AssetValidator.h"
 #include "IMessageLogListing.h"
+#include "AssetRegistry/AssetDataToken.h"
 #include "Presentation/MessageLogListingViewModel.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
@@ -441,6 +442,28 @@ namespace UE::AssetValidation
 	{
 		return IsExternalAsset(AssetData.PackagePath.ToString());
 	}
+
+	template <>
+	TSharedRef<FTokenizedMessage> AddToken<FText>(const TSharedRef<FTokenizedMessage>& Message, const FText& Text)
+	{
+		Message->AddText(Text);
+		return Message;
+	}
+
+	template <>
+	TSharedRef<FTokenizedMessage> AddToken<TSharedRef<IMessageToken>>(const TSharedRef<FTokenizedMessage>& Message, const TSharedRef<IMessageToken>& Token)
+	{
+		Message->AddToken(Token);
+		return Message;
+	}
+	
+	template <>
+	TSharedRef<FTokenizedMessage> AddToken<FAssetData>(const TSharedRef<FTokenizedMessage>& Message, const FAssetData& AssetData)
+	{
+		Message->AddToken(FAssetDataToken::Create(AssetData));
+		return Message;
+	}
+	
 } // UE::AssetValidation
 
 #undef LOCTEXT_NAMESPACE

@@ -1,5 +1,6 @@
 #include "AssetValidationCommandlet.h"
 
+#include "AssetValidationDefines.h"
 #include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "EditorValidatorBase.h"

@@ -2,6 +2,10 @@
 #include "AssetValidators/AssetValidator_AnimSequence.h"
 
 #include "AssetValidationDefines.h"
+#include "AssetValidationModule.h"
+#include "AssetValidationStatics.h"
+#include "AssetRegistry/AssetDataToken.h"
+#include "Misc/DataValidation.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -14,41 +18,51 @@ EDataValidationResult UAssetValidator_AnimSequence::ValidateLoadedAsset_Implemen
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_AnimSequence, AssetValidationChannel);
 	
-	UAnimSequenceBase* AnimAsset = CastChecked<UAnimSequenceBase>(InAsset);
-
-	USkeleton* Skeleton = AnimAsset->GetSkeleton();
-	check(Skeleton);
+	const UAnimSequenceBase* AnimSequence = CastChecked<UAnimSequenceBase>(InAsset);
+	const USkeleton* Skeleton = AnimSequence->GetSkeleton();
 	
-	const TArray<FFloatCurve>& Curves = AnimAsset->GetCurveData().FloatCurves;
+	if (!IsValid(Skeleton))
+	{
+		Context.AddMessage(UE::AssetValidation::CreateTokenMessage(
+			EMessageSeverity::Error, InAssetData, LOCTEXT("NoSkeleton", "animation is missing skeleton.")
+		));
+		return EDataValidationResult::Invalid;
+	}
+
+	EDataValidationResult Result = ValidateCurves(*Skeleton, *AnimSequence, InAssetData, Context);
+	if (Result != EDataValidationResult::Invalid)
+	{
+		AssetPasses(AnimSequence);
+	}
+
+	return Result;
+}
+
+EDataValidationResult UAssetValidator_AnimSequence::ValidateCurves(const USkeleton& Skeleton, const UAnimSequenceBase& AnimSequence, const FAssetData& AssetData, FDataValidationContext& Context)
+{
+	const FAssetData SkeletonAsset{&Skeleton};
+	const TArray<FFloatCurve>& Curves = AnimSequence.GetCurveData().FloatCurves;
+
+	EDataValidationResult Result = EDataValidationResult::Valid;
 	for (const FFloatCurve& Curve: Curves)
 	{
 		const FName CurveName = Curve.GetName();
 		if (!CurveExists(Skeleton, CurveName))
 		{
-			FFormatNamedArguments Arguments;
-			Arguments.Add(TEXT("CurveName"), FText::FromName(CurveName));
-			Arguments.Add(TEXT("SkeletonName"), FText::FromString(Skeleton->GetName()));
-			Arguments.Add(TEXT("AnimAsset"), FText::FromString(AnimAsset->GetName()));
-			
-			FText FailReason = FText::Format(FTextFormat::FromString(TEXT("No curve {CurveName} present on skeleton {SkeletonName}, but exists on anim asset {AnimAsset}")), Arguments);
-			AssetFails(AnimAsset, FailReason);
+			Context.AddMessage(UE::AssetValidation::CreateTokenMessage(EMessageSeverity::Error, AssetData,
+				FText::Format(LOCTEXT("NoCurveFormat", "No curve [{0}] present on skeleton "), FText::FromName(CurveName)),
+				SkeletonAsset, LOCTEXT("CurveExistsOnAsset", ", but exists on animation sequence.")
+			));
+			Result &= EDataValidationResult::Invalid;
 		}
 	}
 
-	if (GetValidationResult() == EDataValidationResult::NotValidated)
-	{
-		AssetPasses(AnimAsset);
-	}
-
-	return GetValidationResult();
+	return Result;
 }
 
-bool UAssetValidator_AnimSequence::CurveExists(const USkeleton* Skeleton, FName CurveName) const
+bool UAssetValidator_AnimSequence::CurveExists(const USkeleton& Skeleton, FName CurveName)
 {
-	check(IsValid(Skeleton));
-
-	// @todo: does it mean that curve exists? Need to test this
-	return Skeleton->GetCurveMetaData(CurveName) != nullptr;
+	return Skeleton.GetCurveMetaData(CurveName) != nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE

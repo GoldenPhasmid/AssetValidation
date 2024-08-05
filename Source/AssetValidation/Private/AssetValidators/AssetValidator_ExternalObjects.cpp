@@ -1,5 +1,6 @@
 #include "AssetValidators/AssetValidator_ExternalObjects.h"
 
+#include "AssetValidationDefines.h"
 #include "AssetValidationSubsystem.h"
 #include "AssetValidationStatics.h"
 #include "Misc/DataValidation.h"

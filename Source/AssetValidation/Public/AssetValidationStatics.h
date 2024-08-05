@@ -2,13 +2,15 @@
 
 #include <mutex>
 
-#include "AssetValidationDefines.h"
-#include "EditorValidatorHelpers.h"
-#include "Misc/DataValidation.h"
+namespace UE::DataValidation
+{
+	struct FScopedLogMessageGatherer;
+}
 
 class UEditorValidatorBase;
 struct FValidateAssetsResults;
 struct FValidateAssetsSettings;
+struct FAssetData;
 
 enum class EDataValidationUsecase : uint8;
 
@@ -77,12 +79,28 @@ namespace UE::AssetValidation
 	/** @return whether asset data represents a world asset */
 	bool IsWorldAsset(const FAssetData& AssetData);
 
+	/** @return whether package path represents external actor */
 	bool IsExternalAsset(const FString& PackagePath);
+	
+	/** @return whether asset data represents external actor */
 	bool IsExternalAsset(const FAssetData& AssetData);
 
 	/** @return true if filename is a C++ source file */
 	bool IsCppFile(const FString& Filename);
+	
+	template <typename T>
+	TSharedRef<FTokenizedMessage> AddToken(const TSharedRef<FTokenizedMessage>& Message, const T& Token);
+	
+	/** @return tokenized message */
+	template <typename ...TParams>
+	TSharedRef<FTokenizedMessage> CreateTokenMessage(EMessageSeverity::Type Severity, TParams&&... Params)
+	{
+		TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(Severity);
+		(AddToken<std::decay_t<TParams>>(Message, Params), ...);
 
+		return Message;
+	}
+	
 	/** Add validation messages to validation context in "data validation format" */
 	ASSETVALIDATION_API void ClearLogMessages(FMessageLog& MessageLog);
 	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);

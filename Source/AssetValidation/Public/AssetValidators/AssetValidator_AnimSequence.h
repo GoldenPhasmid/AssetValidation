@@ -16,7 +16,6 @@ public:
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 	//~End EditorValidatorBase interface
 
-protected:
-
-	bool CurveExists(const USkeleton* Skeleton, FName CurveName) const;
+	static EDataValidationResult ValidateCurves(const USkeleton& Skeleton, const UAnimSequenceBase& AnimSequence, const FAssetData& AssetData, FDataValidationContext& Context);
+	static bool CurveExists(const USkeleton& Skeleton, FName CurveName);
 };
