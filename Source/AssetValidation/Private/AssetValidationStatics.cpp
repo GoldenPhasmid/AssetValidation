@@ -451,6 +451,20 @@ namespace UE::AssetValidation
 	}
 
 	template <>
+	TSharedRef<FTokenizedMessage> AddToken<FString>(const TSharedRef<FTokenizedMessage>& Message, const FString& Str)
+	{
+		Message->AddText(FText::FromString(Str));
+		return Message;
+	}
+
+	template <>
+	TSharedRef<FTokenizedMessage> AddToken<FName>(const TSharedRef<FTokenizedMessage>& Message, const FName& Name)
+	{
+		Message->AddText(FText::FromName(Name));
+		return Message;
+	}
+
+	template <>
 	TSharedRef<FTokenizedMessage> AddToken<TSharedRef<IMessageToken>>(const TSharedRef<FTokenizedMessage>& Message, const TSharedRef<IMessageToken>& Token)
 	{
 		Message->AddToken(Token);

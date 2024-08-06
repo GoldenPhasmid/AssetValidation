@@ -2,6 +2,8 @@
 
 #include <mutex>
 
+#include "CoreMinimal.h"
+
 namespace UE::DataValidation
 {
 	struct FScopedLogMessageGatherer;

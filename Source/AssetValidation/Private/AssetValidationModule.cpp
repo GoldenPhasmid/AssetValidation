@@ -5,6 +5,7 @@
 #include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
+#include "EditorValidatorHelpers.h"
 #include "EditorValidatorSubsystem.h"
 #include "ISettingsModule.h"
 #include "ISourceControlModule.h"
