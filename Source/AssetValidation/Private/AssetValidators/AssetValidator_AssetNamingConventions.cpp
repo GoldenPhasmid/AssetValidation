@@ -20,7 +20,8 @@ bool UAssetValidator_AssetNamingConventions::CanValidateAsset_Implementation(con
 	}
 	
 	const FString PackageName = InAssetData.PackageName.ToString();
-	return UE::AssetValidation::IsBlueprintGeneratedPackage(PackageName);
+	// validate on blueprint top level assets (basically assets from content browser)
+	return UE::AssetValidation::IsBlueprintGeneratedPackage(PackageName) && InAssetData.IsTopLevelAsset();
 }
 
 EDataValidationResult UAssetValidator_AssetNamingConventions::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext)
