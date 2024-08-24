@@ -19,6 +19,7 @@
 #include "AssetValidators/AssetValidator.h"
 #include "IMessageLogListing.h"
 #include "AssetRegistry/AssetDataToken.h"
+#include "Misc/UObjectToken.h"
 #include "Presentation/MessageLogListingViewModel.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
@@ -477,6 +478,14 @@ namespace UE::AssetValidation
 		Message->AddToken(FAssetDataToken::Create(AssetData));
 		return Message;
 	}
+
+	template <>
+	TSharedRef<FTokenizedMessage> AddToken<UObject>(const TSharedRef<FTokenizedMessage>& Message, const UObject* Object)
+	{
+		Message->AddToken(FUObjectToken::Create(Object));
+		return Message;
+	}
+
 	
 } // UE::AssetValidation
 

@@ -3,6 +3,7 @@
 #include <mutex>
 
 #include "CoreMinimal.h"
+#include "Misc/DataValidation.h"
 
 namespace UE::DataValidation
 {
@@ -89,18 +90,69 @@ namespace UE::AssetValidation
 
 	/** @return true if filename is a C++ source file */
 	bool IsCppFile(const FString& Filename);
+
+	template <typename T, typename = void>
+	struct TConvertTokenImpl
+	{
+		using Type = T;
+		static T Convert(T Value) { return Value; }
+	};
+
+	template <bool Value>
+	struct TOnlyTrue;
+
+	template <>
+	struct TOnlyTrue<true> {};
+
+	template <typename TMessageToken, ESPMode Mode>
+	struct TConvertTokenImpl<TSharedPtr<TMessageToken, Mode>, std::void_t<TOnlyTrue<std::is_convertible_v<TMessageToken, IMessageToken>>>>
+	{
+		using Type = TSharedRef<IMessageToken, Mode>;
+		static TSharedRef<IMessageToken, Mode> Convert(const TSharedPtr<TMessageToken>& Token)
+		{
+			return StaticCastSharedPtr<IMessageToken>(Token).ToSharedRef();
+		}
+	};
+
+	template <typename TMessageToken, ESPMode Mode>
+	struct TConvertTokenImpl<TSharedRef<TMessageToken, Mode>, std::void_t<TOnlyTrue<std::is_convertible_v<TMessageToken, IMessageToken>>>>
+	{
+		using Type = TSharedRef<IMessageToken, Mode>;
+		static TSharedRef<IMessageToken, Mode> Convert(const TSharedRef<TMessageToken>& Token)
+		{
+			return StaticCastSharedRef<IMessageToken>(Token);
+		}
+	};
+	
+	template <typename T>
+	struct TConvertToken: TConvertTokenImpl<std::decay_t<T>> {};
+
+	template <typename T>
+	using ConvertTokenType = typename TConvertToken<T>::Type;
 	
 	template <typename T>
 	TSharedRef<FTokenizedMessage> AddToken(const TSharedRef<FTokenizedMessage>& Message, const T& Token);
+
+	template <typename T>
+	TSharedRef<FTokenizedMessage> AddToken(const TSharedRef<FTokenizedMessage>& Message, const T* Token);
 	
 	/** @return tokenized message */
 	template <typename ...TParams>
 	TSharedRef<FTokenizedMessage> CreateTokenMessage(EMessageSeverity::Type Severity, TParams&&... Params)
 	{
 		TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(Severity);
-		(AddToken<std::decay_t<TParams>>(Message, Params), ...);
+		(AddToken<ConvertTokenType<TParams>>(Message, TConvertToken<TParams>::Convert(Params)), ...);
 
 		return Message;
+	}
+
+	template <typename ...TParams>
+	void AddTokenMessage(FDataValidationContext& Context, EMessageSeverity::Type Severity, TParams&&... Params)
+	{
+		TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(Severity);
+		(AddToken<ConvertTokenType<TParams>>(Message, TConvertToken<TParams>::Convert(Params)), ...);
+
+		Context.AddMessage(Message);
 	}
 	
 	/** Add validation messages to validation context in "data validation format" */
