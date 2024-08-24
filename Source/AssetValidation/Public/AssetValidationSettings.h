@@ -6,11 +6,16 @@
 
 #include "AssetValidationSettings.generated.h"
 
+class UAVCommandletAction;
+class UAVCommandletSearchFilter;
+
 UCLASS(Config = Editor, DefaultConfig, DisplayName = "Asset Validation")
 class ASSETVALIDATION_API UAssetValidationSettings: public UDeveloperSettings
 {
 	GENERATED_BODY()
 public:
+
+	UAssetValidationSettings(const FObjectInitializer& Initializer);
 
 	static const UAssetValidationSettings* Get()
 	{
@@ -40,4 +45,12 @@ public:
 	/** If true, will open target actor's world if actor from validation log doesn't live in currently opened world @todo: implement  */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bOpenEditorWorldForUnloadedActors = true;
+
+	/** Default filter for @UAssetValidationCommandlet */
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	TSubclassOf<UAVCommandletSearchFilter> CommandletDefaultFilter;
+
+	/** Default action for @UAssetValidationCommandlet */
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	TSubclassOf<UAVCommandletAction> CommandletDefaultAction;
 };
