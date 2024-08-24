@@ -10,7 +10,7 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-FValidationTabSummoner::FValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor)
+FBlueprintEditorValidationTabSummoner::FBlueprintEditorValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor)
 	: FWorkflowTabFactory("ValidationTab", InBlueprintEditor)
 	  , BlueprintEditor(InBlueprintEditor)
 {
@@ -20,7 +20,7 @@ FValidationTabSummoner::FValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBl
 	TabIcon = FSlateIcon(FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon");
 }
 
-TSharedRef<SWidget> FValidationTabSummoner::CreateTabBody(const FWorkflowTabSpawnInfo& Info) const
+TSharedRef<SWidget> FBlueprintEditorValidationTabSummoner::CreateTabBody(const FWorkflowTabSpawnInfo& Info) const
 {
 	return SNew(SBlueprintEditorValidationTab).BlueprintEditor(BlueprintEditor);
 }

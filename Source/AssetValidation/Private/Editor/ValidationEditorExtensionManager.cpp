@@ -213,7 +213,7 @@ void UValidationEditorExtensionManager::UpdateBlueprintVariableMetaData(UBluepri
 
 void UValidationEditorExtensionManager::RegisterValidationTab(FWorkflowAllowedTabSet& TabFactory, FName ModeName, TSharedPtr<FBlueprintEditor> BlueprintEditor)
 {
-	TabFactory.RegisterFactory(MakeShared<FValidationTabSummoner>(BlueprintEditor));
+	TabFactory.RegisterFactory(MakeShared<FBlueprintEditorValidationTabSummoner>(BlueprintEditor));
 }
 
 void UValidationEditorExtensionManager::RegisterBlueprintEditorLayout(FLayoutExtender& Extender)

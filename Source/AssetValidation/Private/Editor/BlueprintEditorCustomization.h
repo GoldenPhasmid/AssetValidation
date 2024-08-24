@@ -17,10 +17,10 @@ class UBlueprintValidationView: public UObject
 /**
  * Validation tab summoner for blueprint editor
  */
-class FValidationTabSummoner: public FWorkflowTabFactory
+class FBlueprintEditorValidationTabSummoner: public FWorkflowTabFactory
 {
 public:
-	FValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor);
+	FBlueprintEditorValidationTabSummoner(TSharedPtr<FBlueprintEditor> InBlueprintEditor);
 
 	virtual TSharedRef<SWidget> CreateTabBody(const FWorkflowTabSpawnInfo& Info) const override;
 
@@ -48,7 +48,7 @@ public:
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 	virtual FString GetReferencerName() const override
 	{
-		return TEXT("SBlueprintEditorValidationTab");
+		return GetWidgetClass().GetWidgetType().ToString();
 	}
 	//~End FGCObject interface
 protected:
