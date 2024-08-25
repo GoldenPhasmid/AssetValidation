@@ -46,6 +46,7 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateLoadedAsset_Implem
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	
 	Result &= ValidateSkeleton(BaseSkeleton, *AnimationAsset, InAssetData, Context);
+	Result &= ValidateAnimNotifies(*AnimationAsset, InAssetData, Context);
 	Result &= ValidateCurves(*AnimationAsset, InAssetData, Context);
 	
 	TArray<UAnimationAsset*> AnimationAssets;
@@ -54,6 +55,7 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateLoadedAsset_Implem
 	for (const UAnimationAsset* AnimAsset: AnimationAssets)
 	{
 		Result &= ValidateSkeleton(BaseSkeleton, *AnimAsset, InAssetData, Context);
+		Result &= ValidateAnimNotifies(*AnimAsset, InAssetData, Context);
 		Result &= ValidateCurves(*AnimAsset, InAssetData, Context);
 	}
 
@@ -88,6 +90,44 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateSkeleton(const USk
 	return EDataValidationResult::Valid;
 }
 
+EDataValidationResult UAssetValidator_AnimationAsset::ValidateAnimNotifies(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context)
+{
+	const UAnimSequenceBase* AnimSequence = Cast<UAnimSequenceBase>(&AnimAsset);
+	if (AnimSequence == nullptr)
+	{
+		return EDataValidationResult::Valid;
+	}
+	FAssetData AnimSequenceAsset{AnimSequence};
+
+	EDataValidationResult Result = EDataValidationResult::Valid;
+	for (const FAnimNotifyEvent& AnimNotify: AnimSequence->Notifies)
+	{
+		if (AnimNotify.Notify == nullptr && AnimNotify.NotifyStateClass == nullptr)
+		{
+			const FText NotifyName = FText::FromName(AnimNotify.GetNotifyEventName());
+			const float TriggerTime = AnimNotify.GetTriggerTime();
+			const float TriggerTimePretty = static_cast<int32>(TriggerTime) + static_cast<int32>(FMath::Frac(TriggerTime) * 100) / 100.0;
+			
+			const FText FailReason = FText::Format(LOCTEXT("InvalidAnimNotify", "Anim notify event [{0}:Time {1}] was deleted and no longer valid. Remove it to fix this error."),
+				NotifyName, FText::FromString(FString::SanitizeFloat(TriggerTimePretty, 2))
+			);
+
+			if (AssetData == AnimSequenceAsset)
+			{
+				UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, AssetData, FailReason);
+			}
+			else
+			{
+				UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, AssetData, FString{" "}, AnimSequenceAsset, FailReason);
+			}
+
+			Result &= EDataValidationResult::Invalid;
+		}
+	}
+
+	return Result;
+}
+
 EDataValidationResult UAssetValidator_AnimationAsset::ValidateCurves(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context)
 {
 	const USkeleton* Skeleton = AnimAsset.GetSkeleton();
@@ -103,6 +143,7 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateCurves(const UAnim
 	}
 	
 	const FAssetData SkeletonAsset{Skeleton};
+	FAssetData AnimSequenceAsset{AnimSequence};
 	const TArray<FFloatCurve>& Curves = AnimSequence->GetCurveData().FloatCurves;
 
 	EDataValidationResult Result = EDataValidationResult::Valid;
@@ -111,10 +152,22 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateCurves(const UAnim
 		const FName CurveName = Curve.GetName();
 		if (!CurveExists(*Skeleton, CurveName))
 		{
-			UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, AssetData,
-				FText::Format(LOCTEXT("NoCurveFormat", "No curve [{0}] present on skeleton "), FText::FromName(CurveName)),
-				SkeletonAsset, LOCTEXT("CurveExistsOnAsset", ", but exists on animation sequence.")
-			);
+			const FText FailReason = FText::Format(LOCTEXT("NoCurveFormat", "No curve [{0}] present on skeleton "), FText::FromName(CurveName));
+			const FText FailReasonEnd = LOCTEXT("CurveExistsOnAsset", ", but exists on animation sequence.");
+			if (AssetData == AnimSequenceAsset)
+			{
+				UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, AssetData,
+					FailReason, SkeletonAsset, FailReasonEnd
+				);
+			}
+			else
+			{
+				UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, AssetData,
+					FString{" "}, AnimSequenceAsset,
+					FailReason, SkeletonAsset, FailReasonEnd
+				);
+			}
+
 			Result &= EDataValidationResult::Invalid;
 		}
 	}

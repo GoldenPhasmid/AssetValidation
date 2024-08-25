@@ -123,25 +123,28 @@ namespace UE::AssetValidation
 			return StaticCastSharedRef<IMessageToken>(Token);
 		}
 	};
-	
+
+namespace Private
+{
 	template <typename T>
 	struct TConvertToken: TConvertTokenImpl<std::decay_t<T>> {};
 
 	template <typename T>
-	using ConvertTokenType = typename TConvertToken<T>::Type;
-	
+	using TConvertTokenType = typename TConvertToken<T>::Type;
+
 	template <typename T>
 	TSharedRef<FTokenizedMessage> AddToken(const TSharedRef<FTokenizedMessage>& Message, const T& Token);
 
 	template <typename T>
 	TSharedRef<FTokenizedMessage> AddToken(const TSharedRef<FTokenizedMessage>& Message, const T* Token);
+} // Private
 	
 	/** @return tokenized message */
 	template <typename ...TParams>
 	TSharedRef<FTokenizedMessage> CreateTokenMessage(EMessageSeverity::Type Severity, TParams&&... Params)
 	{
 		TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(Severity);
-		(AddToken<ConvertTokenType<TParams>>(Message, TConvertToken<TParams>::Convert(Params)), ...);
+		(Private::AddToken<Private::TConvertTokenType<TParams>>(Message, Private::TConvertToken<TParams>::Convert(Params)), ...);
 
 		return Message;
 	}
@@ -150,7 +153,7 @@ namespace UE::AssetValidation
 	void AddTokenMessage(FDataValidationContext& Context, EMessageSeverity::Type Severity, TParams&&... Params)
 	{
 		TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(Severity);
-		(AddToken<ConvertTokenType<TParams>>(Message, TConvertToken<TParams>::Convert(Params)), ...);
+		(Private::AddToken<Private::TConvertTokenType<TParams>>(Message, Private::TConvertToken<TParams>::Convert(Params)), ...);
 
 		Context.AddMessage(Message);
 	}

@@ -16,6 +16,7 @@ public:
 	//~End EditorValidatorBase interface
 
 	static EDataValidationResult ValidateSkeleton(const USkeleton* Skeleton, const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context);
+	static EDataValidationResult ValidateAnimNotifies(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context);
 	static EDataValidationResult ValidateCurves(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context);
 	static bool CurveExists(const USkeleton& Skeleton, FName CurveName);
 };

@@ -444,6 +444,8 @@ namespace UE::AssetValidation
 		return IsExternalAsset(AssetData.PackagePath.ToString());
 	}
 
+namespace Private
+{
 	template <>
 	TSharedRef<FTokenizedMessage> AddToken<FText>(const TSharedRef<FTokenizedMessage>& Message, const FText& Text)
 	{
@@ -471,7 +473,7 @@ namespace UE::AssetValidation
 		Message->AddToken(Token);
 		return Message;
 	}
-	
+
 	template <>
 	TSharedRef<FTokenizedMessage> AddToken<FAssetData>(const TSharedRef<FTokenizedMessage>& Message, const FAssetData& AssetData)
 	{
@@ -486,7 +488,7 @@ namespace UE::AssetValidation
 		return Message;
 	}
 
-	
+} // Private
 } // UE::AssetValidation
 
 #undef LOCTEXT_NAMESPACE
