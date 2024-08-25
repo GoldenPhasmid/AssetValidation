@@ -36,6 +36,17 @@ FName FAssetValidationStyle::GetStyleSetName()
 	return StyleSetName;
 }
 
+FSlateIcon FAssetValidationStyle::GetCheckContentIcon()
+{
+	static FSlateIcon Icon{FAssetValidationStyle::GetStyleSetName(), "AssetValidation.CheckContent"};
+	return Icon;
+}
+
+FSlateIcon FAssetValidationStyle::GetValidateMenuIcon()
+{
+	static FSlateIcon Icon{FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon"};
+	return Icon;
+}
 
 const FVector2D Icon16x16(16.0f, 16.0f);
 const FVector2D Icon20x20(20.0f, 20.0f);

@@ -19,6 +19,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor/AssetValidationSettingsCustomization.h"
 #include "Editor/EnginePropertyExtensionCustomization.h"
+#include "Editor/LevelEditorCustomization.h"
 #include "Editor/PropertyValidationSettingsCustomization.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Misc/ScopedSlowTask.h"
@@ -26,6 +27,7 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
+class IMessageToken;
 using UE::AssetValidation::ISourceControlProxy;
 
 class FAssetValidationModule final : public IAssetValidationModule 
@@ -44,15 +46,15 @@ public:
 	}
 
 private:
-
-	void OnAssetDataTokenActivated(const TSharedRef<class IMessageToken>& InToken);
+	
+	void OnAssetDataTokenActivated(const TSharedRef<IMessageToken>& InToken);
 	FText OnGetAssetDataTokenDisplayName(const FAssetData& AssetData, const bool bFullPath);
 
 	void UpdateSourceControlProxy(ISourceControlProvider& OldProvider, ISourceControlProvider& NewProvider);
 
+	TSharedPtr<FAssetValidationToolkitManager> ToolkitManager;
 	TSharedPtr<ISourceControlProxy> SourceControlProxy;
 	FDelegateHandle SCProviderChangedHandle;
-
 #if 0
 	struct FNativeClassMap
 	{
@@ -79,7 +81,6 @@ private:
 		TMap<FString, TArray<TWeakObjectPtr<UClass>>> Classes;
 	};
 #endif
-	
 	
 	static void CheckContent();
 	static void CheckProjectSettings();
@@ -126,7 +127,7 @@ void FAssetValidationModule::StartupModule()
 	PropertyEditor.RegisterCustomClassLayout(StaticClass<UAssetValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FAssetValidationSettingsCustomization::MakeInstance));
 	PropertyEditor.RegisterCustomClassLayout(StaticClass<UPropertyValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyValidationSettingsCustomization::MakeInstance));
 	PropertyEditor.RegisterCustomPropertyTypeLayout(StaticStruct<FEnginePropertyExtension>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&UE::AssetValidation::FEnginePropertyExtensionCustomization::MakeInstance));
-
+	
 	FEditorDelegates::OnEditorInitialized.AddLambda([this](double Duration)
 	{
 		// override default FAssetDataToken callbacks to further customize DisplayName and activation action
@@ -140,55 +141,51 @@ void FAssetValidationModule::RegisterMenus()
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
 	FToolMenuOwnerScoped OwnerScoped(this);
 
-	UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
+	ToolkitManager = MakeShared<FAssetValidationToolkitManager>();
 
+	// TOOL BAR ACTIONS
+	
 	const FUIAction CheckContentAction = FUIAction(
 		FExecuteAction::CreateStatic(&FAssetValidationModule::CheckContent),
 		FCanExecuteAction::CreateStatic(&FAssetValidationModule::HasNoPlayWorld),
 		FIsActionChecked(),
 		FIsActionButtonVisible::CreateStatic(&FAssetValidationModule::HasNoPlayWorld)
 	);
-	
+
+	UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
 	FToolMenuSection& PlayGameSection = ToolbarMenu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
-	
+
+	// CheckContent toolbar functionality 
 	FToolMenuEntry CheckContentEntry = FToolMenuEntry::InitToolBarButton(
 		"CheckContent",
 		CheckContentAction,
 		LOCTEXT("CheckContent", "Check Content"),
 		LOCTEXT("CheckContentDescription", "Runs Content Validation job on all checked out assets"),
-		FSlateIcon(FAssetValidationStyle::GetStyleSetName(), "AssetValidation.CheckContent")
+		FAssetValidationStyle::GetCheckContentIcon()
 	);
 	CheckContentEntry.StyleNameOverride = "CalloutToolbar";
 	PlayGameSection.AddEntry(CheckContentEntry);
 
 	UToolMenu* ToolsMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
 	FToolMenuSection& ToolsSection = ToolsMenu->FindOrAddSection("DataValidation");
-	
+
+	// CheckContent inside Tools header entry
 	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
 		"CheckContent",
 		LOCTEXT("CheckContent", "Check Content"),
 		LOCTEXT("CheckContentTooltip", "Check all source controlled assets."),
-		FSlateIcon(FAssetValidationStyle::GetStyleSetName(), "AssetValidation.CheckContent"),
+		FAssetValidationStyle::GetCheckContentIcon(),
 		CheckContentAction
 	));
+	
+	// CheckProjectSettings inside Tools header entry
 	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
 		"CheckProjectSettings",
 		LOCTEXT("CheckProjectSettings", "Check Project Settings"),
 		LOCTEXT("CheckProjectSettingsTooltip", "Check all config objects and developer settings"),
-		FSlateIcon(FAppStyle::GetAppStyleSetName(), "DeveloperTools.MenuIcon"),
+		FAssetValidationStyle::GetValidateMenuIcon(),
 		FUIAction(FExecuteAction::CreateStatic(&FAssetValidationModule::CheckProjectSettings))
 	));
-
-#if 0
-	UToolMenu* BlueprintMenu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
-	BlueprintMenu->AddMenuEntry("DataValidation", FToolMenuEntry::InitMenuEntry(
-		"BlueprintMenuTest",
-		LOCTEXT("BlueprintMenuTest", "Menu Test"),
-		FText::GetEmpty(),
-		FSlateIcon{},
-		FToolUIActionChoice{}
-	));
-#endif
 }
 
 
@@ -202,6 +199,8 @@ void FAssetValidationModule::ShutdownModule()
 	UToolMenus::UnregisterOwner(this);
 
 	FAssetValidationStyle::Shutdown();
+
+	ToolkitManager.Reset();
 	
 	ISourceControlModule& SourceControl = ISourceControlModule::Get();
 	SourceControl.UnregisterProviderChanged(SCProviderChangedHandle);
@@ -327,6 +326,7 @@ FText FAssetValidationModule::OnGetAssetDataTokenDisplayName(const FAssetData& A
 	}
 	return FText::FromName(AssetData.PackageName);
 }
+
 
 void FAssetValidationModule::CheckContent()
 {

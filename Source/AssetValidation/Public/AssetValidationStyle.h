@@ -21,6 +21,9 @@ public:
 
 	static FName GetStyleSetName();
 
+	static FSlateIcon GetCheckContentIcon();
+	static FSlateIcon GetValidateMenuIcon();
+
 private:
 
 	static TSharedRef< class FSlateStyleSet > Create();

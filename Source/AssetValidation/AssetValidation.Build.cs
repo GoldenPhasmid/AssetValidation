@@ -52,6 +52,9 @@ public class AssetValidation : ModuleRules
 				"AIModule",
 				"StructUtils", 
 				"MessageLog",
+				"BlueprintGraph", 
+				"ScriptPlugin",
+				"AssetTools",
 			}
 		);
 	}
