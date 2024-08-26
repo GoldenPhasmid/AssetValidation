@@ -2,6 +2,7 @@
 
 #include "AssetValidationDefines.h"
 #include "AssetValidationStatics.h"
+#include "PropertyValidatorSubsystem.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -97,9 +98,12 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateAnimNotifies(const
 	{
 		return EDataValidationResult::Valid;
 	}
-	FAssetData AnimSequenceAsset{AnimSequence};
 
+	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+	
+	FAssetData AnimSequenceAsset{AnimSequence};
 	EDataValidationResult Result = EDataValidationResult::Valid;
+	
 	for (const FAnimNotifyEvent& AnimNotify: AnimSequence->Notifies)
 	{
 		if (AnimNotify.Notify == nullptr && AnimNotify.NotifyStateClass == nullptr)
@@ -122,6 +126,16 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateAnimNotifies(const
 			}
 
 			Result &= EDataValidationResult::Invalid;
+		}
+		else
+		{
+			UObject* Target = AnimNotify.Notify ? static_cast<UObject*>(AnimNotify.Notify) : static_cast<UObject*>(AnimNotify.NotifyStateClass);
+			FPropertyValidationResult ValidationResult = PropertyValidators->ValidateObject(Target);
+			
+			UE::AssetValidation::AppendAssetValidationMessages(Context, AnimSequenceAsset, EMessageSeverity::Error, ValidationResult.Errors);
+			UE::AssetValidation::AppendAssetValidationMessages(Context, AnimSequenceAsset, EMessageSeverity::Warning, ValidationResult.Warnings);
+
+			Result &= ValidationResult.ValidationResult;
 		}
 	}
 
