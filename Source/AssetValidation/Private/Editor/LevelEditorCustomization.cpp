@@ -106,7 +106,7 @@ void UAssetValidationToolkitView::ExecuteCommandlet()
 		CommandletStatus += FString::Printf(TEXT("Validation for search filter %s failed. See log for details.\n"), *GetNameSafe(SearchFilter));
 		bPassedValidation = false;
 	}
-	if (FPropertyValidationResult Result = UPropertyValidatorSubsystem::Get()->ValidateObject(SearchFilter); Result.ValidationResult == EDataValidationResult::Invalid)
+	if (FPropertyValidationResult Result = UPropertyValidatorSubsystem::Get()->ValidateObject(Action); Result.ValidationResult == EDataValidationResult::Invalid)
 	{
 		CommandletStatus += FString::Printf(TEXT("Validation for action %s failed. See log for details.\n"), *GetNameSafe(Action));
 		bPassedValidation = false;
