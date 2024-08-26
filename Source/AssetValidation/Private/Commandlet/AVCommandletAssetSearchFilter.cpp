@@ -40,17 +40,26 @@ namespace UE::AssetValidation
 	 * Exclusive with -Maps param
 	 */
 	static const FString AllMaps{TEXT("AllMaps")};
+	
 	/**
-	 * Switch, will not use asset filter when querying asset validation.
+	 * Switch, will not use class path filter when querying assets.
 	 * Exclusive with all other asset type options.
 	 */
 	static const FString AllAssets{TEXT("All")};
-	/** Adds BP assets and data only assets to validation */
+	/** Adds BP assets and data only assets to class paths */
 	static const FString Blueprints{TEXT("Blueprints")};
-	/** Adds widget assets to validation */
+	/** Adds widget assets to class paths */
 	static const FString Widgets{TEXT("Widgets")};
-	/** Adds animations, montages and anim BPs to validation */
+	/** Adds animations, montages and anim BPs to class paths */
 	static const FString Animations{TEXT("Animations")};
+	/** Adds static meshes to class paths */
+	static const FString StaticMeshes{TEXT("StaticMeshes")};
+	/** Adds skeletal meshes to class paths */
+	static const FString SkeletalMeshes{TEXT("SkeletalMeshes")};
+	/** Adds material classes to class paths */
+	static const FString Materials{TEXT("Materials")};
+	/** Adds texture classes to class paths */
+	static const FString Textures{TEXT("Textures")};
 	/** Adds unreal sound assets to validation */
 	static const FString Sounds{TEXT("Sounds")};
 }
@@ -90,10 +99,6 @@ void UAVCommandletAssetSearchFilter::InitFromCommandlet(const TArray<FString>& S
 
 	bAllMaps = Switches.Contains(UE::AssetValidation::AllMaps);
 	bAllAssetTypes = Switches.Contains(UE::AssetValidation::AllAssets);
-	bBlueprints = Switches.Contains(UE::AssetValidation::Blueprints);
-	bWidgets = Switches.Contains(UE::AssetValidation::Widgets);
-	bAnimations = Switches.Contains(UE::AssetValidation::Animations);
-	bSounds = Switches.Contains(UE::AssetValidation::Sounds);
 	
 	if (bAllMaps == false)
 	{
@@ -171,70 +176,93 @@ bool UAVCommandletAssetSearchFilter::GetAssets(TArray<FAssetData>& OutAssets) co
 
 TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() const
 {
-	TArray<FTopLevelAssetPath> AllowedClasses;
+	TArray<FTopLevelAssetPath> AllowedClassPaths;
 	if (bAllAssetTypes)
 	{
-		return AllowedClasses;
+		return AllowedClassPaths;
 	}
 
-	AllowedClasses.Reserve(AssetTypes.Num() + 20);
+	auto AddDerivedClasses = [&AllowedClassPaths](const UClass* BaseClass)
+	{
+		TArray<UClass*> Classes;
+		GetDerivedClasses(BaseClass, Classes);
+
+		for (const UClass* DerivedClass: Classes)
+		{
+			AllowedClassPaths.Add(DerivedClass->GetClassPathName());
+		}
+	};
+
+	AllowedClassPaths.Reserve(AssetTypes.Num() + 20);
 	// blueprint assets
 	if (bBlueprints)
 	{
-		AllowedClasses.Add(UBlueprint::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UDataTable::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UDataAsset::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UUserDefinedEnum::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UDataTable::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UDataAsset::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UUserDefinedEnum::StaticClass()->GetClassPathName());
 	}
 	// widgets
 	if (bWidgets)
 	{
-		AllowedClasses.Add(UWidgetBlueprint::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UUserWidgetBlueprint::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UBaseWidgetBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UWidgetBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UUserWidgetBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UBaseWidgetBlueprint::StaticClass()->GetClassPathName());
 	}
 	// animations, montages and anim BPs
 	if (bAnimations)
 	{
-		AllowedClasses.Add(UAnimationAsset::StaticClass()->GetClassPathName());
-		AllowedClasses.Add(UAnimBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UAnimationAsset::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UAnimBlueprint::StaticClass()->GetClassPathName());
 
-		TArray<UClass*> AnimationClasses;
-		GetDerivedClasses(UAnimationAsset::StaticClass(), AnimationClasses);
-
-		for (const UClass* Class: AnimationClasses)
-		{
-			AllowedClasses.Add(Class->GetClassPathName());
-		}
+		AddDerivedClasses(UAnimationAsset::StaticClass());
 	}
-	
+	// static meshes
+	if (bStaticMeshes)
+	{
+		AllowedClassPaths.Add(UStaticMesh::StaticClass()->GetClassPathName());
+	}
+	// skeletal meshes
+	if (bSkeletalMeshes)
+	{
+		AllowedClassPaths.Add(USkeletalMesh::StaticClass()->GetClassPathName());
+	}
+	// materials
+	if (bMaterials)
+	{
+		AddDerivedClasses(UMaterialInterface::StaticClass());
+	}
+	// textures
+	if (bTextures)
+	{
+		AddDerivedClasses(UTexture::StaticClass());
+	}
 	// unreal sounds
 	if (bSounds)
 	{
-		TArray<UClass*> SoundClasses;
-		GetDerivedClasses(USoundBase::StaticClass(), SoundClasses);
-		
-		for (const UClass* Class: SoundClasses)
-		{
-			AllowedClasses.Add(Class->GetClassPathName());
-		}
+		AddDerivedClasses(USoundBase::StaticClass());
+	}
+	// redirectors
+	if (bRedirectors)
+	{
+		AllowedClassPaths.Add(UObjectRedirector::StaticClass()->GetClassPathName());
 	}
 
 	// add world asset type if we have -AllMaps or specified list of maps with -Maps. -Maps are getting filtered later
 	if (bAllMaps || !Maps.IsEmpty())
 	{
-		AllowedClasses.Add(UWorld::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UWorld::StaticClass()->GetClassPathName());
 	}
 
 	// additional asset types
 	for (const UClass* AssetType: AssetTypes)
 	{
 		check(AssetType);
-		AllowedClasses.Add(AssetType->GetClassPathName());
+		AllowedClassPaths.Add(AssetType->GetClassPathName());
 	}
 	
-	return AllowedClasses;
+	return AllowedClassPaths;
 }
 
 TArray<FName> UAVCommandletAssetSearchFilter::GetPackagePaths() const

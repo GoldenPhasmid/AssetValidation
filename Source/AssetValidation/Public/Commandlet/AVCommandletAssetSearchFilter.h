@@ -29,23 +29,11 @@ public:
 	TArray<FDirectoryPath> DirectoryPaths;
 	
 	/** Specify a list of asset types to include into search request */
-	UPROPERTY(EditAnywhere, Category = "Filter", meta = (Validate, AllowAbstract = "true"))
+	UPROPERTY(EditAnywhere, Category = "Filter", meta = (Validate, EditCondition = "!bAllAssetTypes", AllowAbstract = "true"))
 	TArray<const UClass*> AssetTypes;
 
 	UPROPERTY(EditAnywhere, Category = "Filter")
 	bool bAllAssetTypes = false;
-	
-	UPROPERTY(EditAnywhere, Category = "Filter")
-	bool bBlueprints = false;
-
-	UPROPERTY(EditAnywhere, Category = "Filter")
-	bool bWidgets = false;
-
-	UPROPERTY(EditAnywhere, Category = "Filter")
-	bool bAnimations = false;
-
-	UPROPERTY(EditAnywhere, Category = "Filter")
-	bool bSounds = false;
 
 	/** Specify a list of maps to search for, exclusive with @AllMaps. */
 	UPROPERTY(EditAnywhere, Category = "Filter", meta = (Validate, EditCondition = "!bAllMaps"))
@@ -54,7 +42,34 @@ public:
 	/** will include all maps into search request, exclusive with @Maps */
 	UPROPERTY(EditAnywhere, Category = "Filter")
 	bool bAllMaps = false;
+	
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bBlueprints = false;
 
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bWidgets = false;
+
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bAnimations = false;
+
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bStaticMeshes = false;
+
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bSkeletalMeshes = false;
+
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bMaterials = false;
+
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bTextures = false;
+
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bSounds = false;
+	
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bRedirectors = false;
+	
 	UPROPERTY()
 	TArray<FName> CommandletPackagePaths;
 	
