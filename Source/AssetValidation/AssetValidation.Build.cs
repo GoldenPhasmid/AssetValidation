@@ -54,7 +54,8 @@ public class AssetValidation : ModuleRules
 				"MessageLog",
 				"BlueprintGraph", 
 				"ScriptPlugin",
-				"AssetTools",
+				"AssetTools", 
+				"AssetReferenceRestrictions",
 			}
 		);
 	}
