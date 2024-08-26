@@ -17,6 +17,10 @@ UAssetValidator_GroupActor::UAssetValidator_GroupActor()
 		"Actor is part of an active group. Please ungroup all actors before submitting to the source control."
 	);
 	bIsConfigDisabled = true; // disabled by default
+
+	bCanRunParallelMode = true; // does not perform any loading or modification
+	bRequiresLoadedAsset = true;
+	bRequiresTopLevelAsset = false;
 	bCanValidateActors = true; // works on actors
 }
 

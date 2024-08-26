@@ -18,7 +18,10 @@ UAssetValidator_BSP::UAssetValidator_BSP()
 			"{0} represents BSP brush which are not allowed to submit to source control. "
 			"Please convert BSP brushes to static meshes before submit.");
 	bIsConfigDisabled = true; // disabled by default
-	
+
+	bCanRunParallelMode = true;
+	bRequiresLoadedAsset = true;
+	bRequiresTopLevelAsset = false;
 	bCanValidateActors = true;
 }
 

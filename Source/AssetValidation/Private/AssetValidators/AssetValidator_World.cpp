@@ -16,6 +16,16 @@
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
+UAssetValidator_World::UAssetValidator_World()
+{
+	bIsConfigDisabled = false; // enabled by default
+
+	bCanRunParallelMode = false;
+	bRequiresLoadedAsset = false;
+	bRequiresTopLevelAsset = true;
+	bCanValidateActors = false;
+}
+
 bool UAssetValidator_World::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	if (!Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext))

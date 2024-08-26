@@ -8,6 +8,10 @@
 UAssetValidator_Properties::UAssetValidator_Properties()
 {
 	bIsConfigDisabled = false; // enabled by default
+
+	bCanRunParallelMode = true;
+	bRequiresLoadedAsset = true;
+	bRequiresTopLevelAsset = false;
 	bCanValidateActors = true; // works on actors
 }
 

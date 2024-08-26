@@ -8,6 +8,16 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Misc/DataValidation.h"
 
+UAssetValidator_Referencers::UAssetValidator_Referencers()
+{
+	bIsConfigDisabled = false; // enabled by default
+
+	bCanRunParallelMode = false;
+	bRequiresLoadedAsset = false;
+	bRequiresTopLevelAsset = true;
+	bCanValidateActors = false;
+}
+
 bool UAssetValidator_Referencers::IsEnabled() const
 {
 	return !IsRunningCommandlet() && Super::IsEnabled();

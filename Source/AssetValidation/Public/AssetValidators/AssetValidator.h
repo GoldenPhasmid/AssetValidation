@@ -9,7 +9,6 @@ class ASSETVALIDATION_API UAssetValidator: public UEditorValidatorBase
 {
 	GENERATED_BODY()
 public:
-
 	UAssetValidator();
 
 	//~Begin UObject interface
@@ -17,12 +16,10 @@ public:
 	virtual void PostInitProperties() override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	//~End UObject interface
-
-	//~Begin AssetValidator interface
-	FORCEINLINE bool IsThreadSafe() const { return bThreadSafe; }
+	
+	FORCEINLINE bool CanRunParallelMode() const { return bCanRunParallelMode; }
 	FORCEINLINE bool RequiresLoadedAsset() const { return bRequiresLoadedAsset; }
 	FORCEINLINE bool CanValidateActors() const { return bCanValidateActors; }
-	//~End AssetValidator interface
 	
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
 
@@ -46,12 +43,16 @@ protected:
 	 */
 	UPROPERTY(Config)
 	uint8 bLogCustomMessageOnly : 1 = false;
-
-	// Validator traits
-	/** */
-	uint8 bThreadSafe: 1;
-	/** */
-	uint8 bRequiresLoadedAsset: 1;
-	/** */
-	uint8 bCanValidateActors : 1;
+	
+	/**
+	 * Indicates whether validator can run in parallel with other validators with the same trait.
+	 * It usually means that validator uses read-only operations and does not modify any state
+	 */
+	uint8 bCanRunParallelMode: 1 = false;
+	/** Indicates whether asset should be pre-loaded from asset data before calling CanValidateAsset */
+	uint8 bRequiresLoadedAsset: 1 = true;
+	/** Indicates whether validator can operate only on top level assets (assets in Content Browser) */
+	uint8 bRequiresTopLevelAsset: 1 = true;
+	/** Indicates whether validator is an actor validator as well */
+	uint8 bCanValidateActors : 1 = false;
 };

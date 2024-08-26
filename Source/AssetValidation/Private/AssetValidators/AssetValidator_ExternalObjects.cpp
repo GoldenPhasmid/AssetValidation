@@ -8,6 +8,11 @@
 UAssetValidator_ExternalObjects::UAssetValidator_ExternalObjects()
 {
 	bIsConfigDisabled = true; // disabled and hidden, will be removed in future versions
+
+	bCanRunParallelMode = true;
+	bRequiresLoadedAsset = false;
+	bRequiresTopLevelAsset = false;
+	bCanValidateActors = true;
 }
 
 bool UAssetValidator_ExternalObjects::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const

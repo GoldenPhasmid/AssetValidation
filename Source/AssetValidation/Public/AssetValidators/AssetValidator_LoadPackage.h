@@ -10,6 +10,8 @@ class ASSETVALIDATION_API UAssetValidator_LoadPackage: public UAssetValidator
 	GENERATED_BODY()
 public:
 
+	UAssetValidator_LoadPackage();
+
 	//~Begin EditorValidatorBase interface
 	virtual bool IsEnabled() const override;
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;

@@ -7,9 +7,10 @@
 
 UAssetValidator::UAssetValidator()
 {
-	bThreadSafe = false;
-	bRequiresLoadedAsset = true;
-	bCanValidateActors = false;
+	bCanRunParallelMode		= false;
+	bRequiresLoadedAsset	= true;
+	bRequiresTopLevelAsset	= true;
+	bCanValidateActors		= false;
 }
 
 void UAssetValidator::PostLoad()
@@ -45,9 +46,18 @@ void UAssetValidator::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 	}
 }
 
-
 bool UAssetValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
+	if (bRequiresLoadedAsset && InObject == nullptr)
+	{
+		return false;
+	}
+
+	if (bRequiresTopLevelAsset && !bCanValidateActors && !InAssetData.IsTopLevelAsset())
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -67,7 +77,8 @@ EDataValidationResult UAssetValidator::ValidateAsset(const FAssetData& InAssetDa
 
 void UAssetValidator::LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context)
 {
-	if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging && AssetData.IsValid())
+	static const UAssetValidationSettings& Settings = *UAssetValidationSettings::Get();
+	if (Settings.bEnabledDetailedAssetLogging && AssetData.IsValid())
 	{
 		// can't use UEditorValidator::AssetMessage because AssetValidator resets its validation state when doing recursive validation
 		Context.AddMessage(AssetData, EMessageSeverity::Info, NSLOCTEXT("AssetValidation", "ValidatingAsset", "Validating asset"));

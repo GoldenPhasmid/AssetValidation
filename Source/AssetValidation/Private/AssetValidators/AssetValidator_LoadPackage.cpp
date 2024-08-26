@@ -139,6 +139,16 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	return true;
 }
 
+UAssetValidator_LoadPackage::UAssetValidator_LoadPackage()
+{
+	bIsConfigDisabled = false; // enabled by default
+
+	bCanRunParallelMode = false;
+	bRequiresLoadedAsset = false;
+	bRequiresTopLevelAsset = true;
+	bCanValidateActors = false;
+}
+
 bool UAssetValidator_LoadPackage::IsEnabled() const
 {
 	// Commandlets do not need this validation step as they loaded the content while running.
