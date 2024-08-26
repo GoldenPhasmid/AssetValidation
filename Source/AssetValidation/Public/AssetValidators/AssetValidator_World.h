@@ -24,10 +24,10 @@ protected:
 
 	EDataValidationResult ValidateWorld(const FAssetData& AssetData, UWorld* World, FDataValidationContext& Context);
 
-	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context);
-	EDataValidationResult ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, const FAssetData& AssetData, UObject* Asset, FDataValidationContext& Context);
+	EDataValidationResult ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context);
+	EDataValidationResult ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Object, FDataValidationContext& Context);
 
-	EDataValidationResult ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& InContext);
+	EDataValidationResult ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& Context);
 	/** @return approximate asset count that would be validated as part of world validation */
 	int32 EstimateWorldAssetCount(const UWorld* World) const;
 	

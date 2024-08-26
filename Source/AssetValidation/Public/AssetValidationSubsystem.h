@@ -5,6 +5,8 @@
 
 #include "AssetValidationSubsystem.generated.h"
 
+class UAssetValidator;
+
 UCLASS()
 class ASSETVALIDATION_API UAssetValidationSubsystem: public UEditorValidatorSubsystem
 {
@@ -13,6 +15,9 @@ public:
 
 	UAssetValidationSubsystem();
 
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
+	
 	FORCEINLINE static UAssetValidationSubsystem* Get()
 	{
 		return GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
@@ -29,6 +34,8 @@ public:
 	virtual EDataValidationResult ValidateChangelists(const TArray<UDataValidationChangelist*> InChangelists, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
 	virtual void GatherAssetsToValidateFromChangelist(UDataValidationChangelist* InChangelist, const FValidateAssetsSettings& Settings, TSet<FAssetData>& OutAssets, FDataValidationContext& InContext) const override;
 	//~End EditorValidatorSubsystem interface
+
+	EDataValidationResult IsActorValidWithContext(const FAssetData& AssetData, AActor* Actor, FDataValidationContext& InContext) const;
 	
 protected:
 	
@@ -65,6 +72,10 @@ protected:
 	/** */
 	void ResetValidationState() const;
 	void ResetValidationState();
+
+	UPROPERTY(Transient)
+	TArray<UAssetValidator*> ActorValidators;
+	
 	/** number of assets checked, stored as a part of running asset validation */
 	mutable int32 CheckedAssetsCount = 0;
 	/** asset validation results, stored as a part of running asset validation */

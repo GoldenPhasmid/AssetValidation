@@ -235,7 +235,7 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	{
 		for (AActor* Actor: World->PersistentLevel->Actors)
 		{
-			Result &= ValidateAssetInternal(*Subsystem, FAssetData{Actor}, Actor, Context);
+			Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
 		}
 	}
 
@@ -244,50 +244,61 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_World::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context)
 {
-	FAssetData AssetData{Asset};
-	return ValidateAssetInternal(ValidationSubsystem, AssetData, Asset, Context);
+	const FAssetData AssetData{Actor};
+	LogValidatingAssetMessage(AssetData, Context);
+	
+	return ValidationSubsystem.IsActorValidWithContext(AssetData, Actor, Context);
 }
 
-EDataValidationResult UAssetValidator_World::ValidateAssetInternal(UAssetValidationSubsystem& ValidationSubsystem, const FAssetData& AssetData, UObject* Asset, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
 {
+	const FAssetData AssetData{Asset};
 	LogValidatingAssetMessage(AssetData, Context);
 	
 	return ValidationSubsystem.IsAssetValidWithContext(AssetData, Context);
 }
 
-EDataValidationResult UAssetValidator_World::ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& InContext)
+EDataValidationResult UAssetValidator_World::ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& Context)
 {
 	using namespace UE::AssetValidation;
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_ExternalAssets, AssetValidationChannel);
 	
-	UAssetValidationSubsystem* Subsystem = UAssetValidationSubsystem::Get();
+	const UAssetValidationSubsystem* Subsystem = UAssetValidationSubsystem::Get();
 
-	const uint32 NumValidationErrors = InContext.GetNumErrors();
+	const uint32 NumValidationErrors = Context.GetNumErrors();
 	EDataValidationResult Result = EDataValidationResult::NotValidated;
-	for (const FAssetData& ExternalAsset: InContext.GetAssociatedExternalObjects())
+	for (const FAssetData& ExternalAsset: Context.GetAssociatedExternalObjects())
 	{
 		// gather error and warning messages produced by loading an external asset
-		FScopedLogMessageGatherer Gatherer{ExternalAsset, InContext};
+		FScopedLogMessageGatherer Gatherer{ExternalAsset, Context};
 		if (UObject* Asset = ExternalAsset.GetAsset({ULevel::LoadAllExternalObjectsTag}))
 		{
 			TGuardValue AssetGuard{CurrentExternalAsset, Asset};
 
-			Result &= ValidateAssetInternal(*Subsystem, ExternalAsset, Asset, InContext);
+			LogValidatingAssetMessage(ExternalAsset, Context);
+			if (AActor* Actor = Cast<AActor>(Asset))
+			{
+				Result &= Subsystem->IsActorValidWithContext(ExternalAsset, Actor, Context);
+			}
+			else
+			{
+				Result &= Subsystem->IsAssetValidWithContext(ExternalAsset, Context);
+			}
 		}
 		else
 		{
-			InContext.AddMessage(ExternalAsset, EMessageSeverity::Error, FText::Format(LOCTEXT("AssetLoadFailed", "Failed to load asset {0}"), FText::FromName(ExternalAsset.AssetName)));
+			Context.AddMessage(ExternalAsset, EMessageSeverity::Error, FText::Format(LOCTEXT("AssetLoadFailed", "Failed to load asset {0}"), FText::FromName(ExternalAsset.AssetName)));
 			Result &= EDataValidationResult::Invalid;
 		}
 	}
 
 	if (Result == EDataValidationResult::Invalid)
 	{
-		check(InContext.GetNumErrors() > NumValidationErrors);
+		check(Context.GetNumErrors() > NumValidationErrors);
 		const FText FailReason = FText::Format(LOCTEXT("AssetCheckFailed", "{0} is not valid. See AssetCheck log for more details"), FText::FromName(InAssetData.AssetName));
-		InContext.AddMessage(InAssetData, EMessageSeverity::Error, FailReason);
+		Context.AddMessage(InAssetData, EMessageSeverity::Error, FailReason);
 
 		return EDataValidationResult::Invalid;
 	}

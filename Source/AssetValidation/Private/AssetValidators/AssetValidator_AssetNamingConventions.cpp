@@ -10,6 +10,8 @@
 UAssetValidator_AssetNamingConventions::UAssetValidator_AssetNamingConventions()
 {
 	bIsConfigDisabled = false; // enabled by default
+
+	bRequiresLoadedAsset = false;
 }
 
 bool UAssetValidator_AssetNamingConventions::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
@@ -31,6 +33,7 @@ EDataValidationResult UAssetValidator_AssetNamingConventions::ValidateLoadedAsse
 
 EDataValidationResult UAssetValidator_AssetNamingConventions::ValidateAsset_Implementation(const FAssetData& InAssetData, FDataValidationContext& InContext)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_AssetNamingConventions, AssetValidationChannel);
 	static const FRegexPattern AllowedCharacters{TEXT("^[A-Za-z0-9_-]*$")};
 
 	EDataValidationResult Result = EDataValidationResult::Valid;

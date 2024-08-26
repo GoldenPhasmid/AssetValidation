@@ -17,6 +17,7 @@ UAssetValidator_GroupActor::UAssetValidator_GroupActor()
 		"Actor is part of an active group. Please ungroup all actors before submitting to the source control."
 	);
 	bIsConfigDisabled = true; // disabled by default
+	bCanValidateActors = true; // works on actors
 }
 
 bool UAssetValidator_GroupActor::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const

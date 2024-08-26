@@ -7,7 +7,9 @@
 
 UAssetValidator::UAssetValidator()
 {
-
+	bThreadSafe = false;
+	bRequiresLoadedAsset = true;
+	bCanValidateActors = false;
 }
 
 void UAssetValidator::PostLoad()

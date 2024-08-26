@@ -27,6 +27,31 @@ UAssetValidationSubsystem::UAssetValidationSubsystem()
 {
 }
 
+void UAssetValidationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	ForEachEnabledValidator([this](UEditorValidatorBase* EditorValidator)
+	{
+		if (UAssetValidator* AssetValidator = Cast<UAssetValidator>(EditorValidator))
+		{
+			if (AssetValidator->CanValidateActors())
+			{
+				ActorValidators.Add(AssetValidator);
+			}
+		}
+
+		return true;
+	});
+}
+
+void UAssetValidationSubsystem::Deinitialize()
+{
+	ActorValidators.Empty();
+	
+	Super::Deinitialize();
+}
+
 void UAssetValidationSubsystem::MarkPackageLoaded(const FName& PackageName)
 {
 	check(!IsPackageAlreadyLoaded(PackageName));
@@ -535,7 +560,6 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	
 	if (!CurrentSettings.IsSet())
 	{
-		// @todo: use settings from AssetValidationSettings
 		CurrentSettings = UAssetValidationSettings::Get()->DefaultSettings;
 	}
 	
@@ -583,6 +607,40 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 			}
 			return true;
 		});
+	}
+
+	MarkAssetDataValidated(AssetData, Result);
+	return Result;
+}
+
+EDataValidationResult UAssetValidationSubsystem::IsActorValidWithContext(const FAssetData& AssetData, AActor* Actor, FDataValidationContext& InContext) const
+{
+	// Actor should already be loaded, it is either external actor or a usual actor
+	check(AssetData.IsValid() && Actor != nullptr);
+	
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	if (ValidatedAssets.Contains(AssetData))
+	{
+		// asset has already been validated, skipping
+		return Result;
+	}
+	
+	if (!CurrentSettings.IsSet())
+	{
+		CurrentSettings = UAssetValidationSettings::Get()->DefaultSettings;
+	}
+	
+	// explicitly increase validated assets count
+	++CheckedAssetsCount;
+
+	for (UAssetValidator* ActorValidator: ActorValidators)
+	{
+		ActorValidator->ResetValidationState();
+		if (ActorValidator->K2_CanValidate(InContext.GetValidationUsecase()) && ActorValidator->CanValidateAsset_Implementation(AssetData, Actor, InContext))
+		{
+			// validate actor with asset data. Actor should already be loaded, it is either external actor or a usual actor
+			Result &= ActorValidator->ValidateLoadedAsset(AssetData, Actor, InContext);
+		}
 	}
 
 	MarkAssetDataValidated(AssetData, Result);

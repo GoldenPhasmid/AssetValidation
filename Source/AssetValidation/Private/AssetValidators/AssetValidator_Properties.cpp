@@ -5,6 +5,12 @@
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
 
+UAssetValidator_Properties::UAssetValidator_Properties()
+{
+	bIsConfigDisabled = false; // enabled by default
+	bCanValidateActors = true; // works on actors
+}
+
 bool UAssetValidator_Properties::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	return InObject != nullptr && !InObject->IsA<UUserDefinedStruct>() && !InObject->IsA<UUserDefinedEnum>();
