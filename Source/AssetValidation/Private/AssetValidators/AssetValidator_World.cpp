@@ -246,6 +246,11 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 
 EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context)
 {
+	if (Actor == nullptr)
+	{
+		return EDataValidationResult::Valid;
+	}
+	
 	const FAssetData AssetData{Actor};
 	LogValidatingAssetMessage(AssetData, Context);
 	
@@ -254,6 +259,11 @@ EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetV
 
 EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
 {
+	if (Asset == nullptr)
+	{
+		return EDataValidationResult::Valid;
+	}
+	
 	const FAssetData AssetData{Asset};
 	LogValidatingAssetMessage(AssetData, Context);
 	
