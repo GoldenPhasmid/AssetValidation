@@ -13,7 +13,7 @@ class ASSETVALIDATION_API UAVCommandletAction: public UObject
 public:
 
 	/** */
-	virtual void InitFromCommandlet(const TArray<FString>& Switches, const TMap<FString, FString>& Params) {}
+	virtual void InitFromCommandlet(const TArray<FString>& Switches, const TMap<FString, FString>& Params);
 
 	/** */
 	virtual bool Run(const TArray<FAssetData>& Assets) { return false; }

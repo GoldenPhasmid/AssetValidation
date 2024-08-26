@@ -16,9 +16,5 @@ public:
 
 	virtual int32 Main(const FString& Commandline) override;
 
-protected:
-	void FindAssets(const TArray<FString>& Switches, const TMap<FString, FString>& Params, TArray<FAssetData>& OutAssets);
-	
-	TArray<FName> GetPackagePaths(const TMap<FString, FString>& Params, TConstArrayView<FString> Switches) const;
-	TArray<FTopLevelAssetPath> GetAllowedClasses(const TMap<FString, FString>& Params, TConstArrayView<FString> Switches) const;
+	static void ParseCommandlineParams(UObject* Target, const TArray<FString>& Switches, const TMap<FString, FString>& Params);
 };

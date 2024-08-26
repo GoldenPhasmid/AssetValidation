@@ -11,6 +11,7 @@
 #include "Commandlet/AVCommandletSearchFilter.h"
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Sound/SoundClass.h"
 
 
@@ -79,4 +80,35 @@ int32 UAssetValidationCommandlet::Main(const FString& Commandline)
 	}
 	
 	return UE::AssetValidation::RESULT_SUCCESS;
+}
+
+void UAssetValidationCommandlet::ParseCommandlineParams(UObject* Target, const TArray<FString>& Switches, const TMap<FString, FString>& Params)
+{
+	UClass* TargetClass = Target->GetClass();
+	for (const FString& Switch : Switches)
+	{
+		const FString Key = TEXT("b") + Switch;
+		if (const FBoolProperty* Property = CastField<FBoolProperty>(TargetClass->FindPropertyByName(*Key)))
+		{
+			const FString Value = TEXT("True");
+			
+			uint8* Container = reinterpret_cast<uint8*>(Target);
+			if (!FBlueprintEditorUtils::PropertyValueFromString(Property, Value, Container, nullptr))
+			{
+				UE_LOG(LogAssetValidation, Error, TEXT("%s: Cannot set value for '%s': '%s'"), *TargetClass->GetName(), *Key, *Value);
+			}
+		}
+	}
+
+	for (auto& [Key, Value]: Params)
+	{
+		if (const FProperty* Property = TargetClass->FindPropertyByName(*Key))
+		{
+			uint8* Container = reinterpret_cast<uint8*>(Target);
+			if (!FBlueprintEditorUtils::PropertyValueFromString(Property, Value, Container, nullptr))
+			{
+				UE_LOG(LogAssetValidation, Error, TEXT("%s: Cannot set value for '%s': '%s'"), *TargetClass->GetName(), *Key, *Value);
+			}
+		}
+	}
 }
