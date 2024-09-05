@@ -36,6 +36,14 @@
 		{
 			"Name": "StructUtils",
 			"Enabled": true
+		},
+		{
+			"Name": "ScriptPlugin",
+			"Enabled": true
+		},
+		{
+			"Name": "AssetReferenceRestrictions",
+			"Enabled": true
 		}
 	]
 }
