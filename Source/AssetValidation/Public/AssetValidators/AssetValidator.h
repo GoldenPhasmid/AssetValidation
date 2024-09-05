@@ -4,6 +4,22 @@
 
 #include "AssetValidator.generated.h"
 
+/**
+ * UAssetValidator
+ * You should define custom validators by creating a derived class from asset validator and overriding public interface:
+ * 
+ *  - IsEnabled: Derived class has to call Super. Override to add custom logic that define whether validator is enabled or disabled in a current context. 
+ *	- CanValidateAsset_Implementation: Derived class has to call Super first to see if AssetData has passed traits checks.
+ *	- ValidateLoadedAsset_Implementation: Default validator implementation.
+ *	- ValidateAsset_Implementation: called when Asset object associated with an AssetData is not loaded.
+ *	If your validator does not require a loaded asset, you should override ValidateLoadedAsset as well and call ValidateAsset from it.
+ *
+ *	You should not use UEditorValidatorBase::AssetFails to report errors during validation. Instead, you should add issues directly to the
+ *	DataValidationContext using either UE::AssetValidation::AddTokenMessage() or UE::AssetValidation::CreateTokenMessage() defined in AssetValidationStatics
+ *
+ *  Your messages should always be accompanied by an FAssetDataToken of a currently validated asset and any additional information that may help identify
+ *  the location of an issue (FUObjectToken, FAssetDataToken, etc.).
+ */
 UCLASS(Abstract, Blueprintable, Config = Editor, DefaultConfig, ConfigDoNotCheckDefaults)
 class ASSETVALIDATION_API UAssetValidator: public UEditorValidatorBase
 {
