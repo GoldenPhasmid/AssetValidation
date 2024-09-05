@@ -77,7 +77,7 @@ EDataValidationResult UAssetValidator::ValidateAsset(const FAssetData& InAssetDa
 
 void UAssetValidator::LogValidatingAssetMessage(const FAssetData& AssetData, FDataValidationContext& Context)
 {
-	static const UAssetValidationSettings& Settings = *UAssetValidationSettings::Get();
+	const UAssetValidationSettings& Settings = *UAssetValidationSettings::Get();
 	if (Settings.bEnabledDetailedAssetLogging && AssetData.IsValid())
 	{
 		// can't use UEditorValidator::AssetMessage because AssetValidator resets its validation state when doing recursive validation

@@ -17,7 +17,12 @@
 
 UAssetValidator_BlueprintGraph::UAssetValidator_BlueprintGraph()
 {
-	bIsConfigDisabled = false;
+	bIsConfigDisabled = true; // disabled by default
+
+	bCanRunParallelMode = true;
+	bRequiresLoadedAsset = true;
+	bRequiresTopLevelAsset = true;
+	bCanValidateActors = false;
 
 	BannedFunctionPins.Add(UK2Node_CustomEvent::StaticClass());
 	BannedFunctionPins.Add(UK2Node_FunctionEntry::StaticClass());

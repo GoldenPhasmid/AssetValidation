@@ -11,7 +11,10 @@ UAssetValidator_AssetNamingConventions::UAssetValidator_AssetNamingConventions()
 {
 	bIsConfigDisabled = false; // enabled by default
 
+	bCanRunParallelMode = true;
 	bRequiresLoadedAsset = false;
+	bRequiresTopLevelAsset = true;
+	bCanValidateActors = false;
 }
 
 bool UAssetValidator_AssetNamingConventions::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const

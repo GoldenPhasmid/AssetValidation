@@ -67,7 +67,7 @@ TArray<FString> UAssetPathPolicySettings::GetDomains()
 
 UAssetValidator_AssetPathRestrictions::UAssetValidator_AssetPathRestrictions()
 {
-	bIsConfigDisabled = false; // enabled by default
+	bIsConfigDisabled = true; // disabled by default
 
 	bCanRunParallelMode = true;
 	bRequiresLoadedAsset = false;
@@ -108,7 +108,7 @@ EDataValidationResult UAssetValidator_AssetPathRestrictions::ValidateAsset_Imple
 
 EDataValidationResult UAssetValidator_AssetPathRestrictions::ValidateAssetPath(const FAssetPathDescription& AllowedPaths, const FAssetPathDescription& DisallowedPaths, const FAssetData& AssetData, FDataValidationContext& Context)
 {
-	if (AllowedPaths.PassesPathDescription(AssetData) && !DisallowedPaths.PassesPathDescription(AssetData))
+	if (AllowedPaths.PassesPathDescription(AssetData) && (DisallowedPaths.IsEmpty() || !DisallowedPaths.PassesPathDescription(AssetData)))
 	{
 		return EDataValidationResult::Valid;
 	}
