@@ -12,6 +12,7 @@
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "PropertyValidators/PropertyValidation.h"
 #include "Sound/SoundClass.h"
 
 
@@ -104,6 +105,12 @@ void UAssetValidationCommandlet::ParseCommandlineParams(UObject* Target, const T
 	{
 		if (const FProperty* Property = TargetClass->FindPropertyByName(*Key))
 		{
+			if (UE::AssetValidation::IsContainerProperty(Property))
+			{
+				// @todo: support for container properties syntax
+				continue;
+			}
+			
 			uint8* Container = reinterpret_cast<uint8*>(Target);
 			if (!FBlueprintEditorUtils::PropertyValueFromString(Property, Value, Container, nullptr))
 			{
