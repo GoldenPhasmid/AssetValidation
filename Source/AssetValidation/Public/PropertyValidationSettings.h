@@ -39,6 +39,12 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToIterate;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	bool bValidateProject = true;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	bool bValidateProjectPlugins = true;
 	
 	/**
 	 * if set to true, allows unwrapping and iterating over struct inner properties without "ValidateRecursive" meta specifier

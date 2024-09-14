@@ -142,6 +142,10 @@ protected:
 	UPROPERTY(Transient)
 	TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*> PropertyValidators;
 
+	/** a list of project packages subsystem will validate */
+	UPROPERTY(Transient)
+	TArray<FString> ProjectPackages;
+
 	/** List of all active validators */
 	UPROPERTY(Transient)
 	TArray<UPropertyValidatorBase*> AllValidators;
