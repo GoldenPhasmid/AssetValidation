@@ -56,9 +56,9 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 	UClass* AssetClass = InAsset->GetClass();
 	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
 
-	TSet<FName> AllReferencers;
+	TMap<FName, FAssetData> AllReferencers;
 	TSet<FName> ProcessedPackages;
-	TArray<FName, TInlineAllocator<16>> Packages{InAsset->GetPackage()->GetFName()};
+	TArray<FName, TInlineAllocator<32>> Packages{InAsset->GetPackage()->GetFName()};
 	while (Packages.Num())
 	{
 		TArray<FName, TInlineAllocator<16>> NextPackages;
@@ -93,7 +93,7 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 				
 				if (Asset.IsRedirector())
 				{
-					// encountered redirector, search farther
+					// encountered redirector, search further
 					NextPackages.AddUnique(Asset.PackageName);
 				}
 				
@@ -103,7 +103,7 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 				{
 					// add package to referencers only if it contains asset with a similar class type as validating dependency
 					// this makes blueprints check other blueprints, material functions check material functions and so on
-					AllReferencers.Add(Asset.PackageName);
+					AllReferencers.Add(Asset.PackageName, Asset);
 				}
 			}
 		}
@@ -111,26 +111,13 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 		Packages = MoveTemp(NextPackages);
 	}
 
-	TArray<FString> Warnings, Errors;
-	for (const FName& PackageName: AllReferencers)
+	const uint32 NumErrors = Context.GetNumErrors();
+	for (const auto& [Package, Asset]: AllReferencers)
 	{
 		// load referencer packages and gather errors
-		UAssetValidator_LoadPackage::GetPackageLoadErrors(PackageName.ToString(), FAssetData{}, Context);
-	}
-
-	if (Errors.Num() == 0)
-	{
-		AssetPasses(InAsset);
-	}
-
-	for (const FString& Warning: Warnings)
-	{
-		AssetWarning(InAsset, FText::FromString(Warning));
-	}
-	for (const FString& Error: Errors)
-	{
-		AssetFails(InAsset, FText::FromString(Error));
+		UAssetValidator_LoadPackage::GetPackageLoadErrors(Package.ToString(), Asset, Context);
 	}
 	
-	return GetValidationResult();
+	EDataValidationResult Result = NumErrors < Context.GetNumErrors() ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
+	return Result;
 }
