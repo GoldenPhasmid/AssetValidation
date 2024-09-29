@@ -1,5 +1,6 @@
 ﻿#include "Commandlet/AVCommandletAssetSearchFilter.h"
 
+#include "EditorUtilityWidgetBlueprint.h"
 #include "WidgetBlueprint.h"
 #include "Algo/RemoveIf.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -50,6 +51,8 @@ namespace UE::AssetValidation
 	static const FString Blueprints{TEXT("Blueprints")};
 	/** Adds widget assets to class paths */
 	static const FString Widgets{TEXT("Widgets")};
+	/** Adds editor utility widget assets to class paths */
+	static const FString EditorUtilityWidgets{TEXT("EditorUtilityWidgets")};
 	/** Adds animations, montages and anim BPs to class paths */
 	static const FString Animations{TEXT("Animations")};
 	/** Adds static meshes to class paths */
@@ -60,8 +63,10 @@ namespace UE::AssetValidation
 	static const FString Materials{TEXT("Materials")};
 	/** Adds texture classes to class paths */
 	static const FString Textures{TEXT("Textures")};
-	/** Adds unreal sound assets to validation */
+	/** Adds unreal sound assets to class paths */
 	static const FString Sounds{TEXT("Sounds")};
+	/** Adds unreal redirector type to class paths */
+	static const FString Redirectors{TEXT("Redirectors")};
 }
 
 
@@ -209,6 +214,11 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 		AllowedClassPaths.Add(UWidgetBlueprint::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UUserWidgetBlueprint::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UBaseWidgetBlueprint::StaticClass()->GetClassPathName());
+	}
+	// editor utility widgets
+	if (bEditorUtilityWidgets)
+	{
+		AllowedClassPaths.Add(UEditorUtilityWidgetBlueprint::StaticClass()->GetClassPathName());
 	}
 	// animations, montages and anim BPs
 	if (bAnimations)

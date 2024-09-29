@@ -48,6 +48,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
 	bool bWidgets = false;
+	
+	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
+	bool bEditorUtilityWidgets = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Quick", meta = (EditCondition = "!bAllAssetTypes"))
 	bool bAnimations = false;
