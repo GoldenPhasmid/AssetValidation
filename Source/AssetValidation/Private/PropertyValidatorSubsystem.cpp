@@ -4,6 +4,7 @@
 #include "ContainerValidators/ContainerValidator.h"
 #include "Editor/MetaDataSource.h"
 #include "Editor/ValidationEditorExtensionManager.h"
+#include "Interfaces/IPluginManager.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
 
@@ -53,6 +54,24 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 
 	ExtensionManager = NewObject<UValidationEditorExtensionManager>(this);
 	ExtensionManager->Initialize();
+
+	if (UPropertyValidationSettings::Get()->bValidateProjectPlugins)
+	{
+		// validate project plugins by default
+		for (TSharedRef<IPlugin> Plugin: IPluginManager::Get().GetDiscoveredPlugins())
+		{
+			if (Plugin->GetLoadedFrom() == EPluginLoadedFrom::Project)
+			{
+				ProjectPackages.Add(FString::Printf(TEXT("/Script/%s"), *Plugin->GetName()));
+			}
+		}
+	}
+
+	if (UPropertyValidationSettings::Get()->bValidateProject)
+	{
+		// allow validation for project package
+		ProjectPackages.Add(FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName()));
+	}
 }
 
 template <typename ...Types>
@@ -67,6 +86,8 @@ void UPropertyValidatorSubsystem::Deinitialize()
 	
 	ExtensionManager->Cleanup();
 	ExtensionManager = nullptr;
+
+	ProjectPackages.Empty();
 	
 	Super::Deinitialize();
 }
@@ -167,7 +188,15 @@ bool UPropertyValidatorSubsystem::ShouldIgnorePackage(const UPackage* Package) c
 {
 	const FString PackageName = Package->GetName();
 
-	// allow validation for project package
+	// allow validation for project packages
+	if (ProjectPackages.ContainsByPredicate([&PackageName](const FString& ProjectPackage)
+	{
+		return PackageName.StartsWith(ProjectPackage);
+	}))
+	{
+		return false;
+	}
+	
 	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
 	if (PackageName.StartsWith(ProjectPackage))
 	{
@@ -181,9 +210,9 @@ bool UPropertyValidatorSubsystem::ShouldIgnorePackage(const UPackage* Package) c
 	}
 #endif
 
-	auto Settings = UPropertyValidationSettings::Get();
+	const auto Settings = UPropertyValidationSettings::Get();
 	// package is blueprint generated if it is either in Content folder or Plugins/Content folder
-	return Settings->PackagesToIgnore.ContainsByPredicate([PackageName](const FString& ModulePath)
+	return Settings->PackagesToIgnore.ContainsByPredicate([&PackageName](const FString& ModulePath)
 	{
 		return PackageName.StartsWith(ModulePath);
 	});
@@ -192,9 +221,12 @@ bool UPropertyValidatorSubsystem::ShouldIgnorePackage(const UPackage* Package) c
 bool UPropertyValidatorSubsystem::ShouldIteratePackageProperties(const UPackage* Package) const
 {
 	const FString PackageName = Package->GetName();
-	// allow validation for project package
-	const FString ProjectPackage = FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName());
-	if (PackageName.StartsWith(ProjectPackage))
+
+	// allow validation for project packages
+	if (ProjectPackages.ContainsByPredicate([&PackageName](const FString& ProjectPackage)
+	{
+		return PackageName.StartsWith(ProjectPackage);
+	}))
 	{
 		return true;
 	}
