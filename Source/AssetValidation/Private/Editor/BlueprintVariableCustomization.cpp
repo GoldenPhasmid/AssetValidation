@@ -61,12 +61,15 @@ void FBlueprintVariableCustomization::FCustomizationTarget::HandleMetaStateChang
 
 TSharedPtr<IDetailCustomization> FBlueprintVariableCustomization::MakeInstance(TSharedPtr<IBlueprintEditor> InBlueprintEditor)
 {
-	const TArray<UObject*>* Objects = InBlueprintEditor->GetObjectsCurrentlyBeingEdited();
-	if (Objects && Objects->Num() == 1)
+	if (InBlueprintEditor.IsValid())
 	{
-		if (UBlueprint* Blueprint = Cast<UBlueprint>((*Objects)[0]))
+		const TArray<UObject*>* Objects = InBlueprintEditor->GetObjectsCurrentlyBeingEdited();
+		if (Objects && Objects->Num() == 1)
 		{
-			return MakeShared<ThisClass>(InBlueprintEditor, Blueprint, FPrivateToken{});
+			if (UBlueprint* Blueprint = Cast<UBlueprint>((*Objects)[0]))
+			{
+				return MakeShared<ThisClass>(InBlueprintEditor, Blueprint, FPrivateToken{});
+			}
 		}
 	}
 
