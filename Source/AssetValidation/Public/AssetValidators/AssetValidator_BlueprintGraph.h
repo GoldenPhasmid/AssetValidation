@@ -8,7 +8,11 @@ class UEdGraphPin;
 class UEdGraphNode;
 class UBlueprint;
 
-
+/**
+ * Blueprint Graph Validator
+ * Analyzes blueprint graph nodes and logs any banned functions, nodes or property types.										
+ * Marked as EditInlineNew for commandlet actions
+ */
 UCLASS(EditInlineNew)
 class ASSETVALIDATION_API UAssetValidator_BlueprintGraph: public UAssetValidator
 {
