@@ -55,39 +55,43 @@ EDataValidationResult UAssetValidator_SourceControl::ValidateLoadedAsset_Impleme
 	for (FName DependencyName: Dependencies)
 	{
 		FString Dependency = DependencyName.ToString();
-		if (!FPackageName::IsScriptPackage(Dependency))
+		if (FPackageName::IsScriptPackage(Dependency))
 		{
-			if (bWorldAsset && UE::AssetValidation::IsExternalAsset(Dependency))
-			{
-				continue;
-			}
-			
-			FSourceControlStatePtr DependencyState = SCCProvider.GetState(SourceControlHelpers::PackageFilename(Dependency), EStateCacheUsage::Use);
-			if (!DependencyState.IsValid())
-			{
-				continue;
-			}
+			// script packages are not interesting for now, although outdated source code should be scarier than outdated asset
+			continue;
+		}
 
-			if (!DependencyState->IsSourceControlled() && !DependencyState->IsUnknown())
+		if (bWorldAsset && UE::AssetValidation::IsExternalAsset(Dependency))
+		{
+			continue;
+		}
+
+		FSourceControlStatePtr DependencyState = SCCProvider.GetState(SourceControlHelpers::PackageFilename(Dependency), EStateCacheUsage::Use);
+		if (!DependencyState.IsValid())
+		{
+			continue;
+		}
+		
+		if (!DependencyState->IsSourceControlled() && !DependencyState->IsUnknown())
+		{
+			// ignore engine assets as we're not allowed to change them anyway or they can be under different repo
+			if (!bIgnoreEngineDependencies || !Dependency.Contains(TEXT("/Engine/")))
 			{
-				// ignore engine assets as we're not allowed to change them anyway or they can be under different repo
-				if (!bIgnoreEngineDependencies || !Dependency.Contains(TEXT("/Engine/")))
-				{
-					const FText FailReason = FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "references {0} which is not marked for add to source control"), FText::FromString(Dependency));
-					// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
-					Context.AddMessage(InAsset, EMessageSeverity::Error, FailReason);
-					Result &= EDataValidationResult::Invalid;
-				}
-			}
-			if (!DependencyState->IsCurrent()) // @todo: this check is not implemented for git :)
-			{
-				const FString FullName = InAssetData.AssetName.ToString();
-				const FString AssetName = InAssetData.IsTopLevelAsset() ? PackageName : FullName;
-				const FText FailReason = FText::Format(LOCTEXT("SourceControl_NotLatestRevision", "references {0} which is not on latest revision"), FText::FromString(Dependency));
-				
+				const FText FailReason = FText::Format(LOCTEXT("SourceControl_NotMarkedForAdd", "references {0} which is not marked for add to source control"), FText::FromString(Dependency));
+				// The editor doesn't sync state for all assets, so we only want to warn on assets that are known about
 				Context.AddMessage(InAsset, EMessageSeverity::Error, FailReason);
 				Result &= EDataValidationResult::Invalid;
 			}
+		}
+		
+		if (!DependencyState->IsCurrent()) // @todo: this check is not implemented for git :)
+		{
+			const FString FullName = InAssetData.AssetName.ToString();
+			const FString AssetName = InAssetData.IsTopLevelAsset() ? PackageName : FullName;
+			const FText FailReason = FText::Format(LOCTEXT("SourceControl_NotLatestRevision", "references {0} which is not on latest revision"), FText::FromString(Dependency));
+			
+			Context.AddMessage(InAsset, EMessageSeverity::Error, FailReason);
+			Result &= EDataValidationResult::Invalid;
 		}
 	}
 	
