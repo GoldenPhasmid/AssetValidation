@@ -12,4 +12,7 @@ class UAVCommandletAction_EnumerateAssets: public UAVCommandletAction
 public:
 
 	virtual bool Run(const TArray<FAssetData>& Assets) override;
+
+	UPROPERTY(EditAnywhere)
+	bool bLogAssets = false;
 };
