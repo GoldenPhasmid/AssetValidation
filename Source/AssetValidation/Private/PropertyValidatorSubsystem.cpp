@@ -377,7 +377,7 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 		// engine property extension ignore visibility requirements
 		bVisibleInBlueprint |= MetaData.IsType<FEnginePropertyExtension>();
 		// property is editable in blueprints
-		bVisibleInBlueprint |= Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit);
+		bVisibleInBlueprint |= Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit) && !Property->HasAnyPropertyFlags(EPropertyFlags::CPF_EditConst);
 		// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
 		// we want to validate blueprint components as well, so we check for Owner to be a blueprint generated class
 		// and property to be object property derived from actor component
