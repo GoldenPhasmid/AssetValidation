@@ -233,6 +233,44 @@ namespace UE::AssetValidation
 		return Filename.EndsWith(TEXT(".h")) || Filename.EndsWith(TEXT(".cpp")) || Filename.EndsWith(TEXT(".hpp"));
 	}
 
+	bool GetAssetSizeBytes(IAssetRegistry& AssetRegistry, const FAssetData& AssetData, float& OutMemorySize, float& OutDiskSize)
+	{
+		if (!AssetData.IsValid())
+		{
+			return false;
+		}
+		
+		if (TOptional<FAssetPackageData> FoundData = AssetRegistry.GetAssetPackageDataCopy(AssetData.PackageName); FoundData.IsSet())
+		{
+			OutDiskSize = FoundData->DiskSize;
+		}
+		else
+		{
+			OutDiskSize = 0.f;
+		}
+
+		if (UObject* Asset = AssetData.GetAsset())
+		{
+			OutMemorySize = Asset->GetResourceSizeBytes(EResourceSizeMode::EstimatedTotal);
+		}
+		else
+		{
+			OutMemorySize = 0.f;
+		}
+		
+		return true;
+	}
+
+	UClass* GetCppBaseClass(UClass* InClass)
+	{
+		while (InClass != nullptr && InClass->GetClass()->IsChildOf<UBlueprintGeneratedClass>())
+		{
+			InClass = InClass->GetSuperClass();
+		}
+
+		return InClass;
+	}
+
 	void ClearLogMessages(FMessageLog& MessageLog)
 	{
 		if (auto OnGetLog = MessageLog.OnGetLog(); OnGetLog.IsBound())

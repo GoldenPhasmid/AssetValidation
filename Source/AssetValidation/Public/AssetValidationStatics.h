@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Misc/DataValidation.h"
 
+class IAssetRegistry;
+
 namespace UE::DataValidation
 {
 	struct FScopedLogMessageGatherer;
@@ -90,6 +92,12 @@ namespace UE::AssetValidation
 
 	/** @return true if filename is a C++ source file */
 	bool IsCppFile(const FString& Filename);
+
+	/** @return memory and disk size for a given asset */
+	bool GetAssetSizeBytes(IAssetRegistry& AssetRegistry, const FAssetData& AssetData, float& OutMemorySize, float& OutDiskSize);
+
+	/** @return first C++ defined base class */
+	UClass* GetCppBaseClass(UClass* InClass);
 
 	template <typename T, typename = void>
 	struct TConvertTokenImpl
