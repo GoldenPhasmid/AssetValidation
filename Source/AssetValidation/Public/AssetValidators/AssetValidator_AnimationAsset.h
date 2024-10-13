@@ -21,4 +21,7 @@ public:
 	static EDataValidationResult ValidateAnimNotifies(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context);
 	static EDataValidationResult ValidateCurves(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context);
 	static bool CurveExists(const USkeleton& Skeleton, FName CurveName);
+	
+	UPROPERTY(EditAnywhere, Config, Category = "Asset Validation")
+	bool bAllowNamedAnimNotifies = true;
 };

@@ -103,6 +103,7 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateSkeleton(const USk
 
 EDataValidationResult UAssetValidator_AnimationAsset::ValidateAnimNotifies(const UAnimationAsset& AnimAsset, const FAssetData& AssetData, FDataValidationContext& Context)
 {
+	const bool bAllowNamedAnimNotifies = GetDefault<UAssetValidator_AnimationAsset>()->bAllowNamedAnimNotifies;
 	const UAnimSequenceBase* AnimSequence = Cast<UAnimSequenceBase>(&AnimAsset);
 	if (AnimSequence == nullptr)
 	{
@@ -118,11 +119,17 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateAnimNotifies(const
 	{
 		if (AnimNotify.Notify == nullptr && AnimNotify.NotifyStateClass == nullptr)
 		{
+			if (bAllowNamedAnimNotifies)
+			{
+				continue;
+			}
+			
 			const FText NotifyName = FText::FromName(AnimNotify.GetNotifyEventName());
 			const float TriggerTime = AnimNotify.GetTriggerTime();
 			const float TriggerTimePretty = static_cast<int32>(TriggerTime) + static_cast<int32>(FMath::Frac(TriggerTime) * 100) / 100.0;
 			
-			const FText FailReason = FText::Format(LOCTEXT("InvalidAnimNotify", "Anim notify event [{0}:Time {1}] was deleted and no longer valid. Remove it to fix this error."),
+			const FText FailReason = FText::Format(LOCTEXT("InvalidAnimNotify", "Anim notify event [{0}:Time {1}] does not have a class set. "
+				"It was either deleted or used as a named notify. Remove it to fix this error."),
 				NotifyName, FText::FromString(FString::SanitizeFloat(TriggerTimePretty, 2))
 			);
 
