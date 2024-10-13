@@ -4,6 +4,7 @@
 #include "GameplayTagContainer.h"
 #include "InstancedStruct.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType.h"
 #include "Editor/MetaDataSource.h"
 #include "Engine/AssetManager.h"
 
@@ -271,8 +272,11 @@ void UStructValidator_BlackboardKeySelector::ValidateProperty(TNonNullPtr<const 
 {
 	const FBlackboardKeySelector* BlackboardKey = ConvertStructMemory<FBlackboardKeySelector>(PropertyMemory);
 	check(BlackboardKey);
-	
-	ValidationContext.FailOnCondition(!BlackboardKey->IsSet(), Property, LOCTEXT("BlackboardKeySelector", "Blackboard key is not set."));
+
+	if (BlackboardKey->SelectedKeyName == NAME_None || BlackboardKey->SelectedKeyType == nullptr)
+	{
+		ValidationContext.PropertyFails(Property, LOCTEXT("BlackboardKeySelector", "Blackboard key is not set."));
+	}
 }
 
 UStructValidator_InstancedStruct::UStructValidator_InstancedStruct()
