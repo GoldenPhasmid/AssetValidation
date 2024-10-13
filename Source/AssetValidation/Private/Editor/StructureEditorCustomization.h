@@ -10,7 +10,7 @@ namespace UE::AssetValidation
 	class FMetaDataSource;
 }
 
-struct FEnginePropertyExtension;
+struct FPropertyMetaDataExtension;
 class UUserDefinedStruct;
 
 /**

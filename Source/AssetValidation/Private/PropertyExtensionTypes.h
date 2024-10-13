@@ -6,34 +6,34 @@ class UObject;
 class UClass;
 class UStruct;
 class UUserDefinedStruct;
-struct FPropertyExtensionConfig;
-struct FEnginePropertyExtension;
+struct FPropertyMetaDataExtensionConfig;
+struct FPropertyMetaDataExtension;
 
 /**
  * Single property meta data extension, in config format
  */
-USTRUCT(BlueprintType)
-struct ASSETVALIDATION_API FPropertyExtensionConfig
+USTRUCT()
+struct ASSETVALIDATION_API FPropertyMetaDataExtensionConfig
 {
 	GENERATED_BODY()
 
-	FPropertyExtensionConfig() = default;
-	FPropertyExtensionConfig(const FEnginePropertyExtension& Extension);
+	FPropertyMetaDataExtensionConfig() = default;
+	FPropertyMetaDataExtensionConfig(const FPropertyMetaDataExtension& Extension);
 
 	/** class path in a /<PackageName>/<ModuleName>.<ClassName> format */
-	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
+	UPROPERTY()
 	FSoftObjectPath Class;
 
 	/** Simple property name */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	FName Property = NAME_None;
 
 	/** property meta data, list of pairs Key=Value separated by ';' */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	FString MetaData;
 
 	/** user comment */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	FString Comment;
 };
 
@@ -41,16 +41,16 @@ struct ASSETVALIDATION_API FPropertyExtensionConfig
  * Single property meta data extension
  */
 USTRUCT()
-struct ASSETVALIDATION_API FEnginePropertyExtension
+struct ASSETVALIDATION_API FPropertyMetaDataExtension
 {
 	GENERATED_BODY()
 	
-	FEnginePropertyExtension() = default;
-	FEnginePropertyExtension(UStruct* InStruct, const TFieldPath<FProperty>& InPropertyPath)
+	FPropertyMetaDataExtension() = default;
+	FPropertyMetaDataExtension(UStruct* InStruct, const TFieldPath<FProperty>& InPropertyPath)
 		: Struct(InStruct)
 		, PropertyPath(InPropertyPath)
 	{}
-	FEnginePropertyExtension(const FPropertyExtensionConfig& Config);
+	explicit FPropertyMetaDataExtension(const FPropertyMetaDataExtensionConfig& Config);
 
 	FORCEINLINE bool IsValid() const
 	{
@@ -87,26 +87,26 @@ struct ASSETVALIDATION_API FEnginePropertyExtension
 		MetaDataMap.Remove(Key);
 	}
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (Validate))
 	TObjectPtr<UStruct> Struct = nullptr;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (Validate))
 	TFieldPath<FProperty> PropertyPath;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (ValidateKey))
 	TMap<FName, FString> MetaDataMap;
 };
 
 /**
- * Class extension data
+ * Property extension data for a class
  */
 USTRUCT()
-struct ASSETVALIDATION_API FEngineClassExtension
+struct ASSETVALIDATION_API FUClassMetaDataExtension
 {
 	GENERATED_BODY()
 
-	FEngineClassExtension() = default;
-	FEngineClassExtension(UClass* InClass)
+	FUClassMetaDataExtension() = default;
+	explicit FUClassMetaDataExtension(UClass* InClass)
 		: Class(InClass)
 	{}
 
@@ -115,28 +115,28 @@ struct ASSETVALIDATION_API FEngineClassExtension
 		return Class != nullptr;
 	}
 
-	UPROPERTY(EditAnywhere, meta = (AllowAbstract = "true"))
+	UPROPERTY(EditAnywhere, meta = (Validate, AllowAbstract = "true"))
 	TSubclassOf<UObject> Class;
 
 	UPROPERTY(EditAnywhere)
-	TArray<FEnginePropertyExtension> Properties;
+	TArray<FPropertyMetaDataExtension> Properties;
 };
 
-FORCEINLINE bool operator==(const FEngineClassExtension& ClassData, const UClass* Class)
+FORCEINLINE bool operator==(const FUClassMetaDataExtension& ClassData, const UClass* Class)
 {
 	return ClassData.Class == Class;
 }
 
 /**
- * Extension data for a script struct
+ * Property extension data for a script struct
  */
 USTRUCT()
-struct ASSETVALIDATION_API FEngineStructExtension
+struct ASSETVALIDATION_API FUScriptStructMetaDataExtension
 {
 	GENERATED_BODY()
 
-	FEngineStructExtension() = default;
-	FEngineStructExtension(UScriptStruct* InStruct)
+	FUScriptStructMetaDataExtension() = default;
+	explicit FUScriptStructMetaDataExtension(UScriptStruct* InStruct)
 		: Struct(InStruct)
 	{}
 
@@ -145,17 +145,37 @@ struct ASSETVALIDATION_API FEngineStructExtension
 		return Struct != nullptr;
 	}
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (Validate, AllowAbstract = "true"))
 	TObjectPtr<UScriptStruct> Struct;
 
 	UPROPERTY(EditAnywhere)
-	TArray<FEnginePropertyExtension> Properties;
+	TArray<FPropertyMetaDataExtension> Properties;
 };
 
 
-FORCEINLINE bool operator==(const FEngineStructExtension& StructData, const UScriptStruct* ScriptStruct)
+FORCEINLINE bool operator==(const FUScriptStructMetaDataExtension& StructData, const UScriptStruct* ScriptStruct)
 {
 	return StructData.Struct == ScriptStruct;
 }
 
+UCLASS()
+class ASSETVALIDATION_API UPropertyMetaDataExtensionSet: public UDataAsset
+{
+	GENERATED_BODY()
+public:
+
+	static FSimpleDelegate OnPropertyMetaDataChanged;
+	
+	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent) override;
+
+	void FillPropertyMap(TMap<FSoftObjectPath, TArray<FPropertyMetaDataExtension>>& ExtensionMap);
+	
+	/** List of classes with additional validation meta data */
+	UPROPERTY(EditAnywhere, Category = "Settings", meta = (TitleProperty = "Class"))
+	TArray<FUClassMetaDataExtension> ClassExtensions;
+
+	/** List of structs with additional validation meta data */
+	UPROPERTY(EditAnywhere, Category = "Settings", meta = (TitleProperty = "Struct"))
+	TArray<FUScriptStructMetaDataExtension> StructExtensions;
+};
 

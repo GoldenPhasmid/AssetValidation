@@ -5,10 +5,10 @@
 
 #include "PropertyValidationSettings.generated.h"
 
-struct FPropertyExtensionConfig;
-struct FEnginePropertyExtension;
-struct FEngineClassExtension;
-struct FEngineStructExtension;
+struct FPropertyMetaDataExtensionConfig;
+struct FPropertyMetaDataExtension;
+struct FUClassMetaDataExtension;
+struct FUScriptStructMetaDataExtension;
 
 UCLASS(Config = Editor, DefaultConfig, DisplayName = "Property Validation")
 class ASSETVALIDATION_API UPropertyValidationSettings: public UDeveloperSettings
@@ -22,7 +22,6 @@ public:
 	FORCEINLINE static UPropertyValidationSettings* GetMutable()	{ return GetMutableDefault<UPropertyValidationSettings>(); }
 	
 	virtual void PostInitProperties() override;
-	virtual void PostReloadConfig(FProperty* PropertyThatWasLoaded) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	/**
@@ -39,6 +38,9 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToIterate;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate, ConfigRestartRequired = "true"))
+	TArray<FString> PropertyExtensionPaths;
 
 	/** If set, project module path is included to the list of paths for property validation */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
@@ -92,29 +94,5 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bReportIncorrectMetaUsage = true;
-
-	/** List of classes with additional validation meta data */
-	UPROPERTY(EditAnywhere, Category = "Settings")
-	TArray<FEngineClassExtension> ClassExtensions;
-
-	/** List of structs with additional validation meta data */
-	UPROPERTY(EditAnywhere, Category = "Settings")
-	TArray<FEngineStructExtension> StructExtensions;
-
-	UPROPERTY(Config)
-	TArray<FPropertyExtensionConfig> PropertyExtensions;
 	
-	static const TArray<FEnginePropertyExtension>& GetExtensions(const UStruct* Struct);
-
-protected:
-
-	void LoadConfig();
-	void StoreConfig();
-
-	FORCEINLINE void MarkExtensionMapDirty() const { bExtensionMapDirty = true; }
-	void UpdatePropertyExtensionMap() const;
-
-	// marked mutable for lazy updates
-	mutable TMap<FSoftObjectPath, TArray<FEnginePropertyExtension>> PropertyExtensionMap;
-	mutable bool bExtensionMapDirty = false;
 };

@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Editor/CustomizationTarget.h"
 
-struct FEnginePropertyExtension;
+struct FPropertyMetaDataExtension;
 namespace UE::AssetValidation
 {
 	class SPropertySelector;
@@ -12,9 +12,9 @@ namespace UE::AssetValidation
 namespace UE::AssetValidation
 {
 	
-class FEnginePropertyExtensionCustomization: public IPropertyTypeCustomization
+class FPropertyMetaDataExtensionCustomization: public IPropertyTypeCustomization
 {
-	using ThisClass = FEnginePropertyExtensionCustomization;
+	using ThisClass = FPropertyMetaDataExtensionCustomization;
 public:
 	static TSharedRef<IPropertyTypeCustomization> MakeInstance()
 	{
@@ -23,22 +23,15 @@ public:
 	
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
 	virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
-	virtual ~FEnginePropertyExtensionCustomization() override;
+	virtual ~FPropertyMetaDataExtensionCustomization() override;
 
 private:
-
-	/** CPF_DisableEditOnTemplate functionality */
-	void AddDefaultsEditableRow(FDetailWidgetRow& WidgetRow);
-	
-	EVisibility ShowEditableCheckboxVisibility() const;
-	ECheckBoxState OnEditableCheckboxState() const;
-	void OnEditableChanged(ECheckBoxState InNewState);
 
 	struct FCustomizationTarget: public UE::AssetValidation::ICustomizationTarget
 	{
 	public:
-		FCustomizationTarget(FEnginePropertyExtensionCustomization& InCustomization)
-			: Customization(StaticCastWeakPtr<FEnginePropertyExtensionCustomization>(InCustomization.AsWeak()))
+		FCustomizationTarget(FPropertyMetaDataExtensionCustomization& InCustomization)
+			: Customization(StaticCastWeakPtr<FPropertyMetaDataExtensionCustomization>(InCustomization.AsWeak()))
 		{}
 		
 		//~Begin ICustomizationTarget interface
@@ -48,7 +41,7 @@ private:
 		virtual void HandleMetaStateChanged(bool NewMetaState, const FName& MetaKey, FString MetaValue = {}) override;
 		//~End ICustomizationTarget interface
 
-		TWeakPtr<FEnginePropertyExtensionCustomization> Customization;
+		TWeakPtr<FPropertyMetaDataExtensionCustomization> Customization;
 	};
 	
 	void HandlePropertyChanged(TFieldPath<FProperty> NewPath);
@@ -60,7 +53,7 @@ private:
 	/** @return struct that owns the property from customized struct */
 	UStruct* GetOwningStruct() const;
 
-	FEnginePropertyExtension& GetPropertyExtension() const;
+	FPropertyMetaDataExtension& GetPropertyExtension() const;
 
 	/** */
 	TSharedPtr<FCustomizationTarget> CustomizationTarget;

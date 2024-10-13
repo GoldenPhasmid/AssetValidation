@@ -1,12 +1,86 @@
 #include "PropertyValidatorSubsystem.h"
 
+#include "AssetValidationDefines.h"
 #include "PropertyValidationSettings.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "ContainerValidators/ContainerValidator.h"
 #include "Editor/MetaDataSource.h"
 #include "Editor/ValidationEditorExtensionManager.h"
+#include "Engine/ObjectLibrary.h"
 #include "Interfaces/IPluginManager.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidation.h"
+
+void FPropertyExtensionLibrary::InitializePropertyMap()
+{
+	if (bInitialized == true)
+	{
+		return;
+	}
+	bInitialized = true;
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(FPropertyExtensionLibrary_InitializePropertyMap, AssetValidationChannel);
+
+	// create an object library and load all objects from specified paths
+	Library = UObjectLibrary::CreateLibrary(UPropertyMetaDataExtensionSet::StaticClass(), false, !IsRunningCommandlet());
+	Library->bIncludeOnlyOnDiskAssets = true;
+	Library->bRecursivePaths = true;
+
+	Library->LoadAssetDataFromPaths(UPropertyValidationSettings::Get()->PropertyExtensionPaths, true);
+	Library->LoadAssetsFromAssetData();
+	Library->GetObjects(ExtensionSets);
+
+	// update property map with loaded extension sets
+	RefreshPropertyMap();
+}
+
+void FPropertyExtensionLibrary::RequestUpdatePropertyMap()
+{
+	bRequiresUpdate = true;
+}
+
+void FPropertyExtensionLibrary::AddSet(UPropertyMetaDataExtensionSet* InSet)
+{
+	check(bInitialized);
+	check(!ExtensionSets.Contains(InSet));
+	ExtensionSets.Add(InSet);
+	
+	RequestUpdatePropertyMap();
+}
+
+void FPropertyExtensionLibrary::RemoveSet(UPropertyMetaDataExtensionSet* InSet)
+{
+	check(bInitialized);
+	int32 Count = ExtensionSets.RemoveSingleSwap(InSet);
+	Count += ExtensionSets.RemoveSingleSwap(nullptr);
+	check(Count > 0);
+
+	RequestUpdatePropertyMap();
+}
+
+TConstArrayView<FPropertyMetaDataExtension> FPropertyExtensionLibrary::GetProperties(const UStruct* InStruct) const
+{
+	FPropertyExtensionLibrary* MutableThis = const_cast<FPropertyExtensionLibrary*>(this);
+	if (bRequiresUpdate)
+	{
+		MutableThis->RefreshPropertyMap();
+		MutableThis->bRequiresUpdate = false;
+	}
+	
+	TConstArrayView<FPropertyMetaDataExtension> Extensions = MutableThis->PropertyExtensionMap.FindOrAdd(FSoftObjectPath{InStruct});
+	return Extensions;
+}
+
+void FPropertyExtensionLibrary::RefreshPropertyMap()
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(FPropertyExtensionLibrary_RefreshPropertyMap, AssetValidationChannel);
+	PropertyExtensionMap.Reset();
+
+	for (UPropertyMetaDataExtensionSet* ExtensionSet: ExtensionSets)
+	{
+		check(ExtensionSet);
+		ExtensionSet->FillPropertyMap(PropertyExtensionMap);
+	}
+}
 
 UPropertyValidatorSubsystem* UPropertyValidatorSubsystem::Get()
 {
@@ -56,8 +130,11 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	ExtensionManager = NewObject<UValidationEditorExtensionManager>(this);
 	ExtensionManager->Initialize();
 
+	InitPropertyExtensionLibrary();
+
+	const UPropertyValidationSettings* Settings = UPropertyValidationSettings::Get();
 	// if enabled, add project plugins paths to a list of paths to validate by default 
-	if (UPropertyValidationSettings::Get()->bValidateProjectPlugins)
+	if (Settings->bValidateProjectPlugins)
 	{
 		for (TSharedRef<IPlugin> Plugin: IPluginManager::Get().GetDiscoveredPlugins())
 		{
@@ -69,10 +146,40 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	}
 
 	// if enabled, add project path to a list of paths to validate by default 
-	if (UPropertyValidationSettings::Get()->bValidateProject)
+	if (Settings->bValidateProject)
 	{
 		ProjectPackages.Add(FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName()));
 	}
+}
+
+void UPropertyValidatorSubsystem::InitPropertyExtensionLibrary()
+{
+	IAssetRegistry& AssetRegistry = FModuleManager::GetModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	if (AssetRegistry.IsLoadingAssets())
+	{
+		static FDelegateHandle DoOnce = AssetRegistry.OnFilesLoaded().AddUObject(this, &ThisClass::InitPropertyExtensionLibrary);
+		return;
+	}
+	
+	ExtensionLibrary.InitializePropertyMap();
+	AssetRegistry.OnInMemoryAssetCreated().AddWeakLambda(this, [this](UObject *Object)
+	{
+		if (UPropertyMetaDataExtensionSet* Set = Cast<UPropertyMetaDataExtensionSet>(Object))
+		{
+			ExtensionLibrary.AddSet(Set);
+		}
+	});
+	AssetRegistry.OnInMemoryAssetDeleted().AddWeakLambda(this, [this](UObject *Object)
+	{
+		if (UPropertyMetaDataExtensionSet* Set = Cast<UPropertyMetaDataExtensionSet>(Object))
+		{
+			ExtensionLibrary.RemoveSet(Set);
+		}
+	});
+	UPropertyMetaDataExtensionSet::OnPropertyMetaDataChanged.BindWeakLambda(this, [this]
+	{
+		ExtensionLibrary.RequestUpdatePropertyMap();
+	});
 }
 
 template <typename ...Types>
@@ -87,6 +194,8 @@ void UPropertyValidatorSubsystem::Deinitialize()
 	
 	ExtensionManager->Cleanup();
 	ExtensionManager = nullptr;
+
+	ExtensionLibrary.Reset();
 
 	ProjectPackages.Empty();
 	
@@ -106,8 +215,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObject(const UObj
 		// do not validate abstract or deprecated classes.
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
-
-	TRACE_CPUPROFILER_EVENT_SCOPE(UPropertyValidatorSubsystem::ValidateObject);
+	
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UPropertyValidatorSubsystem_ValidateObject, AssetValidationChannel);
 
 	// package check happens inside WithContext call
 	FPropertyValidationContext ValidationContext(this, Object);
@@ -123,8 +232,8 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateStruct(const UObj
 		// count invalid objects as valid in property validation. 
 		return FPropertyValidationResult{EDataValidationResult::Valid};
 	}
-	
-	TRACE_CPUPROFILER_EVENT_SCOPE(UPropertyValidatorSubsystem::ValidateStruct);
+
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UPropertyValidatorSubsystem_ValidateStruct, AssetValidationChannel);
 
 	// package check happens inside WithContext call
 	FPropertyValidationContext ValidationContext(this, OwningObject);
@@ -149,7 +258,7 @@ FPropertyValidationResult UPropertyValidatorSubsystem::ValidateObjectProperty(co
 	
 	// sanity check that property belongs to object class
 	check(Object->IsA(Property->GetOwner<UClass>()));
-	TRACE_CPUPROFILER_EVENT_SCOPE(UPropertyValidatorSubsystem::ValidateObjectProperty);
+	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UPropertyValidatorSubsystem_ValidateObjectProperty, AssetValidationChannel);
 	
 	// explicitly check for object package
 	FPropertyValidationContext ValidationContext(this, Object);
@@ -300,7 +409,8 @@ void UPropertyValidatorSubsystem::ValidateContainerWithContext(TNonNullPtr<const
 		}
 
 		// query property extensions for current Struct and run validation on them
-		for (const FEnginePropertyExtension& Extension: UPropertyValidationSettings::GetExtensions(Struct))
+		check(ExtensionLibrary.IsInitialized());
+		for (const FPropertyMetaDataExtension& Extension: ExtensionLibrary.GetProperties(Struct))
 		{
 			UE::AssetValidation::FMetaDataSource MetaData{Extension};
 			ValidatePropertyWithContext(ContainerMemory, Extension.GetProperty(), MetaData, ValidationContext);
@@ -408,7 +518,7 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 	{
 		bool bVisibleInBlueprint = false;
 		// engine property extension ignore visibility requirements
-		bVisibleInBlueprint |= MetaData.IsType<FEnginePropertyExtension>();
+		bVisibleInBlueprint |= MetaData.IsType<FPropertyMetaDataExtension>();
 		// property is editable in blueprints
 		bVisibleInBlueprint |= Property->HasAnyPropertyFlags(EPropertyFlags::CPF_Edit) && !Property->HasAnyPropertyFlags(EPropertyFlags::CPF_EditConst);
 		// blueprint created components doesn't have CPF_Edit property specifier, while cpp defined components have
@@ -437,7 +547,7 @@ bool UPropertyValidatorSubsystem::ShouldValidateProperty(const FProperty* Proper
 		
 	// user can disable property validation on template
 	// @todo: sometimes template related-checks will skip editable properties, because engine is inconsistent with its template flag
-	if (MetaData.IsType<FEnginePropertyExtension>() && MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
+	if (MetaData.IsType<FPropertyMetaDataExtension>() && MetaData.HasMetaData(UE::AssetValidation::DisableEditOnTemplate) && bTemplate)
 	{
 		return false;
 	}

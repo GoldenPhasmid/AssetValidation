@@ -3,31 +3,31 @@
 #include "AssetValidationDefines.h"
 #include "PropertyValidators/PropertyValidation.h"
 
-FPropertyExtensionConfig::FPropertyExtensionConfig(const FEnginePropertyExtension& Extension)
+FString MakeMetaDataMessage(const FString& Key, const FString& Value)
+{
+	FString MetaData{};
+	if (Value.IsEmpty())
+	{
+		MetaData += Key;
+	}
+	else
+	{
+		MetaData += Key + TEXT("=") + Value;
+	}
+	MetaData += TEXT(";");
+	return MetaData;
+}
+
+FPropertyMetaDataExtensionConfig::FPropertyMetaDataExtensionConfig(const FPropertyMetaDataExtension& Extension)
 	: Class(Extension.Struct)
 	, Property(Extension.GetProperty()->GetFName())
 {
-	auto MakeMessage = [](const FString& Key, const FString& Value)
-	{
-		FString MetaData{};
-		if (Value.IsEmpty())
-		{
-			MetaData += Key;
-		}
-		else
-		{
-			MetaData += Key + TEXT("=") + Value;
-		}
-		MetaData += TEXT(";");
-		return MetaData;
-	};
-	
 	auto MetaDataMap = Extension.MetaDataMap;
 	for (const FName& MetaKey: UE::AssetValidation::GetMetaKeys())
 	{
 		if (const FString* MetaValue = MetaDataMap.Find(MetaKey))
 		{
-			MetaData += MakeMessage(MetaKey.ToString(), *MetaValue);
+			MetaData += MakeMetaDataMessage(MetaKey.ToString(), *MetaValue);
 			MetaDataMap.Remove(MetaKey);
 		}
 	}
@@ -42,13 +42,13 @@ FPropertyExtensionConfig::FPropertyExtensionConfig(const FEnginePropertyExtensio
 	// append remaining metadata which is not related to asset validation meta keys.
 	for (auto& [MetaKey, MetaValue]: MetaDataArray)
 	{
-		MetaData += MakeMessage(MetaKey.ToString(), MetaValue);
+		MetaData += MakeMetaDataMessage(MetaKey.ToString(), MetaValue);
 	}
 
 	MetaData.RemoveFromEnd(TEXT(";"));
 }
 
-FEnginePropertyExtension::FEnginePropertyExtension(const FPropertyExtensionConfig& Config)
+FPropertyMetaDataExtension::FPropertyMetaDataExtension(const FPropertyMetaDataExtensionConfig& Config)
 {
 	Struct = Cast<UStruct>(Config.Class.TryLoad());
 	if (Struct == nullptr)
@@ -107,4 +107,76 @@ FEnginePropertyExtension::FEnginePropertyExtension(const FPropertyExtensionConfi
 		}
 	}
 #endif
+}
+
+FSimpleDelegate UPropertyMetaDataExtensionSet::OnPropertyMetaDataChanged{};
+
+void UPropertyMetaDataExtensionSet::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeChainProperty(PropertyChangedEvent);
+
+	const FName PropertyName = PropertyChangedEvent.GetPropertyName();
+	const FName MemberName = PropertyChangedEvent.GetMemberPropertyName();
+
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FUClassMetaDataExtension, Class))
+	{
+		const int32 Index = PropertyChangedEvent.GetArrayIndex(GET_MEMBER_NAME_CHECKED(ThisClass, ClassExtensions).ToString());
+		check(ClassExtensions.IsValidIndex(Index));
+		
+		ClassExtensions[Index].Properties.Reset();
+	}
+
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FUScriptStructMetaDataExtension, Struct))
+	{
+		const int32 Index = PropertyChangedEvent.GetArrayIndex(GET_MEMBER_NAME_CHECKED(ThisClass, StructExtensions).ToString());
+		check(StructExtensions.IsValidIndex(Index));
+		
+		StructExtensions[Index].Properties.Reset();
+	}
+
+	// @todo: move to detail customization instead
+	for (FUClassMetaDataExtension& ClassExtension: ClassExtensions)
+	{
+		for (FPropertyMetaDataExtension& PropertyExtension: ClassExtension.Properties)
+		{
+			PropertyExtension.Struct = ClassExtension.Class.Get();
+		}
+	}
+	
+	// @todo: move to detail customization instead
+	for (FUScriptStructMetaDataExtension& StructExtension: StructExtensions)
+	{
+		for (FPropertyMetaDataExtension& PropertyExtension: StructExtension.Properties)
+		{
+			PropertyExtension.Struct = StructExtension.Struct;
+		}
+	}
+
+	OnPropertyMetaDataChanged.ExecuteIfBound();
+}
+
+void UPropertyMetaDataExtensionSet::FillPropertyMap(TMap<FSoftObjectPath, TArray<FPropertyMetaDataExtension>>& ExtensionMap)
+{
+	auto IsPropertyExtValid = [](const FPropertyMetaDataExtension& Extension) { return Extension.IsValid(); };
+	for (const FUClassMetaDataExtension& ClassExtension: ClassExtensions)
+	{
+		if (ClassExtension.IsValid())
+		{
+			TArray<FPropertyMetaDataExtension>& Extensions = ExtensionMap.Add(FSoftObjectPath{ClassExtension.Class});
+			Extensions.Reserve(ClassExtension.Properties.Num());
+			
+			Algo::CopyIf(ClassExtension.Properties, Extensions, IsPropertyExtValid);
+		}
+	}
+
+	for (const FUScriptStructMetaDataExtension& StructExtension: StructExtensions)
+	{
+		if (StructExtension.IsValid())
+		{
+			TArray<FPropertyMetaDataExtension>& Extensions = ExtensionMap.Add(FSoftObjectPath{StructExtension.Struct});
+			Extensions.Reserve(StructExtension.Properties.Num());
+			
+			Algo::CopyIf(StructExtension.Properties, Extensions, IsPropertyExtValid);
+		}
+	}
 }

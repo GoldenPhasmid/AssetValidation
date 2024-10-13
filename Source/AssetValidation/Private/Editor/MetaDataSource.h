@@ -24,9 +24,9 @@ public:
 		// @todo: remove const_cast after everything clears up
 		Variant.Set<FProperty*>(const_cast<FProperty*>(Property)); 
 	}
-	FMetaDataSource(const FEnginePropertyExtension& Extension)
+	FMetaDataSource(const FPropertyMetaDataExtension& Extension)
 	{
-		Variant.Set<FEnginePropertyExtension>(Extension);
+		Variant.Set<FPropertyMetaDataExtension>(Extension);
 	}
 
 	template <typename T>
@@ -37,9 +37,9 @@ public:
 		return Variant.Get<FProperty*>();
 	}
 
-	FEnginePropertyExtension GetExtension() const
+	FPropertyMetaDataExtension GetExtension() const
 	{
-		return Variant.Get<FEnginePropertyExtension>();
+		return Variant.Get<FPropertyMetaDataExtension>();
 	}
 
 	void SetProperty(FProperty* Property)
@@ -47,9 +47,9 @@ public:
 		Variant.Set<FProperty*>(Property);
 	}
 
-	void SetExtension(const FEnginePropertyExtension& PropertyData)
+	void SetExtension(const FPropertyMetaDataExtension& PropertyData)
 	{
-		Variant.Set<FEnginePropertyExtension>(PropertyData);
+		Variant.Set<FPropertyMetaDataExtension>(PropertyData);
 	}
 
 	bool IsValid() const;
@@ -61,7 +61,7 @@ public:
 	void RemoveMetaData(const FName& Key);
 
 private:
-	TVariant<FEmptyVariantState, FProperty*, FEnginePropertyExtension> Variant;
+	TVariant<FEmptyVariantState, FProperty*, FPropertyMetaDataExtension> Variant;
 };
 	
 template <>
@@ -71,9 +71,9 @@ FORCEINLINE bool FMetaDataSource::IsType<FProperty>() const
 }
 
 template <>
-FORCEINLINE bool FMetaDataSource::IsType<FEnginePropertyExtension>() const
+FORCEINLINE bool FMetaDataSource::IsType<FPropertyMetaDataExtension>() const
 {
-	return Variant.IsType<FEnginePropertyExtension>();
+	return Variant.IsType<FPropertyMetaDataExtension>();
 }
 
 

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorSubsystem.h"
+#include "PropertyExtensionTypes.h"
 #include "PropertyValidators/PropertyValidatorBase.h"
 #include "PropertyValidators/PropertyValidationResult.h"
 #include "Templates/NonNullPointer.h"
@@ -15,12 +16,50 @@ namespace UE::AssetValidation
 using FMetaDataSource = UE::AssetValidation::FMetaDataSource;
 
 class FFieldClass;
+class UObjectLibrary;
 class UPropertyValidatorBase;
-class FPropertyValidationContext;
 class UValidationEditorExtensionManager;
+class UPropertyMetaDataExtensionSet;
+class FPropertyValidationContext;
+struct FPropertyMetaDataExtension;
 struct FPropertyValidationResult;
 struct FPropertyValidatorDescriptor;
 struct FSubobjectData;
+
+USTRUCT()
+struct FPropertyExtensionLibrary
+{
+	GENERATED_BODY()
+
+	void InitializePropertyMap();
+	void RequestUpdatePropertyMap();
+
+	void AddSet(UPropertyMetaDataExtensionSet* InSet);
+	void RemoveSet(UPropertyMetaDataExtensionSet* InSet);
+
+	TConstArrayView<FPropertyMetaDataExtension> GetProperties(const UStruct* InStruct) const;
+	
+	FORCEINLINE bool IsInitialized() const { return bInitialized; }
+	FORCEINLINE void Reset() { *this = FPropertyExtensionLibrary{}; }
+protected:
+	
+	void RefreshPropertyMap();
+
+	/** metadata extension set object library */
+	UPROPERTY(Transient)
+	TObjectPtr<UObjectLibrary> Library;
+
+	/** all found metadata extensions. Updated when new asset of the same type is created or deleted */
+	UPROPERTY(Transient)
+	TArray<UPropertyMetaDataExtensionSet*> ExtensionSets;
+	
+	/** property extension map */
+	TMap<FSoftObjectPath, TArray<FPropertyMetaDataExtension>> PropertyExtensionMap;
+	/** indicates whether library is initialized */
+	bool bInitialized = false;
+	/** indicates whether property map requires update */
+	bool bRequiresUpdate = false;
+};
 
 /**
  *
@@ -135,6 +174,8 @@ protected:
 	const UPropertyValidatorBase* FindContainerValidator(const FProperty* PropertyType) const;
 	/** @return validator from container a given property type */
 	static const UPropertyValidatorBase* FindValidator(const TMap<FPropertyValidatorDescriptor, UPropertyValidatorBase*>& Container, const FProperty* PropertyType);
+
+	void InitPropertyExtensionLibrary();
 	
 	/** property validators mapped by their respective use */
 	UPROPERTY(Transient)
@@ -152,4 +193,7 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UValidationEditorExtensionManager> ExtensionManager;
+
+	UPROPERTY(Transient)
+	FPropertyExtensionLibrary ExtensionLibrary;
 };

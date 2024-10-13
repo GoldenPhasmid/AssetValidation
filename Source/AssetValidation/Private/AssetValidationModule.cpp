@@ -18,7 +18,7 @@
 #include "AssetRegistry/AssetDataToken.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor/AssetValidationSettingsCustomization.h"
-#include "Editor/EnginePropertyExtensionCustomization.h"
+#include "Editor/PropertyMetaDataExtensionCustomization.h"
 #include "Editor/LevelEditorCustomization.h"
 #include "Editor/PropertyValidationSettingsCustomization.h"
 #include "Editor/UnrealEdEngine.h"
@@ -126,7 +126,7 @@ void FAssetValidationModule::StartupModule()
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyEditor.RegisterCustomClassLayout(StaticClass<UAssetValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FAssetValidationSettingsCustomization::MakeInstance));
 	PropertyEditor.RegisterCustomClassLayout(StaticClass<UPropertyValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyValidationSettingsCustomization::MakeInstance));
-	PropertyEditor.RegisterCustomPropertyTypeLayout(StaticStruct<FEnginePropertyExtension>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&UE::AssetValidation::FEnginePropertyExtensionCustomization::MakeInstance));
+	PropertyEditor.RegisterCustomPropertyTypeLayout(StaticStruct<FPropertyMetaDataExtension>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyMetaDataExtensionCustomization::MakeInstance));
 	
 	FEditorDelegates::OnEditorInitialized.AddLambda([this](double Duration)
 	{
