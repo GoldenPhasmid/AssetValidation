@@ -40,9 +40,11 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (Validate))
 	TArray<FString> PackagesToIterate;
 
+	/** If set, project module path is included to the list of paths for property validation */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bValidateProject = true;
 
+	/** If set, project plugins paths is included  to the list of paths for property validation */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bValidateProjectPlugins = true;
 	

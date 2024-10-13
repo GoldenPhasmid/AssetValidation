@@ -52,12 +52,13 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		}
 	}
 
+	// create and initialize blueprint edito extension manager
 	ExtensionManager = NewObject<UValidationEditorExtensionManager>(this);
 	ExtensionManager->Initialize();
 
+	// if enabled, add project plugins paths to a list of paths to validate by default 
 	if (UPropertyValidationSettings::Get()->bValidateProjectPlugins)
 	{
-		// validate project plugins by default
 		for (TSharedRef<IPlugin> Plugin: IPluginManager::Get().GetDiscoveredPlugins())
 		{
 			if (Plugin->GetLoadedFrom() == EPluginLoadedFrom::Project)
@@ -67,9 +68,9 @@ void UPropertyValidatorSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		}
 	}
 
+	// if enabled, add project path to a list of paths to validate by default 
 	if (UPropertyValidationSettings::Get()->bValidateProject)
 	{
-		// allow validation for project package
 		ProjectPackages.Add(FString::Printf(TEXT("/Script/%s"), FApp::GetProjectName()));
 	}
 }
