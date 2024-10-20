@@ -313,11 +313,9 @@ FString UE::AssetValidation::ResolveObjectDisplayName(const UObject* Object, FPr
 		{
 			return DisplayLabel;
 		}
-		
-		return Widget->GetName();
 	}
 
-	return Object->GetName();
+	return Object->GetClass()->GetName();
 }
 
 bool UE::AssetValidation::UpdateBlueprintVarMetaData(UBlueprint* Blueprint, const FProperty* Property, const FName& VarName, const FName& MetaName, bool bAddIfPossible)
