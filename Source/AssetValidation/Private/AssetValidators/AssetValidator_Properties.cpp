@@ -24,24 +24,34 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL(UAssetValidator_Properties, AssetValidationChannel);
 	
-	UPropertyValidatorSubsystem* PropertyValidators = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
-	check(PropertyValidators);
+	UPropertyValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UPropertyValidatorSubsystem>();
+	check(ValidatorSubsystem);
 
 	UClass* Class = InAsset->GetClass();
 	UObject* Object = InAsset;
-	
+
+	EDataValidationResult Result = EDataValidationResult::Valid;
 	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
+		// for blueprint assets, validate SCS and other engine properties with metadata extension
+		FPropertyValidationResult OutResult = ValidatorSubsystem->ValidateObject(Blueprint);
+		Result &= OutResult.ValidationResult;
+
+		UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, OutResult.Errors);
+		UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, OutResult.Warnings);
+
 		Class = Blueprint->GeneratedClass;
-		Object = Class->GetDefaultObject();
+        Object = Class->GetDefaultObject();
 	}
 
 	check(Class && Object);
+
+	// validate default object
+	FPropertyValidationResult OutResult = ValidatorSubsystem->ValidateObject(Object);
+	Result &= OutResult.ValidationResult;
 	
-	FPropertyValidationResult Result = PropertyValidators->ValidateObject(Object);
+	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, OutResult.Errors);
+	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, OutResult.Warnings);
 	
-	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, Result.Errors);
-	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, Result.Warnings);
-	
-	return Result.ValidationResult;
+	return Result;
 }
