@@ -296,7 +296,7 @@ void UValidationEditorExtensionManager::HandleBlueprintComponentAdded(const FSub
 		return;
 	}
 
-	if (NewSubobjectData.IsComponent() && !NewSubobjectData.IsInheritedComponent())
+	if (NewSubobjectData.IsComponent() && !NewSubobjectData.IsInheritedComponent() && !NewSubobjectData.IsInstancedComponent())
 	{
 		if (UBlueprint* Blueprint = NewSubobjectData.GetBlueprint())
 		{
