@@ -1,14 +1,68 @@
 ﻿#include "LevelEditorCustomization.h"
 
+#include "AssetValidationSettings.h"
+#include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
+#include "EditorValidatorHelpers.h"
 #include "PropertyValidatorSubsystem.h"
 #include "Commandlet/AVCommandletAction.h"
 #include "Commandlet/AVCommandletSearchFilter.h"
+#include "ISourceControlModule.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
-FAssetValidationToolkitManager::FAssetValidationToolkitManager()
+bool HasNoPlayWorld()
 {
+	return GEditor->PlayWorld == nullptr;
+}
+
+void ValidateCheckedOutAssets(EDataValidationUsecase Usecase)
+{
+	if (!ISourceControlModule::Get().IsEnabled())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControlDisabled", "Your source control is disabled. Enable and try again."));
+		return;
+	}
+
+	FScopedSlowTask SlowTask(0.f, FText::FromString("Verifying checkout out assets..."));
+	SlowTask.MakeDialog();
+    
+	FValidateAssetsSettings Settings;
+	Settings.ValidationUsecase = Usecase;
+	Settings.bSkipExcludedDirectories = true;
+	Settings.bShowIfNoFailures = true;
+    
+	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+	DataValidationLog.NewPage(LOCTEXT("CheckContent", "Check Content"));
+
+	FValidateAssetsResults Results{};
+	UE::AssetValidation::ValidateCheckedOutAssets(true, Settings, Results);
+}
+	
+void ValidateProjectSettings(EDataValidationUsecase Usecase)
+{
+	FScopedSlowTask SlowTask(0.f, FText::FromString("Verifying project settings..."));
+	SlowTask.MakeDialog();
+		
+	FValidateAssetsSettings Settings;
+	Settings.ValidationUsecase = Usecase;
+	Settings.bSkipExcludedDirectories = true;
+	Settings.bShowIfNoFailures = true;
+	
+	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
+	DataValidationLog.NewPage(FText::FromString("Check Project Settings"));
+	
+	FValidateAssetsResults Results;
+	UE::AssetValidation::ValidateProjectSettings(Settings, Results);
+}
+
+FAssetValidationMenuExtensionManager::FAssetValidationMenuExtensionManager()
+{
+	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
+	FToolMenuOwnerScoped OwnerScoped(this);
+	
+	// WINDOW header
+	// "Asset Validation" in Window header
 	UToolMenu* WindowMenu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Window");
 	FToolMenuSection& LogSection = WindowMenu->FindOrAddSection("Log");
 
@@ -23,28 +77,73 @@ FAssetValidationToolkitManager::FAssetValidationToolkitManager()
 	.SetDisplayName(LOCTEXT("WindowItemName", "Asset Validation"))
 	.SetIcon(FAssetValidationStyle::GetValidateMenuIcon())
 	.SetAutoGenerateMenuEntry(false);
+
+	const FUIAction CheckContentAction = FUIAction(
+		FExecuteAction::CreateStatic(&ValidateCheckedOutAssets, EDataValidationUsecase::Script),
+		FCanExecuteAction::CreateStatic(&HasNoPlayWorld),
+		FIsActionChecked(),
+		FIsActionButtonVisible::CreateStatic(&HasNoPlayWorld)
+	);
+
+	UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
+	FToolMenuSection& PlayGameSection = ToolbarMenu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
+
+	// CheckContent TOOLBAR 
+	FToolMenuEntry CheckContentEntry = FToolMenuEntry::InitToolBarButton(
+		"CheckContent",
+		CheckContentAction,
+		LOCTEXT("CheckContent", "Check Content"),
+		LOCTEXT("CheckContentDescription", "Runs Content Validation job on all checked out assets"),
+		FAssetValidationStyle::GetCheckContentIcon()
+	);
+	CheckContentEntry.StyleNameOverride = "CalloutToolbar";
+	PlayGameSection.AddEntry(CheckContentEntry);
+
+	// TOOLS header
+	UToolMenu* ToolsMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
+	FToolMenuSection& ToolsSection = ToolsMenu->FindOrAddSection("DataValidation");
+
+	// CheckContent inside Tools header entry
+	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
+		"CheckContent",
+		LOCTEXT("CheckContent", "Check Content"),
+		LOCTEXT("CheckContentTooltip", "Check all source controlled assets."),
+		FAssetValidationStyle::GetCheckContentIcon(),
+		CheckContentAction
+	));
+	
+	// CheckProjectSettings inside Tools header entry
+	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
+		"CheckProjectSettings",
+		LOCTEXT("CheckProjectSettings", "Check Project Settings"),
+		LOCTEXT("CheckProjectSettingsTooltip", "Check all config objects and developer settings"),
+		FAssetValidationStyle::GetValidateMenuIcon(),
+		FUIAction(FExecuteAction::CreateStatic(&ValidateProjectSettings, EDataValidationUsecase::Script))
+	));
 }
 
-FAssetValidationToolkitManager::~FAssetValidationToolkitManager()
+FAssetValidationMenuExtensionManager::~FAssetValidationMenuExtensionManager()
 {
+	UToolMenus::UnregisterOwner(this);
+	
 	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(TabName);
 }
 
-void FAssetValidationToolkitManager::SummonTab()
+void FAssetValidationMenuExtensionManager::SummonTab()
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(TabName);
 }
 
-TSharedRef<SDockTab> FAssetValidationToolkitManager::CreateTabBody(const FSpawnTabArgs& TabArgs) const
+TSharedRef<SDockTab> FAssetValidationMenuExtensionManager::CreateTabBody(const FSpawnTabArgs& TabArgs) const
 {
 	return SNew(SDockTab)
 	.TabRole(NomadTab)
 	[
-		SNew(SAssetValidationToolkit)
+		SNew(SAssetValidationToolkitView)
 	];
 }
 
-void SAssetValidationToolkit::Construct(const FArguments& Args)
+void SAssetValidationToolkitView::Construct(const FArguments& Args)
 {
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
@@ -56,7 +155,7 @@ void SAssetValidationToolkit::Construct(const FArguments& Args)
 
 	DetailsView = PropertyEditor.CreateDetailView(DetailsViewArgs);
 
-	ToolkitView = NewObject<UAssetValidationToolkitView>();
+	ToolkitView = NewObject<UAssetValidationToolkit>();
 	DetailsView->SetObject(ToolkitView.Get());
 
 	ChildSlot
@@ -65,38 +164,55 @@ void SAssetValidationToolkit::Construct(const FArguments& Args)
 	];
 }
 
-void SAssetValidationToolkit::AddReferencedObjects(FReferenceCollector& Collector)
+void SAssetValidationToolkitView::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ToolkitView);
 }
 
-void SAssetValidationToolkit::NotifyPreChange(FProperty* PropertyAboutToChange)
+void SAssetValidationToolkitView::NotifyPreChange(FProperty* PropertyAboutToChange)
 {
-	// DetailsView->SetObject(nullptr);
+	// noop
 }
 
-void SAssetValidationToolkit::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged)
+void SAssetValidationToolkitView::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged)
 {
-	// DetailsView->SetObject(ToolkitView.Get(), true);
+	// noop
 }
 
-void UAssetValidationToolkitView::CheckContent()
+void UAssetValidationToolkit::PostInitProperties()
 {
+	UObject::PostInitProperties();
+
+	if (!HasAnyFlags(RF_ClassDefaultObject))
+	{
+		SearchFilter = NewObject<UAVCommandletSearchFilter>(this, UAssetValidationSettings::Get()->CommandletDefaultFilter);
+		Action = NewObject<UAVCommandletAction>(this, UAssetValidationSettings::Get()->CommandletDefaultAction);
+	}
 }
 
-void UAssetValidationToolkitView::CheckProjectSettings()
+void UAssetValidationToolkit::CheckContent()
 {
+	ValidateCheckedOutAssets(EDataValidationUsecase::Commandlet);
 }
 
-void UAssetValidationToolkitView::ExecuteCommandlet()
+void UAssetValidationToolkit::CheckProjectSettings()
 {
+	ValidateProjectSettings(EDataValidationUsecase::Commandlet);
+}
+
+void UAssetValidationToolkit::ExecuteCommandlet()
+{
+	ON_SCOPE_EXIT
+	{
+		CommandletStatus.RemoveFromEnd(TEXT("\n"));
+	};
+
 	CommandletStatus.Empty();
-	CommandletStatus += SearchFilter ? TEXT("") : TEXT("Seach filter is required.\n");
-	CommandletStatus += Action ? TEXT("") : TEXT("Action is required.\n");
+	CommandletStatus += SearchFilter ? TEXT("") : TEXT("Commandlet search filter is required.\n");
+	CommandletStatus += Action ? TEXT("") : TEXT("Commandlet action is required.\n");
 
 	if (!CommandletStatus.IsEmpty())
 	{
-		CommandletStatus.RemoveFromEnd(TEXT("\n"));
 		return;
 	}
 
@@ -120,8 +236,6 @@ void UAssetValidationToolkitView::ExecuteCommandlet()
 		const bool bResult = Action->Run(Assets);
 		CommandletStatus += FString::Printf(TEXT("Status: %s.\n"), bResult ? TEXT("Succeeded") : TEXT("Failed"));
 	}
-
-	CommandletStatus.RemoveFromEnd(TEXT("\n"));
 }
 
 #undef LOCTEXT_NAMESPACE

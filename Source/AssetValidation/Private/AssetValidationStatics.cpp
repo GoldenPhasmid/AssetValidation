@@ -77,11 +77,11 @@ namespace UE::AssetValidation
 {
 	int32 ValidateCheckedOutAssets(bool bInteractive, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
 	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidateCheckedOutAssets);
+		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL_STR(__FUNCTION__, AssetValidationChannel);
 		
 		if (FStudioTelemetry::IsAvailable())
 		{
-			FStudioTelemetry::Get().RecordEvent(TEXT("ValidateCheckedOutAssets"));
+			FStudioTelemetry::Get().RecordEvent(__FUNCTION__);
 		}
 		
 		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
@@ -159,7 +159,7 @@ namespace UE::AssetValidation
 
 		// Step 6: Validate Project Settings
 		{
-			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
+			FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSettings", "Checking project settings..."));
 			SlowTask.MakeDialog();
 			
 			ValidateProjectSettings(InSettings, OutResults);
@@ -195,7 +195,12 @@ namespace UE::AssetValidation
 	
 	void ValidateProjectSettings(const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
 	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidateProjectSettings);
+		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL_STR(__FUNCTION__, AssetValidationChannel);
+
+		if (FStudioTelemetry::IsAvailable())
+		{
+			FStudioTelemetry::Get().RecordEvent(__FUNCTION__);
+		}
 		
 		TArray<UClass*> AllClasses;
 		GetDerivedClasses(UObject::StaticClass(), AllClasses, true);
@@ -226,6 +231,72 @@ namespace UE::AssetValidation
 		FValidateAssetsSettings Settings = InSettings;
 		Settings.MessageLogPageTitle = LOCTEXT("ValidateProjectSettings", "Validating Project Settings...");
 		ValidatorSubsystem->ValidateAssetsWithSettings(Assets, Settings, OutResults);
+	}
+
+		void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_ON_CHANNEL_STR(__FUNCTION__, AssetValidationChannel);
+		
+		if (FStudioTelemetry::IsAvailable())
+		{
+			FStudioTelemetry::Get().RecordEvent(__FUNCTION__);
+		}
+		
+		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+
+		TArray<FString> AllPackages{ModifiedPackages};
+		for (const FString& DeletedPackage: DeletedPackages)
+		{
+			// append referencer packages found from deleted packages
+			TArray<FName> Referencers;
+			AssetRegistry.GetReferencers(FName(DeletedPackage), Referencers, AssetRegistry::EDependencyCategory::Package, AssetRegistry::EDependencyQuery::Hard);
+			for (const FName& Referencer: Referencers)
+			{
+				const FString ReferenceStr{Referencer.ToString()};
+				if (!DeletedPackages.Contains(ReferenceStr) && ShouldValidatePackage(ReferenceStr))
+				{
+					UE_LOG(LogAssetValidation, Verbose, TEXT("%s: Deleted package %s references package %s, added to validation"), *FString(__FUNCTION__), *DeletedPackage, *ReferenceStr);
+					AllPackages.Add(ReferenceStr);
+				}
+			}
+		}
+
+		FMessageLog ValidationLog{UE::DataValidation::MessageLogName};
+		
+		TArray<FAssetData> AssetsToValidate;
+		for (const FString& PackageName: AllPackages)
+		{
+			if (!FPackageName::IsValidLongPackageName(PackageName))
+			{
+				UE_LOG(LogAssetValidation, Warning, TEXT("Invalid package long name %s"), *PackageName);
+				continue;
+			}
+		
+			TArray<FAssetData> Assets;
+			AssetRegistry.GetAssetsByPackageName(FName(PackageName), Assets, true);
+
+			if (Assets.IsEmpty())
+			{
+				if (FString WarningMessage = ValidateEmptyPackage(PackageName); !WarningMessage.IsEmpty())
+				{
+					UE_LOG(LogAssetValidation, Warning, TEXT("%s"), *WarningMessage);
+                    ValidationLog.Warning(FText::FromString(WarningMessage));
+				}
+			}
+			else
+			{
+				AssetsToValidate.Append(MoveTemp(Assets));
+			}
+		}
+		ValidationLog.Flush();
+
+		FValidateAssetsSettings Settings = InSettings;
+		Settings.bCaptureAssetLoadLogs = false;		// do not capture asset load logs
+		Settings.bSkipExcludedDirectories = true;	// skip excluded directories
+		Settings.MessageLogPageTitle = LOCTEXT("ValidatePackages", "Validating Packages...");
+		
+		UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
+		ValidatorSubsystem->ValidateAssetsWithSettings(AssetsToValidate, Settings, OutResults);
 	}
 
 	bool IsCppFile(const FString& Filename)
@@ -328,67 +399,6 @@ namespace UE::AssetValidation
 		}
 	}
 	
-	void ValidatePackages(TConstArrayView<FString> ModifiedPackages, TConstArrayView<FString> DeletedPackages, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults)
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(UE::AssetValidation::ValidatePackages);
-		
-		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-
-		TArray<FString> AllPackages{ModifiedPackages};
-		for (const FString& DeletedPackage: DeletedPackages)
-		{
-			// append referencer packages found from deleted packages
-			TArray<FName> Referencers;
-			AssetRegistry.GetReferencers(FName(DeletedPackage), Referencers, AssetRegistry::EDependencyCategory::Package, AssetRegistry::EDependencyQuery::Hard);
-			for (const FName& Referencer: Referencers)
-			{
-				const FString ReferenceStr{Referencer.ToString()};
-				if (!DeletedPackages.Contains(ReferenceStr) && ShouldValidatePackage(ReferenceStr))
-				{
-					UE_LOG(LogAssetValidation, Verbose, TEXT("%s: Deleted package %s references package %s, added to validation"), *FString(__FUNCTION__), *DeletedPackage, *ReferenceStr);
-					AllPackages.Add(ReferenceStr);
-				}
-			}
-		}
-
-		FMessageLog ValidationLog{UE::DataValidation::MessageLogName};
-		
-		TArray<FAssetData> AssetsToValidate;
-		for (const FString& PackageName: AllPackages)
-		{
-			if (!FPackageName::IsValidLongPackageName(PackageName))
-			{
-				UE_LOG(LogAssetValidation, Warning, TEXT("Invalid package long name %s"), *PackageName);
-				continue;
-			}
-		
-			TArray<FAssetData> Assets;
-			AssetRegistry.GetAssetsByPackageName(FName(PackageName), Assets, true);
-
-			if (Assets.IsEmpty())
-			{
-				if (FString WarningMessage = ValidateEmptyPackage(PackageName); !WarningMessage.IsEmpty())
-				{
-					UE_LOG(LogAssetValidation, Warning, TEXT("%s"), *WarningMessage);
-                    ValidationLog.Warning(FText::FromString(WarningMessage));
-				}
-			}
-			else
-			{
-				AssetsToValidate.Append(MoveTemp(Assets));
-			}
-		}
-		ValidationLog.Flush();
-
-		FValidateAssetsSettings Settings = InSettings;
-		Settings.bCaptureAssetLoadLogs = false;		// do not capture asset load logs
-		Settings.bSkipExcludedDirectories = true;	// skip excluded directories
-		Settings.MessageLogPageTitle = LOCTEXT("ValidatePackages", "Validating Packages...");
-		
-		UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
-		ValidatorSubsystem->ValidateAssetsWithSettings(AssetsToValidate, Settings, OutResults);
-	}
-
 	bool ShouldValidatePackage(const FString& PackageName)
 	{
 		const UProjectPackagingSettings* PackagingSettings = GetDefault<UProjectPackagingSettings>();

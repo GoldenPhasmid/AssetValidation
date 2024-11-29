@@ -11,14 +11,14 @@ class UAVCommandletSearchFilter;
 class IDetailsView;
 
 /**
- * 
+ * Manager that handles register/unregister action for Asset Validation menu entries
  */
-class FAssetValidationToolkitManager: public TSharedFromThis<FAssetValidationToolkitManager> 
+class FAssetValidationMenuExtensionManager: public TSharedFromThis<FAssetValidationMenuExtensionManager> 
 {
-	using ThisClass = FAssetValidationToolkitManager;
+	using ThisClass = FAssetValidationMenuExtensionManager;
 public:
-	FAssetValidationToolkitManager();
-	~FAssetValidationToolkitManager();
+	FAssetValidationMenuExtensionManager();
+	~FAssetValidationMenuExtensionManager();
 
 private:
 	void SummonTab();
@@ -28,12 +28,13 @@ private:
 };
 
 /**
- * 
+ * Window view for asset validation commandlet functionality
+ * Uses UAssetValidationToolkit property view
  */
-class SAssetValidationToolkit: public SCompoundWidget, public FGCObject, public FNotifyHook
+class SAssetValidationToolkitView: public SCompoundWidget, public FGCObject, public FNotifyHook
 {
 public:
-	SLATE_BEGIN_ARGS(SAssetValidationToolkit)
+	SLATE_BEGIN_ARGS(SAssetValidationToolkitView)
 	{}
 	SLATE_END_ARGS()
 
@@ -60,11 +61,17 @@ protected:
 	TSharedPtr<IDetailsView> DetailsView;
 };
 
+/**
+ * Object that represents asset validation commandlet functionality in editor window
+ * Viewed via SAssetValidationToolkit
+ */
 UCLASS()
-class UAssetValidationToolkitView: public UObject
+class UAssetValidationToolkit: public UObject
 {
 	GENERATED_BODY()
 public:
+
+	virtual void PostInitProperties() override;
 
 	UFUNCTION(CallInEditor, Category = "Actions")
 	void CheckContent();
@@ -76,7 +83,7 @@ public:
 	void ExecuteCommandlet();
 
 	UPROPERTY(VisibleAnywhere, Category = "Commandlet")
-	FString CommandletStatus = TEXT("OK");
+	FString CommandletStatus;
 	
 	UPROPERTY(EditAnywhere, Instanced, Category = "Commandlet")
 	TObjectPtr<UAVCommandletSearchFilter> SearchFilter;
