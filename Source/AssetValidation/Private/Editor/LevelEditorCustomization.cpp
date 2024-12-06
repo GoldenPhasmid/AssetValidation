@@ -1,5 +1,6 @@
 ﻿#include "LevelEditorCustomization.h"
 
+#include "AssetDependencyViewerWidget.h"
 #include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
@@ -10,6 +11,12 @@
 #include "ISourceControlModule.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
+
+namespace UE::AssetValidation
+{
+	const FName AVToolkit_Tab_CommandletPreview{TEXT("CommandletPreview")};
+	const FName AVToolkit_Tab_DependencyViewer{TEXT("DependencyViewer")};
+}
 
 bool HasNoPlayWorld()
 {
@@ -60,23 +67,22 @@ FAssetValidationMenuExtensionManager::FAssetValidationMenuExtensionManager()
 {
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
 	FToolMenuOwnerScoped OwnerScoped(this);
-	
-	// WINDOW header
-	// "Asset Validation" in Window header
-	UToolMenu* WindowMenu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Window");
-	FToolMenuSection& LogSection = WindowMenu->FindOrAddSection("Log");
 
-	LogSection.AddMenuEntry("OpenAssetValidation",
-		LOCTEXT("WindowItemName", "Asset Validation"),
-		LOCTEXT("WindowItemTooltip", "Opens the Asset Validation Toolkit"),
-		FAssetValidationStyle::GetValidateMenuIcon(),
-		FUIAction{FExecuteAction::CreateRaw(this, &ThisClass::SummonTab)}
-	);
-
-	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(TabName, FOnSpawnTab::CreateRaw(this, &ThisClass::CreateTabBody))
-	.SetDisplayName(LOCTEXT("WindowItemName", "Asset Validation"))
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(UE::AssetValidation::AVToolkit_Tab_CommandletPreview,
+		FOnSpawnTab::CreateRaw(this, &ThisClass::CreateCommandletPreview))
+	.SetDisplayName(LOCTEXT("CommandletPreview_WindowItemName", "AV Commandlet Preview"))
 	.SetIcon(FAssetValidationStyle::GetValidateMenuIcon())
 	.SetAutoGenerateMenuEntry(false);
+
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(UE::AssetValidation::AVToolkit_Tab_DependencyViewer,
+		FOnSpawnTab::CreateRaw(this, &ThisClass::CreateDependencyViewer))
+	.SetDisplayName(LOCTEXT("DependencyViewer_WindowItemName", "AV Dependency Viewer"))
+	.SetIcon(FAssetValidationStyle::GetValidateMenuIcon())
+	.SetAutoGenerateMenuEntry(false);
+
+	// TOOLS header
+	UToolMenu* ToolsMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
+	FToolMenuSection& ToolsSection = ToolsMenu->FindOrAddSection("Tools");
 
 	const FUIAction CheckContentAction = FUIAction(
 		FExecuteAction::CreateStatic(&ValidateCheckedOutAssets, EDataValidationUsecase::Script),
@@ -84,11 +90,53 @@ FAssetValidationMenuExtensionManager::FAssetValidationMenuExtensionManager()
 		FIsActionChecked(),
 		FIsActionButtonVisible::CreateStatic(&HasNoPlayWorld)
 	);
+	
+	ToolsSection.AddSubMenu("AssetValidation", FText::FromString(TEXT("AssetValidation")), FText::GetEmpty(),
+		FNewToolMenuDelegate::CreateLambda([this, CheckContentAction](UToolMenu* InSubMenu)
+	{
+		FToolMenuOwnerScoped OwnerScoped(this);
+			
+		// Commandlet Preview
+		InSubMenu->AddMenuEntry("CommandletPreview", FToolMenuEntry::InitMenuEntry(
+			FName{"CommandletPreview"},
+			LOCTEXT("CommandletPreview_WindowItemName", "AV Commandlet Preview"),
+			LOCTEXT("CommandletPreview_WindowItemTooltip", "Opens the Asset Validation Toolkit"),
+			FAssetValidationStyle::GetValidateMenuIcon(),
+			FUIAction{FExecuteAction::CreateRaw(this, &ThisClass::SummonTab, UE::AssetValidation::AVToolkit_Tab_CommandletPreview)})
+		);
 
+		// Dependency Viewer
+		InSubMenu->AddMenuEntry("DependencyViewer", FToolMenuEntry::InitMenuEntry(
+			FName{"DependencyViewer"},
+			LOCTEXT("DependencyViewer_WindowItemName", "AV Dependency Viewer"),
+			LOCTEXT("DependencyViewer_WindowItemTooltip", "Opens the Asset Validation Toolkit"),
+			FAssetValidationStyle::GetValidateMenuIcon(),
+			FUIAction{FExecuteAction::CreateRaw(this, &ThisClass::SummonTab, UE::AssetValidation::AVToolkit_Tab_DependencyViewer)})
+		);
+
+		// CheckContent inside Tools header entry
+		InSubMenu->AddMenuEntry("CheckContent", FToolMenuEntry::InitMenuEntry(
+			"CheckContent",
+			LOCTEXT("CheckContent", "Check Content"),
+			LOCTEXT("CheckContentTooltip", "Check all source controlled assets."),
+			FAssetValidationStyle::GetCheckContentIcon(),
+			CheckContentAction
+		));
+			
+		// CheckProjectSettings inside Tools header entry
+		InSubMenu->AddMenuEntry("CheckProjectSettings", FToolMenuEntry::InitMenuEntry(
+			"CheckProjectSettings",
+			LOCTEXT("CheckProjectSettings", "Check Project Settings"),
+			LOCTEXT("CheckProjectSettingsTooltip", "Check all config objects and developer settings"),
+			FAssetValidationStyle::GetValidateMenuIcon(),
+			FUIAction(FExecuteAction::CreateStatic(&ValidateProjectSettings, EDataValidationUsecase::Script))
+		));
+	}), false, FAssetValidationStyle::GetValidateMenuIcon());
+	
 	UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
 	FToolMenuSection& PlayGameSection = ToolbarMenu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
 
-	// CheckContent TOOLBAR 
+	// CheckContent on the LevelEditor toolbar
 	FToolMenuEntry CheckContentEntry = FToolMenuEntry::InitToolBarButton(
 		"CheckContent",
 		CheckContentAction,
@@ -98,52 +146,40 @@ FAssetValidationMenuExtensionManager::FAssetValidationMenuExtensionManager()
 	);
 	CheckContentEntry.StyleNameOverride = "CalloutToolbar";
 	PlayGameSection.AddEntry(CheckContentEntry);
-
-	// TOOLS header
-	UToolMenu* ToolsMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
-	FToolMenuSection& ToolsSection = ToolsMenu->FindOrAddSection("DataValidation");
-
-	// CheckContent inside Tools header entry
-	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
-		"CheckContent",
-		LOCTEXT("CheckContent", "Check Content"),
-		LOCTEXT("CheckContentTooltip", "Check all source controlled assets."),
-		FAssetValidationStyle::GetCheckContentIcon(),
-		CheckContentAction
-	));
-	
-	// CheckProjectSettings inside Tools header entry
-	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
-		"CheckProjectSettings",
-		LOCTEXT("CheckProjectSettings", "Check Project Settings"),
-		LOCTEXT("CheckProjectSettingsTooltip", "Check all config objects and developer settings"),
-		FAssetValidationStyle::GetValidateMenuIcon(),
-		FUIAction(FExecuteAction::CreateStatic(&ValidateProjectSettings, EDataValidationUsecase::Script))
-	));
 }
 
 FAssetValidationMenuExtensionManager::~FAssetValidationMenuExtensionManager()
 {
-	UToolMenus::UnregisterOwner(this);
+	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(UE::AssetValidation::AVToolkit_Tab_CommandletPreview);
+	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(UE::AssetValidation::AVToolkit_Tab_DependencyViewer);
 	
-	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(TabName);
+	UToolMenus::UnregisterOwner(this);
 }
 
-void FAssetValidationMenuExtensionManager::SummonTab()
+void FAssetValidationMenuExtensionManager::SummonTab(FName TabName)
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(TabName);
 }
 
-TSharedRef<SDockTab> FAssetValidationMenuExtensionManager::CreateTabBody(const FSpawnTabArgs& TabArgs) const
+TSharedRef<SDockTab> FAssetValidationMenuExtensionManager::CreateCommandletPreview(const FSpawnTabArgs& TabArgs) const
 {
 	return SNew(SDockTab)
 	.TabRole(NomadTab)
 	[
-		SNew(SAssetValidationToolkitView)
+		SNew(SAVCommandletPreviewWidget)
 	];
 }
 
-void SAssetValidationToolkitView::Construct(const FArguments& Args)
+TSharedRef<SDockTab> FAssetValidationMenuExtensionManager::CreateDependencyViewer(const FSpawnTabArgs& TabArgs) const
+{
+	return SNew(SDockTab)
+	.TabRole(NomadTab)
+	[
+		SNew(SAssetDependencyViewerWidget)
+	];
+}
+
+void SAVCommandletPreviewWidget::Construct(const FArguments& Args)
 {
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
@@ -155,7 +191,7 @@ void SAssetValidationToolkitView::Construct(const FArguments& Args)
 
 	DetailsView = PropertyEditor.CreateDetailView(DetailsViewArgs);
 
-	ToolkitView = NewObject<UAssetValidationToolkit>();
+	ToolkitView = NewObject<UAVCommandletPreview>();
 	DetailsView->SetObject(ToolkitView.Get());
 
 	ChildSlot
@@ -164,22 +200,22 @@ void SAssetValidationToolkitView::Construct(const FArguments& Args)
 	];
 }
 
-void SAssetValidationToolkitView::AddReferencedObjects(FReferenceCollector& Collector)
+void SAVCommandletPreviewWidget::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ToolkitView);
 }
 
-void SAssetValidationToolkitView::NotifyPreChange(FProperty* PropertyAboutToChange)
+void SAVCommandletPreviewWidget::NotifyPreChange(FProperty* PropertyAboutToChange)
 {
 	// noop
 }
 
-void SAssetValidationToolkitView::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged)
+void SAVCommandletPreviewWidget::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged)
 {
 	// noop
 }
 
-void UAssetValidationToolkit::PostInitProperties()
+void UAVCommandletPreview::PostInitProperties()
 {
 	UObject::PostInitProperties();
 
@@ -190,17 +226,17 @@ void UAssetValidationToolkit::PostInitProperties()
 	}
 }
 
-void UAssetValidationToolkit::CheckContent()
+void UAVCommandletPreview::CheckContent()
 {
 	ValidateCheckedOutAssets(EDataValidationUsecase::Commandlet);
 }
 
-void UAssetValidationToolkit::CheckProjectSettings()
+void UAVCommandletPreview::CheckProjectSettings()
 {
 	ValidateProjectSettings(EDataValidationUsecase::Commandlet);
 }
 
-void UAssetValidationToolkit::ExecuteCommandlet()
+void UAVCommandletPreview::ExecuteCommandlet()
 {
 	ON_SCOPE_EXIT
 	{

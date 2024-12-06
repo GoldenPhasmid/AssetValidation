@@ -27,6 +27,10 @@ struct FAssetTreeNode
  */
 struct FAssetAuditResult
 {
+	FAssetAuditResult() = default;
+	explicit FAssetAuditResult(const FAssetData& InAssetData);
+
+	FAssetData AssetData;
 	float TotalDiskSizeBytes = 0.f;
 	float TotalMemorySizeBytes = 0.f;
 	int32 TotalDependencyCount = 0;

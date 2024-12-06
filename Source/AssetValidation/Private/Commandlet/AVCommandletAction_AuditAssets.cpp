@@ -39,7 +39,7 @@ bool UAVCommandletAction_AuditAssets::Run(const TArray<FAssetData>& Assets)
 	FAssetDependencyTree DependencyTree{};
 	for (TEnumerateRef<const FAssetData> AssetData: EnumerateRange(Assets))
 	{
-		FAssetAuditResult& Result = Results.AddDefaulted_GetRef();
+		FAssetAuditResult& Result = Results.Add_GetRef(FAssetAuditResult{*AssetData});
 		
 		DependencyTree.AuditAsset(AssetRegistry, *AssetData, Result);
 		

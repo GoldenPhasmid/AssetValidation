@@ -21,20 +21,20 @@ public:
 	~FAssetValidationMenuExtensionManager();
 
 private:
-	void SummonTab();
-	TSharedRef<SDockTab> CreateTabBody(const FSpawnTabArgs& TabArgs) const;
-
-	FName TabName{TEXT("AssetValidationToolkit")};
+	void SummonTab(FName TabName);
+	
+	TSharedRef<SDockTab> CreateCommandletPreview(const FSpawnTabArgs& TabArgs) const;
+	TSharedRef<SDockTab> CreateDependencyViewer(const FSpawnTabArgs& TabArgs) const;
 };
 
 /**
  * Window view for asset validation commandlet functionality
  * Uses UAssetValidationToolkit property view
  */
-class SAssetValidationToolkitView: public SCompoundWidget, public FGCObject, public FNotifyHook
+class SAVCommandletPreviewWidget: public SCompoundWidget, public FGCObject, public FNotifyHook
 {
 public:
-	SLATE_BEGIN_ARGS(SAssetValidationToolkitView)
+	SLATE_BEGIN_ARGS(SAVCommandletPreviewWidget)
 	{}
 	SLATE_END_ARGS()
 
@@ -66,7 +66,7 @@ protected:
  * Viewed via SAssetValidationToolkit
  */
 UCLASS()
-class UAssetValidationToolkit: public UObject
+class UAVCommandletPreview: public UObject
 {
 	GENERATED_BODY()
 public:
