@@ -26,6 +26,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "AssetManagerEditor",
+			"Enabled": true
+		},
+		{
 			"Name": "GameplayAbilities",
 			"Enabled": true
 		},
