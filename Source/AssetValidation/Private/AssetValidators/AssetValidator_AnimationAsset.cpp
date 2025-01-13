@@ -59,6 +59,11 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateLoadedAsset_Implem
 	Result &= ValidateSkeleton(BaseSkeleton, *AnimationAsset, InAssetData, Context);
 	Result &= ValidateAnimNotifies(*AnimationAsset, InAssetData, Context);
 	Result &= ValidateCurves(*AnimationAsset, InAssetData, Context);
+
+	if (const UAnimSequence* AnimSequence = Cast<UAnimSequence>(AnimationAsset))
+	{
+		Result &= ValidateRootMotion(*AnimSequence, Context);
+	}
 	
 	TArray<UAnimationAsset*> AnimationAssets;
 	AnimationAsset->GetAllAnimationSequencesReferred(AnimationAssets);
@@ -68,6 +73,11 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateLoadedAsset_Implem
 		Result &= ValidateSkeleton(BaseSkeleton, *AnimAsset, InAssetData, Context);
 		Result &= ValidateAnimNotifies(*AnimAsset, InAssetData, Context);
 		Result &= ValidateCurves(*AnimAsset, InAssetData, Context);
+
+		if (const UAnimSequence* AnimSequence = Cast<UAnimSequence>(AnimAsset))
+		{
+			Result &= ValidateRootMotion(*AnimSequence, Context);
+		}
 	}
 
 	if (Result != EDataValidationResult::Invalid)
@@ -75,6 +85,28 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateLoadedAsset_Implem
 		AssetPasses(AnimationAsset);
 	}
 
+	return Result;
+}
+
+EDataValidationResult UAssetValidator_AnimationAsset::ValidateRootMotion(const UAnimSequence& AnimSequence, FDataValidationContext& Context) const
+{
+	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	if (bValidateRootMotion && AnimSequence.HasRootMotion())
+	{
+		const FTransform RootStartTransform = AnimSequence.ExtractRootTrackTransform(0.f, nullptr);
+		const FVector UpAxis = RootStartTransform.GetUnitAxis(EAxis::Z);
+		Result = RootMotionUpAxis.Equals(UpAxis) ? EDataValidationResult::Valid : EDataValidationResult::Invalid;
+
+		if (Result == EDataValidationResult::Invalid)
+		{
+			FAssetData AssetData{&AnimSequence};
+			UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, AssetData,
+				FText::Format(LOCTEXT("InvalidUpAxis", "Root motion has invalid UP axis direction. Expected [{0}], actual [{1}]"),
+					FText::FromString(RootMotionUpAxis.ToCompactString()), FText::FromString(UpAxis.ToCompactString()))
+			);
+		}
+	}
+	
 	return Result;
 }
 
@@ -210,5 +242,32 @@ bool UAssetValidator_AnimationAsset::CurveExists(const USkeleton& Skeleton, FNam
 {
 	return Skeleton.GetCurveMetaData(CurveName) != nullptr;
 }
+
+bool UAssetValidator_AnimationAsset::SkeletonHasCurve(const USkeleton* Skeleton, FName CurveName)
+{
+	if (Skeleton && CurveName != NAME_None)
+	{
+		return CurveExists(*Skeleton, CurveName);
+	}
+
+	return false;
+}
+
+bool UAssetValidator_AnimationAsset::AddCurveToSkeleton(USkeleton* Skeleton, FName CurveName)
+{
+	if (Skeleton && CurveName != NAME_None)
+	{
+		if (Skeleton->GetCurveMetaData(CurveName) != nullptr)
+		{
+			return true;
+		}
+		
+		Skeleton->Modify();
+		return Skeleton->AddCurveMetaData(CurveName);
+	}
+
+	return false;
+}
+
 
 #undef LOCTEXT_NAMESPACE
