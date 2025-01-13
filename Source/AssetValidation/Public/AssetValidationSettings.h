@@ -31,8 +31,11 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	FValidateAssetsSettings DefaultSettings;
 
-	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (ContentDir))
-	TArray<FDirectoryPath> ExcludedDirectories;
+	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (ContentDir, Validate))
+	TArray<FDirectoryPath> ValidatePaths;
+	
+	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (ContentDir, Validate))
+	TArray<FDirectoryPath> ExcludedPaths;
 
 	/** If true, will fill validation log with messages like "Validating thingy" or "Done validating thingy" */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")

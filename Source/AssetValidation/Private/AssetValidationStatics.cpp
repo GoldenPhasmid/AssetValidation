@@ -402,7 +402,7 @@ namespace UE::AssetValidation
 			}
 		}
 		
-		for (const FDirectoryPath& Directory: UAssetValidationSettings::Get()->ExcludedDirectories)
+		for (const FDirectoryPath& Directory: UAssetValidationSettings::Get()->ExcludedPaths)
 		{
 			const FString& Folder = Directory.Path;
 			if (PackageName.StartsWith(Folder))

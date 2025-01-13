@@ -7,4 +7,6 @@ UAssetValidationSettings::UAssetValidationSettings(const FObjectInitializer& Ini
 {
 	CommandletDefaultFilter = UAVCommandletAssetSearchFilter::StaticClass();
 	CommandletDefaultAction = UAVCommandletAction_ValidateAssets::StaticClass();
+
+	ExcludedPaths.Add(FDirectoryPath{TEXT("/Game/Developers")});
 }
