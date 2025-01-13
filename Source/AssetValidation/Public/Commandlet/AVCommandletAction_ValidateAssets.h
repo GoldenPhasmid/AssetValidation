@@ -2,9 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Commandlet/AVCommandletAction.h"
+#include "AssetValidators/AssetValidator.h"
 
 #include "AVCommandletAction_ValidateAssets.generated.h"
 
+class UAssetValidator;
 enum class EDataValidationUsecase: uint8;
 
 UCLASS(DisplayName = "Validate Assets")
@@ -20,10 +22,11 @@ public:
 	virtual bool Run(const TArray<FAssetData>& Assets) override;
 	//~End AVCommandletAction interface
 
-	void DisableValidators();
+	void DisableValidators(TArray<UEditorValidatorBase*>& OutDisabledValidators);
+	void EnableValidators(TArrayView<UEditorValidatorBase*> Validators);
 
 	UPROPERTY(EditAnywhere, Category = "Action")
-	TArray<TSoftClassPtr<UClass>> DisabledValidators;
+	TArray<TSoftClassPtr<UAssetValidator>> DisabledValidators;
 
 	UPROPERTY(EditAnywhere, Category = "Action")
 	EDataValidationUsecase ValidationUsecase;
@@ -33,5 +36,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Action")
 	bool bSkipExcludedDirectories = true;
-	
+
+	UPROPERTY()
+	TSet<FName> CommandletDisabledValidators;
 };

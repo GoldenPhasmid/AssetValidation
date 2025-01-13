@@ -22,17 +22,24 @@ void UAVCommandletAction_ValidateAssets::InitFromCommandlet(const TArray<FString
 {
 	ValidationUsecase = EDataValidationUsecase::Commandlet;
 	bDetailedLog = Switches.Contains(UE::AssetValidation::DetailedLog);
-	
+
+	CommandletDisabledValidators.Reset();
 	if (const FString* Values = Params.Find(UE::AssetValidation::DisableValidators))
 	{
 		TArray<FString> ClassNames;
 		Values->ParseIntoArray(ClassNames, UE::AssetValidation::Separator);
 
-		Algo::Transform(ClassNames, DisabledValidators, [](const FString& ClassName)
+		Algo::Transform(ClassNames, CommandletDisabledValidators, [](const FString& ClassName)
 		{
-			return TSoftClassPtr<UClass>{ClassName};
+			return FName{ClassName};
 		});
 	}
+
+	for (TSoftClassPtr<UAssetValidator> Validator: DisabledValidators)
+	{
+		CommandletDisabledValidators.Add(Validator->GetFName());;
+	}
+
 }
 
 bool UAVCommandletAction_ValidateAssets::Run(const TArray<FAssetData>& Assets)
@@ -43,44 +50,47 @@ bool UAVCommandletAction_ValidateAssets::Run(const TArray<FAssetData>& Assets)
 	}
 	
 	UAssetValidationSettings& ProjectSettings = *UAssetValidationSettings::GetMutable();
-	const bool bCachedDetailedLog = ProjectSettings.bEnabledDetailedAssetLogging;
-	// enable or disable verbose asset logging depending on a switch
-	ProjectSettings.bEnabledDetailedAssetLogging = bDetailedLog;
+	// override detailed asset logging switch
+	TGuardValue Guard{ProjectSettings.bEnabledDetailedAssetLogging, bDetailedLog};
 	
 	FValidateAssetsSettings Settings;
 	Settings.bSkipExcludedDirectories = bSkipExcludedDirectories;
 	Settings.bShowIfNoFailures = true;
 	Settings.ValidationUsecase = EDataValidationUsecase::Commandlet;
-	DisableValidators();
+
+	TArray<UEditorValidatorBase*> TempDisabledValidators;
+	DisableValidators(TempDisabledValidators);
 
 	const UAssetValidationSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
 	
 	FValidateAssetsResults Results;
 	Subsystem->ValidateAssetsWithSettings(Assets, Settings, Results);
 
-	ProjectSettings.bEnabledDetailedAssetLogging = bCachedDetailedLog;
+	EnableValidators(TempDisabledValidators);
 	
 	return Results.NumInvalid > 0;
 }
 
-void UAVCommandletAction_ValidateAssets::DisableValidators()
+void UAVCommandletAction_ValidateAssets::DisableValidators(TArray<UEditorValidatorBase*>& OutDisabledValidators)
 {
-	TSet<UClass*> ValidatorClasses;
-	for (TSoftClassPtr<UClass> Validator: DisabledValidators)
-	{
-		if (UClass* ValidatorClass = Validator.LoadSynchronous())
-		{
-			ValidatorClasses.Add(ValidatorClass);
-		}
-	}
-
 	UAssetValidationSubsystem* Subsystem = UAssetValidationSubsystem::Get();
-	Subsystem->ForEachEnabledValidator([&ValidatorClasses](UEditorValidatorBase* EditorValidator)
+	Subsystem->ForEachEnabledValidator([this, &OutDisabledValidators](UEditorValidatorBase* EditorValidator)
 	{
-		if (ValidatorClasses.Contains(EditorValidator->GetClass()))
+		if (CommandletDisabledValidators.Contains(EditorValidator->GetClass()->GetFName()))
 		{
+			OutDisabledValidators.Add(EditorValidator);
 			UE::AssetValidation::SetValidatorEnabled(EditorValidator, false);
 		}
 		return true;
 	});
+}
+
+void UAVCommandletAction_ValidateAssets::EnableValidators(TArrayView<UEditorValidatorBase*> Validators)
+{
+	for (UEditorValidatorBase* EditorValidator: Validators)
+	{
+		check(EditorValidator);
+		// ForEachEnabledValidator always skips disabled validators, so we just have to re-enable those that we disabled
+		UE::AssetValidation::SetValidatorEnabled(EditorValidator, true);
+	}
 }
