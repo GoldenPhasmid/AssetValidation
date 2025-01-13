@@ -1,5 +1,6 @@
 ﻿#include "Commandlet/AVCommandletAssetSearchFilter.h"
 
+#include "AssetValidationSettings.h"
 #include "EditorUtilityWidgetBlueprint.h"
 #include "WidgetBlueprint.h"
 #include "Algo/RemoveIf.h"
@@ -30,6 +31,12 @@ namespace UE::AssetValidation
 	 * Expects a list of class names using ',' as a separator.
 	 */
 	static const FString AssetTypes{TEXT("AssetTypes")};
+
+	/**
+	 * Parameter, specify a list of asset types to exclude from validation.
+	 * Expects a list of class names using ',' as a separator. Used only if -All is specified
+	 */
+	static const FString ExcludeAssetTypes{TEXT("ExcludeAssetTypes")};
 	/**
 	 * Parameter
 	 * Specify a list of maps to validate, exclusive with -AllMaps switch.
@@ -46,7 +53,7 @@ namespace UE::AssetValidation
 	 * Switch, will not use class path filter when querying assets.
 	 * Exclusive with all other asset type options.
 	 */
-	static const FString AllAssets{TEXT("All")};
+	static const FString AllAssets{TEXT("AllAssets")};
 	/** Adds BP assets and data only assets to class paths */
 	static const FString Blueprints{TEXT("Blueprints")};
 	/** Adds widget assets to class paths */
@@ -69,6 +76,21 @@ namespace UE::AssetValidation
 	static const FString Redirectors{TEXT("Redirectors")};
 }
 
+
+UAVCommandletAssetSearchFilter::UAVCommandletAssetSearchFilter()
+{
+	
+}
+
+void UAVCommandletAssetSearchFilter::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	if (!HasAnyFlags(RF_ClassDefaultObject))
+	{
+		DirectoryPaths = UAssetValidationSettings::Get()->ValidatePaths;
+	}
+}
 
 void UAVCommandletAssetSearchFilter::InitFromCommandlet(const TArray<FString>& Switches, const TMap<FString, FString>& Params)
 {
@@ -101,10 +123,27 @@ void UAVCommandletAssetSearchFilter::InitFromCommandlet(const TArray<FString>& S
 			}
 		}
 	}
+	
+	bAllAssetTypes = Switches.Contains(UE::AssetValidation::AllAssets);
+	// excluded asset types
+	if (bAllAssetTypes)
+	{
+		if (const FString* Values = Params.Find(UE::AssetValidation::ExcludeAssetTypes))
+		{
+			TArray<FString> ClassNames;
+			Values->ParseIntoArray(ClassNames, UE::AssetValidation::Separator);
+
+			for (const FString& ClassName: ClassNames)
+			{
+				if (const UClass* Class = UClass::TryFindTypeSlow<UClass>(ClassName))
+				{
+					ExcludeAssetTypes.Add(Class);
+				}
+			}
+		}
+	}
 
 	bAllMaps = Switches.Contains(UE::AssetValidation::AllMaps);
-	bAllAssetTypes = Switches.Contains(UE::AssetValidation::AllAssets);
-	
 	if (bAllMaps == false)
 	{
 		// map names
@@ -125,12 +164,14 @@ bool UAVCommandletAssetSearchFilter::GetAssets(TArray<FAssetData>& OutAssets) co
 	AssetRegistry.SearchAllAssets(true);
 
 	FARFilter Filter;
-	Filter.bRecursivePaths = true;
+	Filter.bRecursivePaths = bRecursivePaths || !DirectoryPaths.IsEmpty();
+	Filter.bRecursiveClasses = bAllAssetTypes || bRecursiveTypes;
 	Filter.bIncludeOnlyOnDiskAssets = true;
 	Filter.PackagePaths = GetPackagePaths();
 	AddPackagePaths(Filter.PackagePaths);
 	
 	Filter.ClassPaths = GetAllowedClasses();
+	Filter.RecursiveClassPathsExclusionSet = GetExcludedClasses();
 	AddClassPaths(Filter.ClassPaths);
 	
 	AssetRegistry.GetAssets(Filter, OutAssets);
@@ -153,7 +194,7 @@ bool UAVCommandletAssetSearchFilter::GetAssets(TArray<FAssetData>& OutAssets) co
 	// If ExternalActors are not loaded, they will spam the validation log as they can't
 	// be loaded on the fly like other assets.
 	// Also, external actors are validated as a part of world asset validation
-	auto IsAssetPackageExternalOrFilteredMap = [&MapNames](const FAssetData& AssetData)
+	auto IsAssetPackageExternalOrFilteredMap = [this, &MapNames](const FAssetData& AssetData) -> bool
 	{
 		FString ObjectPath = AssetData.GetObjectPathString();
 		FStringView ClassName, PackageName, ObjectName, SubObjectName;
@@ -165,6 +206,7 @@ bool UAVCommandletAssetSearchFilter::GetAssets(TArray<FAssetData>& OutAssets) co
 		}
 
 		static const FTopLevelAssetPath WorldClassPath = UWorld::StaticClass()->GetClassPathName();
+		// filter out not included maps
 		if (AssetData.AssetClassPath == WorldClassPath && !MapNames.IsEmpty() && !MapNames.Contains(AssetData.AssetName))
 		{
 			return true;			
@@ -174,7 +216,7 @@ bool UAVCommandletAssetSearchFilter::GetAssets(TArray<FAssetData>& OutAssets) co
 	};
 	OutAssets.SetNum(Algo::RemoveIf(OutAssets, IsAssetPackageExternalOrFilteredMap));
 
-	FilterAssets(OutAssets);
+	PostProcessAssets(OutAssets);
 
 	return true;
 }
@@ -184,13 +226,14 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 	TArray<FTopLevelAssetPath> AllowedClassPaths;
 	if (bAllAssetTypes)
 	{
+		AllowedClassPaths.Add(UObject::StaticClass()->GetClassPathName());
 		return AllowedClassPaths;
 	}
 
 	auto AddDerivedClasses = [&AllowedClassPaths](const UClass* BaseClass)
 	{
 		TArray<UClass*> Classes;
-		GetDerivedClasses(BaseClass, Classes);
+		GetDerivedClasses(BaseClass, Classes, true);
 
 		for (const UClass* DerivedClass: Classes)
 		{
@@ -203,17 +246,23 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 	if (bBlueprints)
 	{
 		AllowedClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
-		AllowedClassPaths.Add(UDataTable::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UDataAsset::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UDataTable::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UUserDefinedEnum::StaticClass()->GetClassPathName());
+		
+		AddDerivedClasses(UBlueprint::StaticClass());
+		AddDerivedClasses(UDataAsset::StaticClass());
+		AddDerivedClasses(UDataTable::StaticClass());
 	}
 	// widgets
 	if (bWidgets)
 	{
 		AllowedClassPaths.Add(UWidgetBlueprint::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UUserWidgetBlueprint::StaticClass()->GetClassPathName());
-		AllowedClassPaths.Add(UBaseWidgetBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UEditorUtilityWidgetBlueprint::StaticClass()->GetClassPathName());
+
+		AddDerivedClasses(UUserWidgetBlueprint::StaticClass());
 	}
 	// editor utility widgets
 	if (bEditorUtilityWidgets)
@@ -223,8 +272,8 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 	// animations, montages and anim BPs
 	if (bAnimations)
 	{
-		AllowedClassPaths.Add(UAnimationAsset::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UAnimBlueprint::StaticClass()->GetClassPathName());
+		AllowedClassPaths.Add(UAnimationAsset::StaticClass()->GetClassPathName());
 
 		AddDerivedClasses(UAnimationAsset::StaticClass());
 	}
@@ -275,6 +324,17 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 	return AllowedClassPaths;
 }
 
+TSet<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetExcludedClasses() const
+{
+	TSet<FTopLevelAssetPath> ExcludedClasses;
+	Algo::Transform(ExcludeAssetTypes, ExcludedClasses, [](const UClass* Class)
+	{
+		return FTopLevelAssetPath{Class};
+	});
+
+	return ExcludedClasses;
+}
+
 TArray<FName> UAVCommandletAssetSearchFilter::GetPackagePaths() const
 {
 	TArray<FName> PackagePaths;
@@ -282,7 +342,7 @@ TArray<FName> UAVCommandletAssetSearchFilter::GetPackagePaths() const
 	
 	for (const FDirectoryPath& Path: DirectoryPaths)
 	{
-		PackagePaths.Add(FName{Path.Path});
+		PackagePaths.AddUnique(FName{Path.Path});
 	}
 
 	PackagePaths.Append(CommandletPackagePaths);
