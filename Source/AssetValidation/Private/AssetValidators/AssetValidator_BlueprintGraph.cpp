@@ -151,6 +151,51 @@ EDataValidationResult UAssetValidator_BlueprintGraph::ValidateNode(const UBluepr
 			}
 		}	
 	}
+
+	if (bValidateEmptyTickFunctions)
+	{
+		static const FName EventTickName(TEXT("ReceiveTick"));
+		if (UK2Node_Event* Event = Cast<UK2Node_Event>(Node); Event && Event->EventReference.GetMemberName() == EventTickName && IsLeafEventNode(Event))
+		{
+			const FText FailReason = LOCTEXT("ValidateNode_EmptyTickFunction", "Empty tick functions still get executed, please use it or remove it.");
+			UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error,
+				AssetData, FBlueprintGraphToken::Create(Node, Blueprint, FailReason), FailReason);
+
+			HighlightNode(Node, FailReason);
+			Result &= EDataValidationResult::Invalid;
+		}
+	}
+
+	if (bValidateMultiPinPureNodes)
+	{
+		if (UK2Node* PureNode = Cast<UK2Node>(Node); PureNode && PureNode->IsNodePure())
+		{
+			int32 Count = 0;
+			for (UEdGraphPin* Pin : PureNode->Pins)
+			{
+				// find all connected output pins
+				if (Pin->Direction == EGPD_Output && Pin->LinkedTo.Num() > 0)
+				{
+					++Count;
+					if (Count > 1)
+					{
+						break;
+					}
+				}
+			}
+
+			if (Count > 1)
+			{
+				const FText NodeTitle = PureNode->GetNodeTitle(ENodeTitleType::Type::MenuTitle);
+				const FText FailReason = FText::Format(LOCTEXT("ValidateNode_MultiPinPureNodes", "{0} is a pure node with multiple connected output pins. This will cause the node to be executed multiple times."), NodeTitle);
+				UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error,
+					AssetData, FBlueprintGraphToken::Create(Node, Blueprint, FailReason), FailReason);
+
+				HighlightNode(Node, FailReason);
+				Result &= EDataValidationResult::Invalid;
+			}
+		}
+	}
 	
 	if (bValidateBlueprintCasts)
 	{
@@ -221,6 +266,18 @@ bool UAssetValidator_BlueprintGraph::ValidatePin(const UEdGraphPin* Pin)
 	}
 
 	return true;
+}
+
+bool UAssetValidator_BlueprintGraph::IsLeafEventNode(const UK2Node_Event* Node)
+{
+	check(Node);
+	if (Node->IsAutomaticallyPlacedGhostNode())
+	{
+		return false;
+	}
+
+	UEdGraphPin* ThenPin = Node->FindPin(UEdGraphSchema_K2::PN_Then);
+	return ThenPin && ThenPin->LinkedTo.IsEmpty();
 }
 
 bool UAssetValidator_BlueprintGraph::IsBlueprintGeneratedClass(const UClass* Class)
