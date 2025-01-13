@@ -34,8 +34,10 @@ bool UAVCommandletAction_FixupRedirectors::Run(const TArray<FAssetData>& Assets)
 		const FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
 		AssetToolsModule.Get().FixupReferencers(Redirectors, bPromptCheckout, FixupMode);
 	}
-
-	UE_LOG(LogAssetValidation, Display, TEXT("Failed to find redirectors."));
+	else
+	{
+		UE_LOG(LogAssetValidation, Display, TEXT("Failed to find redirectors."));
+	}
 
 	return true;
 }
