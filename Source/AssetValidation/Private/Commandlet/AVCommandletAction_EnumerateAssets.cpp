@@ -10,7 +10,7 @@ bool UAVCommandletAction_EnumerateAssets::Run(const TArray<FAssetData>& Assets)
 	{
 		for (const FAssetData& Asset: Assets)
 		{
-			UE_LOG(LogAssetValidation, Display, TEXT("UAssetValidationCommandlet: Found asset %s."), *Asset.AssetName.ToString());
+			UE_LOG(LogAssetValidation, Display, TEXT("UAssetValidationCommandlet: Found asset %s, class %s."), *Asset.AssetName.ToString(), *Asset.AssetClassPath.ToString());
 		}
 	}
 	
