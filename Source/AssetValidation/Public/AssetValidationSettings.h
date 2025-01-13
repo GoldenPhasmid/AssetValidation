@@ -49,11 +49,11 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bOpenEditorWorldForUnloadedActors = true;
 
-	/** Default filter for @UAssetValidationCommandlet */
+	/** Default filter to use for @UAssetValidationCommandlet execution if no other filter is specified */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TSubclassOf<UAVCommandletSearchFilter> CommandletDefaultFilter;
 
-	/** Default action for @UAssetValidationCommandlet */
+	/** Default action to use for @UAssetValidationCommandlet execution if no other action is specified */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	TSubclassOf<UAVCommandletAction> CommandletDefaultAction;
 };

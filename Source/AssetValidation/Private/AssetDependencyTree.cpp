@@ -4,6 +4,12 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Misc/AssetRegistryInterface.h"
 
+FAssetAuditResult::FAssetAuditResult(const FAssetData& InAssetData)
+	: AssetData(InAssetData)
+{
+	
+}
+
 FAssetTreeNode::FAssetTreeNode(IAssetRegistry& AssetRegistry, const FAssetData& InAssetData)
 	: AssetData(InAssetData)
 {

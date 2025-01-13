@@ -5,8 +5,6 @@
 #include "AssetValidationSettings.h"
 #include "AssetValidationStatics.h"
 #include "AssetValidationStyle.h"
-#include "EditorValidatorHelpers.h"
-#include "EditorValidatorSubsystem.h"
 #include "ISettingsModule.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
@@ -52,7 +50,7 @@ private:
 
 	void UpdateSourceControlProxy(ISourceControlProvider& OldProvider, ISourceControlProvider& NewProvider);
 
-	TSharedPtr<FAssetValidationToolkitManager> ToolkitManager;
+	TSharedPtr<FAssetValidationMenuExtensionManager> ToolkitManager;
 	TSharedPtr<ISourceControlProxy> SourceControlProxy;
 	FDelegateHandle SCProviderChangedHandle;
 #if 0
@@ -81,11 +79,6 @@ private:
 		TMap<FString, TArray<TWeakObjectPtr<UClass>>> Classes;
 	};
 #endif
-	
-	static void CheckContent();
-	static void CheckProjectSettings();
-	static bool HasNoPlayWorld();
-	void RegisterMenus();
 };
 
 void FAssetValidationModule::UpdateSourceControlProxy(ISourceControlProvider& OldProvider, ISourceControlProvider& NewProvider)
@@ -114,7 +107,10 @@ void FAssetValidationModule::StartupModule()
 	
 	if (FSlateApplication::IsInitialized())
 	{
-		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &ThisClass::RegisterMenus));
+		UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateLambda([this]
+		{
+			ToolkitManager = MakeShared<FAssetValidationMenuExtensionManager>();
+		}));
 	}
 	
 	ISourceControlModule& SourceControl = ISourceControlModule::Get();
@@ -136,71 +132,16 @@ void FAssetValidationModule::StartupModule()
 	});
 }
 
-void FAssetValidationModule::RegisterMenus()
-{
-	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
-	FToolMenuOwnerScoped OwnerScoped(this);
-
-	ToolkitManager = MakeShared<FAssetValidationToolkitManager>();
-
-	// TOOL BAR ACTIONS
-	
-	const FUIAction CheckContentAction = FUIAction(
-		FExecuteAction::CreateStatic(&FAssetValidationModule::CheckContent),
-		FCanExecuteAction::CreateStatic(&FAssetValidationModule::HasNoPlayWorld),
-		FIsActionChecked(),
-		FIsActionButtonVisible::CreateStatic(&FAssetValidationModule::HasNoPlayWorld)
-	);
-
-	UToolMenu* ToolbarMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.PlayToolBar");
-	FToolMenuSection& PlayGameSection = ToolbarMenu->AddSection("PlayGameExtensions", TAttribute<FText>(), FToolMenuInsert("Play", EToolMenuInsertType::After));
-
-	// CheckContent toolbar functionality 
-	FToolMenuEntry CheckContentEntry = FToolMenuEntry::InitToolBarButton(
-		"CheckContent",
-		CheckContentAction,
-		LOCTEXT("CheckContent", "Check Content"),
-		LOCTEXT("CheckContentDescription", "Runs Content Validation job on all checked out assets"),
-		FAssetValidationStyle::GetCheckContentIcon()
-	);
-	CheckContentEntry.StyleNameOverride = "CalloutToolbar";
-	PlayGameSection.AddEntry(CheckContentEntry);
-
-	UToolMenu* ToolsMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
-	FToolMenuSection& ToolsSection = ToolsMenu->FindOrAddSection("DataValidation");
-
-	// CheckContent inside Tools header entry
-	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
-		"CheckContent",
-		LOCTEXT("CheckContent", "Check Content"),
-		LOCTEXT("CheckContentTooltip", "Check all source controlled assets."),
-		FAssetValidationStyle::GetCheckContentIcon(),
-		CheckContentAction
-	));
-	
-	// CheckProjectSettings inside Tools header entry
-	ToolsSection.AddEntry(FToolMenuEntry::InitMenuEntry(
-		"CheckProjectSettings",
-		LOCTEXT("CheckProjectSettings", "Check Project Settings"),
-		LOCTEXT("CheckProjectSettingsTooltip", "Check all config objects and developer settings"),
-		FAssetValidationStyle::GetValidateMenuIcon(),
-		FUIAction(FExecuteAction::CreateStatic(&FAssetValidationModule::CheckProjectSettings))
-	));
-}
-
-
 void FAssetValidationModule::ShutdownModule()
 {
+	ToolkitManager.Reset();
+	UToolMenus::UnRegisterStartupCallback(this);
+	
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
 	FEditorDelegates::OnEditorInitialized.RemoveAll(this);
-
-	UToolMenus::UnRegisterStartupCallback(this);
-	UToolMenus::UnregisterOwner(this);
-
+	
 	FAssetValidationStyle::Shutdown();
-
-	ToolkitManager.Reset();
 	
 	ISourceControlModule& SourceControl = ISourceControlModule::Get();
 	SourceControl.UnregisterProviderChanged(SCProviderChangedHandle);
@@ -325,49 +266,6 @@ FText FAssetValidationModule::OnGetAssetDataTokenDisplayName(const FAssetData& A
 		return FText::FromStringView(Buffer.ToView());
 	}
 	return FText::FromName(AssetData.PackageName);
-}
-
-
-void FAssetValidationModule::CheckContent()
-{
-	if (!ISourceControlModule::Get().IsEnabled())
-	{
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SourceControlDisabled", "Your source control is disabled. Enable and try again."));
-		return;
-	}
-
-	FValidateAssetsSettings Settings;
-	Settings.ValidationUsecase = EDataValidationUsecase::Script;
-	Settings.bSkipExcludedDirectories = true;
-	Settings.bShowIfNoFailures = true;
-
-	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
-	DataValidationLog.NewPage(LOCTEXT("CheckContent", "Check Content"));
-	
-	FValidateAssetsResults Results;
-	UE::AssetValidation::ValidateCheckedOutAssets(true, Settings, Results);
-}
-
-void FAssetValidationModule::CheckProjectSettings()
-{
-	FScopedSlowTask SlowTask(0.f, LOCTEXT("CheckProjectSetings", "Checking project settings..."));
-	SlowTask.MakeDialog();
-		
-	FValidateAssetsSettings Settings;
-	Settings.ValidationUsecase = EDataValidationUsecase::Script;
-	Settings.bSkipExcludedDirectories = true;
-	Settings.bShowIfNoFailures = true;
-	
-	FMessageLog DataValidationLog(UE::DataValidation::MessageLogName);
-	DataValidationLog.NewPage(LOCTEXT("CheckProjectSettings", "Check Project Settings"));
-	
-	FValidateAssetsResults Results;
-	UE::AssetValidation::ValidateProjectSettings(Settings, Results);
-}
-
-bool FAssetValidationModule::HasNoPlayWorld()
-{
-	return GEditor->PlayWorld == nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE

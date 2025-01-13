@@ -57,6 +57,7 @@ public class AssetValidation : ModuleRules
 				"AssetTools", 
 				"AssetReferenceRestrictions", 
 				"Blutility",
+				"AssetManagerEditor",
 			}
 		);
 	}

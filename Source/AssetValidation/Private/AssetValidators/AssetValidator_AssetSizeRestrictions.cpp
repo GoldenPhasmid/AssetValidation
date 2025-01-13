@@ -80,7 +80,7 @@ EDataValidationResult UAssetValidator_AssetSizeRestrictions::ValidateLoadedAsset
 	// @todo: reuse dependency tree between calls
 	FAssetDependencyTree AssetTree{};
 
-	FAssetAuditResult AuditResult{};
+	FAssetAuditResult AuditResult{InAssetData};
 	if (!AssetTree.AuditAsset(*IAssetRegistry::Get(), InAssetData, AuditResult))
 	{
 		UE::AssetValidation::AddTokenMessage(Context, EMessageSeverity::Error, InAssetData, LOCTEXT("AssetSizeRestrictions_AuditFailed", "Failed to audit asset. Unknown error."));
@@ -119,6 +119,7 @@ EDataValidationResult UAssetValidator_AssetSizeRestrictions::ValidateLoadedAsset
 
 UClass* UAssetValidator_AssetSizeRestrictions::GetCppAssetClass(const UObject* Asset) const
 {
+	check(Asset);
 	if (const UBlueprint* Blueprint = Cast<UBlueprint>(Asset))
 	{
 		return UE::AssetValidation::GetCppBaseClass(Blueprint->GeneratedClass);
@@ -130,12 +131,13 @@ UClass* UAssetValidator_AssetSizeRestrictions::GetCppAssetClass(const UObject* A
 void UAssetValidator_AssetSizeRestrictions::BuildAssetTypeMap()
 {
 	AssetMap.Reset();
+	AssetTypeMap.Reset();
+	
 	for (TConstEnumerateRef<FAssetSizeRestriction> Entry: EnumerateRange(Assets))
 	{
 		AssetMap.Add(Entry->Asset, Entry.GetIndex());
 	}
 	
-	AssetTypeMap.Reset();
 	for (TConstEnumerateRef<FAssetTypeSizeRestriction> Entry: EnumerateRange(AssetTypes))
 	{
 		AssetTypeMap.Add(Entry->ClassFilter.GetAssetPath(), Entry.GetIndex());
@@ -145,24 +147,25 @@ void UAssetValidator_AssetSizeRestrictions::BuildAssetTypeMap()
 void UAssetValidator_AssetSizeRestrictions::GetAssetRestrictions(const UObject* Asset, float& OutMemory, float& OutDiskMemory) const
 {
 	check(Asset);
-	if (const int32* Index = AssetMap.Find(Asset))
+	if (const int32* AssetIndex = AssetMap.Find(Asset))
 	{
-		OutMemory = Assets[*Index].MaxMemorySizeMegaBytes;
-		OutDiskMemory = Assets[*Index].MaxDiskSizeMegaBytes;
-		return;
+		OutMemory = Assets[*AssetIndex].MaxMemorySizeMegaBytes;
+		OutDiskMemory = Assets[*AssetIndex].MaxDiskSizeMegaBytes;
 	}
-
-	if (UClass* Class = GetCppAssetClass(Asset))
+	else if (UClass* Class = GetCppAssetClass(Asset))
 	{
-		if (const int32* Index = AssetTypeMap.Find(Class->GetClassPathName()))
+		if (const int32* AssetTypeIndex = AssetTypeMap.Find(Class->GetClassPathName()))
 		{
-			OutMemory = AssetTypes[*Index].MaxMemorySizeMegaBytes;
-			OutDiskMemory = AssetTypes[*Index].MaxDiskSizeMegaBytes;
-			return;
+			OutMemory = AssetTypes[*AssetTypeIndex].MaxMemorySizeMegaBytes;
+			OutDiskMemory = AssetTypes[*AssetTypeIndex].MaxDiskSizeMegaBytes;
 		}
 	}
+	else
+	{
+		OutMemory = OutDiskMemory = 0.f;
+	}
 
-	OutMemory = OutDiskMemory = 0.f;
+	
 }
 
 #undef LOCTEXT_NAMESPACE

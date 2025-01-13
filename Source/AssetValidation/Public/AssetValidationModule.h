@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+enum class EDataValidationUsecase : uint8;
+struct FValidateAssetsResults;
 struct FPropertyValidationResult;
 class FToolBarBuilder;
 class FMenuBuilder;
@@ -10,7 +12,7 @@ class FMenuBuilder;
 namespace UE::AssetValidation
 {
 	class ISourceControlProxy;
-}
+} // UE::AssetValidation
 
 class ASSETVALIDATION_API IAssetValidationModule: public IModuleInterface
 {
