@@ -37,6 +37,10 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category = "Settings", meta = (ContentDir, Validate))
 	TArray<FDirectoryPath> ExcludedPaths;
 
+	/** number of assets after which task progress shows cancel button */
+	UPROPERTY(EditAnywhere, Config, Category = "Settings")
+	int32 NumAssetsToShowCancelButton = 100;
+
 	/** If true, will fill validation log with messages like "Validating thingy" or "Done validating thingy" */
 	UPROPERTY(EditAnywhere, Config, Category = "Settings")
 	bool bEnabledDetailedAssetLogging = false;

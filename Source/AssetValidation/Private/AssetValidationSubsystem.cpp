@@ -197,7 +197,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternalResolver(
 	const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings,
 	FValidateAssetsResults& OutResults) const
 {
-	bool bCustomValidateAssets = true;
+	constexpr bool bCustomValidateAssets = true;
 	if (bCustomValidateAssets)
 	{
 		return ValidateAssetsInternal(DataValidationLog, AssetDataList, InSettings, OutResults);
@@ -234,9 +234,9 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 	 */
 	
 	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
-
+	
 	FScopedSlowTask SlowTask(AssetDataList.Num(), LOCTEXT("ValidateAssetsTask", "Validating Assets"));
-	SlowTask.MakeDialog();
+	SlowTask.MakeDialog(ShouldShowCancelButton(AssetDataList.Num(), InSettings));
 	
 	UE_LOG(LogAssetValidation, Display, TEXT("Starting to validate %d assets"), AssetDataList.Num());
 	UE_LOG(LogAssetValidation, Log, TEXT("Enabled validators:"));
@@ -309,12 +309,19 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 	int32 PrevNumChecked	= OutResults.NumChecked;
 	int32 PrevNumInvalid	= OutResults.NumInvalid;
 	OutResults.NumRequested = AssetDataList.Num();
-	
+
+	const auto& UserSettings = UAssetValidationSettings::Get();
 	// Now add to map or update as needed
 	for (const FAssetData& AssetData : AssetDataList)
 	{
 		ensure(AssetData.IsValid());
 
+		if (SlowTask.ShouldCancel())
+		{
+			// break the loop if task cancel was requested by user
+			break;
+		}
+		
 		SlowTask.EnterProgressFrame(1.0f, FText::Format(LOCTEXT("ValidatingFilename", "Validating {0}"), FText::FromString(AssetData.GetFullName())));
 		
 		if (OutResults.NumChecked >= InSettings.MaxAssetsToValidate)
@@ -333,7 +340,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 		// Check exclusion path
 		if (InSettings.bSkipExcludedDirectories && IsPathExcludedFromValidation(AssetData.PackageName.ToString()))
 		{
-			if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging)
+			if (UserSettings->bEnabledDetailedAssetLogging)
 			{
 				DataValidationLog.Info()
 				->AddToken(FAssetDataToken::Create(AssetData))
@@ -351,7 +358,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 		}
 
 		// do not log detailed info for every asset unless asked to
-		if (UAssetValidationSettings::Get()->bEnabledDetailedAssetLogging)
+		if (UserSettings->bEnabledDetailedAssetLogging)
 		{
 			DataValidationLog.Info()
 			->AddToken(FAssetDataToken::Create(AssetData))
@@ -459,15 +466,15 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(
 	const FValidateAssetsSettings& Settings,
 	FValidateAssetsResults& OutResults) const
 {
-	FScopedSlowTask SlowTask(Changelists.Num(), LOCTEXT("DataValidation.ValidatingChangelistTask", "Validating Changelists"));
+	FScopedSlowTask SlowTask(Changelists.Num(), LOCTEXT("AssetValidation.ValidatingChangelistTask", "Validating Changelists"));
 	SlowTask.Visibility = ESlowTaskVisibility::Invisible;
-	SlowTask.MakeDialog();
+	SlowTask.MakeDialog(false);
 
 	IAssetRegistry& AssetRegistry = IAssetRegistry::GetChecked();
 	if (AssetRegistry.IsLoadingAssets())
 	{
 		UE_CLOG(FApp::IsUnattended(), LogAssetValidation, Fatal, TEXT("Unable to perform unattended content validation while asset registry scan is in progress. Callers just wait for asset registry scan to complete."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("DataValidation.UnableToValidate_PendingAssetRegistry", "Unable to validate changelist while asset registry scan is in progress. Wait until asset discovery is complete."));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("AssetValidation.UnableToValidate_PendingAssetRegistry", "Unable to validate changelist while asset registry scan is in progress. Wait until asset discovery is complete."));
 		return EDataValidationResult::NotValidated;
 	}
 	
@@ -476,7 +483,8 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(
 		CL->AddToRoot();
 	}
 	
-	ON_SCOPE_EXIT {
+	ON_SCOPE_EXIT
+	{
 		for (UDataValidationChangelist* CL : Changelists)
 		{
 			CL->RemoveFromRoot();		
@@ -645,6 +653,12 @@ EDataValidationResult UAssetValidationSubsystem::IsActorValidWithContext(const F
 
 	MarkAssetDataValidated(AssetData, Result);
 	return Result;
+}
+
+bool UAssetValidationSubsystem::ShouldShowCancelButton(int32 NumAssets, const FValidateAssetsSettings& InSettings) const
+{
+	return (InSettings.ValidationUsecase == EDataValidationUsecase::Manual || InSettings.ValidationUsecase == EDataValidationUsecase::Script)
+			&& NumAssets > UAssetValidationSettings::Get()->NumAssetsToShowCancelButton;
 }
 
 EDataValidationResult UAssetValidationSubsystem::IsObjectValidWithContext(UObject* InAsset, FDataValidationContext& InContext) const

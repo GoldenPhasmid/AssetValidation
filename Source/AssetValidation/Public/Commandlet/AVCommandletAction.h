@@ -6,6 +6,22 @@
 
 struct FAssetData;
 
+USTRUCT()
+struct FAVCommandletActionResultBase
+{
+	GENERATED_BODY()
+
+	FAVCommandletActionResultBase() = default;
+	explicit FAVCommandletActionResultBase(const FAssetData& AssetData);
+	
+	UPROPERTY()
+	FString AssetName;
+
+	UPROPERTY()
+	FString AssetPath;
+};
+
+
 UCLASS(Abstract, EditInlineNew, DefaultToInstanced)
 class ASSETVALIDATION_API UAVCommandletAction: public UObject
 {

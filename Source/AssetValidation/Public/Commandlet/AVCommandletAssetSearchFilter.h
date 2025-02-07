@@ -25,15 +25,22 @@ public:
 	TSet<FTopLevelAssetPath> GetExcludedClasses() const;
 	TArray<FName> GetPackagePaths() const;
 
-	// interface to implement
+protected:
+
+	/** add classes derived from @ParentClass to @ClassPaths array */
+	static void AddDerivedClasses(TArray<FTopLevelAssetPath>& ClassPaths, UClass* ParentClass);
+	/** post process search filter result */
 	virtual void PostProcessAssets(TArray<FAssetData>& Assets) const {}
+	/** append additional package paths to the AR filter */
 	virtual void AddPackagePaths(TArray<FName>& Paths) const {}
+	/** append additional class paths to the AR filter */
 	virtual void AddClassPaths(TArray<FTopLevelAssetPath>& ClassPaths) const {}
 
 	/** Specify a list of package paths to include into search request */
 	UPROPERTY(EditAnywhere, Category = "Filter|Paths", meta = (Validate, ContentDir))
 	TArray<FDirectoryPath> DirectoryPaths;
-	
+
+	/** If true, assets in @DirectoryPaths discovered recursively */
 	UPROPERTY(EditAnywhere, Category = "Filter|Paths")
 	bool bRecursivePaths = true;
 
@@ -59,34 +66,34 @@ public:
 	TArray<const UClass*> ExcludeAssetTypes;
 	
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bBlueprints = false;
+	uint32 bBlueprints: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bWidgets = false;
+	uint32 bWidgets = false;
 	
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bEditorUtilityWidgets = false;
+	uint32 bEditorUtilityWidgets: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bAnimations = false;
+	uint32 bAnimations: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bStaticMeshes = false;
+	uint32 bStaticMeshes: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bSkeletalMeshes = false;
+	uint32 bSkeletalMeshes: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bMaterials = false;
+	uint32 bMaterials: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bTextures = false;
+	uint32 bTextures: 1 = false;
 
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bSounds = false;
+	uint32 bSounds: 1 = false;
 	
 	UPROPERTY(EditAnywhere, Category = "Filter|Assets|Quick", meta = (EditCondition = "!bAllAssetTypes"))
-	bool bRedirectors = false;
+	uint32 bRedirectors: 1 = false;
 	
 	UPROPERTY()
 	TArray<FName> CommandletPackagePaths;

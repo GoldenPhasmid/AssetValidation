@@ -221,6 +221,17 @@ bool UAVCommandletAssetSearchFilter::GetAssets(TArray<FAssetData>& OutAssets) co
 	return true;
 }
 
+void UAVCommandletAssetSearchFilter::AddDerivedClasses(TArray<FTopLevelAssetPath>& ClassPaths, UClass* ParentClass)
+{
+	TArray<UClass*> Classes;
+	GetDerivedClasses(ParentClass, Classes, true);
+
+	for (const UClass* DerivedClass: Classes)
+	{
+		ClassPaths.Add(DerivedClass->GetClassPathName());
+	}
+}
+
 TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() const
 {
 	TArray<FTopLevelAssetPath> AllowedClassPaths;
@@ -229,17 +240,6 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 		AllowedClassPaths.Add(UObject::StaticClass()->GetClassPathName());
 		return AllowedClassPaths;
 	}
-
-	auto AddDerivedClasses = [&AllowedClassPaths](const UClass* BaseClass)
-	{
-		TArray<UClass*> Classes;
-		GetDerivedClasses(BaseClass, Classes, true);
-
-		for (const UClass* DerivedClass: Classes)
-		{
-			AllowedClassPaths.Add(DerivedClass->GetClassPathName());
-		}
-	};
 
 	AllowedClassPaths.Reserve(AssetTypes.Num() + 20);
 	// blueprint assets
@@ -251,9 +251,9 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 		AllowedClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UUserDefinedEnum::StaticClass()->GetClassPathName());
 		
-		AddDerivedClasses(UBlueprint::StaticClass());
-		AddDerivedClasses(UDataAsset::StaticClass());
-		AddDerivedClasses(UDataTable::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UBlueprint::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UDataAsset::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UDataTable::StaticClass());
 	}
 	// widgets
 	if (bWidgets)
@@ -262,7 +262,7 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 		AllowedClassPaths.Add(UUserWidgetBlueprint::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UEditorUtilityWidgetBlueprint::StaticClass()->GetClassPathName());
 
-		AddDerivedClasses(UUserWidgetBlueprint::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UUserWidgetBlueprint::StaticClass());
 	}
 	// editor utility widgets
 	if (bEditorUtilityWidgets)
@@ -275,7 +275,7 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 		AllowedClassPaths.Add(UAnimBlueprint::StaticClass()->GetClassPathName());
 		AllowedClassPaths.Add(UAnimationAsset::StaticClass()->GetClassPathName());
 
-		AddDerivedClasses(UAnimationAsset::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UAnimationAsset::StaticClass());
 	}
 	// static meshes
 	if (bStaticMeshes)
@@ -290,17 +290,17 @@ TArray<FTopLevelAssetPath> UAVCommandletAssetSearchFilter::GetAllowedClasses() c
 	// materials
 	if (bMaterials)
 	{
-		AddDerivedClasses(UMaterialInterface::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UMaterialInterface::StaticClass());
 	}
 	// textures
 	if (bTextures)
 	{
-		AddDerivedClasses(UTexture::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, UTexture::StaticClass());
 	}
 	// unreal sounds
 	if (bSounds)
 	{
-		AddDerivedClasses(USoundBase::StaticClass());
+		AddDerivedClasses(AllowedClassPaths, USoundBase::StaticClass());
 	}
 	// redirectors
 	if (bRedirectors)

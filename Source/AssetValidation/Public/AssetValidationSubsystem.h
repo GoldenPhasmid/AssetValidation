@@ -39,6 +39,7 @@ public:
 	
 protected:
 	
+	bool ShouldShowCancelButton(int32 NumAssets, const FValidateAssetsSettings& InSettings) const;
 	bool IsEmptyChangelist(UDataValidationChangelist* Changelist) const;
 
 	EDataValidationResult ValidateAssetsInternalResolver(

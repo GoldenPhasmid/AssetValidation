@@ -8,7 +8,7 @@ struct FAssetData;
 /**
  * AssetTreeNode
  */
-struct FAssetTreeNode
+struct ASSETVALIDATION_API FAssetTreeNode
 {
 	FAssetTreeNode() = default;
 	FAssetTreeNode(IAssetRegistry& AssetRegistry, const FAssetData& InAssetData);
@@ -25,11 +25,11 @@ struct FAssetTreeNode
 /**
  * AssetAuditResult
  */
-struct FAssetAuditResult
+struct ASSETVALIDATION_API FAssetAuditResult
 {
 	FAssetAuditResult() = default;
 	explicit FAssetAuditResult(const FAssetData& InAssetData);
-
+	
 	FAssetData AssetData;
 	float TotalDiskSizeBytes = 0.f;
 	float TotalMemorySizeBytes = 0.f;
@@ -49,15 +49,15 @@ struct FAssetAuditResult
  * Provides general information about asset and its HARD references
  * Unlike AssetRegistry, dependencies are stored as AssetData, which makes subsequent queries faster
  * The main reason though is that it handles recursive dependency iteration for you
+ * @todo: tree is not usable multiple times, it gives invalid results
  * @todo: thread safety for adding/removing nodes
  * @todo: asset data invalidation
  * @todo: cache referencers as well
  * @todo: make it a dependency graph instead
  */
-class FAssetDependencyTree
+class ASSETVALIDATION_API FAssetDependencyTree
 {
 public:
-
 	~FAssetDependencyTree();
 	
 	/**
