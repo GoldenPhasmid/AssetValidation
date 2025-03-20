@@ -112,13 +112,7 @@ void FAssetValidationModule::StartupModule()
 			ToolkitManager = MakeShared<FAssetValidationMenuExtensionManager>();
 		}));
 	}
-	
-	ISourceControlModule& SourceControl = ISourceControlModule::Get();
-	SCProviderChangedHandle = SourceControl.RegisterProviderChanged(FSourceControlProviderChanged::FDelegate::CreateRaw(this, &ThisClass::UpdateSourceControlProxy));
 
-	ISourceControlProvider& SCCProvider = SourceControl.GetProvider();
-	UpdateSourceControlProxy(SCCProvider, SCCProvider);
-	
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyEditor.RegisterCustomClassLayout(StaticClass<UAssetValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FAssetValidationSettingsCustomization::MakeInstance));
 	PropertyEditor.RegisterCustomClassLayout(StaticClass<UPropertyValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyValidationSettingsCustomization::MakeInstance));
@@ -129,6 +123,12 @@ void FAssetValidationModule::StartupModule()
 		// override default FAssetDataToken callbacks to further customize DisplayName and activation action
 		FAssetDataToken::DefaultOnMessageTokenActivated().BindRaw(this, &ThisClass::OnAssetDataTokenActivated);
 		FAssetDataToken::DefaultOnGetAssetDisplayName().BindRaw(this, &ThisClass::OnGetAssetDataTokenDisplayName);
+
+		ISourceControlModule& SourceControl = ISourceControlModule::Get();
+		SCProviderChangedHandle = SourceControl.RegisterProviderChanged(FSourceControlProviderChanged::FDelegate::CreateRaw(this, &ThisClass::UpdateSourceControlProxy));
+		
+		ISourceControlProvider& SCCProvider = SourceControl.GetProvider();
+		UpdateSourceControlProxy(SCCProvider, SCCProvider);
 	});
 }
 
