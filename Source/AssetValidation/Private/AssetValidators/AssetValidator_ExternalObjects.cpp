@@ -39,7 +39,7 @@ EDataValidationResult UAssetValidator_ExternalObjects::ValidateAssetInternal(con
 	check(ValidationSubsystem);
 
 	const uint32 NumValidationErrors = InContext.GetNumErrors();
-	EDataValidationResult Result = EDataValidationResult::NotValidated;
+	EDataValidationResult Result = EDataValidationResult::Valid;
 	for (const FAssetData& AssetData: InContext.GetAssociatedExternalObjects())
 	{
 		// gather error and warning messages produced by loading an external asset
