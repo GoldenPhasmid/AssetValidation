@@ -37,8 +37,8 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 		FPropertyValidationResult OutResult = ValidatorSubsystem->ValidateObject(Blueprint);
 		Result &= OutResult.ValidationResult;
 
-		UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, OutResult.Errors);
-		UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, OutResult.Warnings);
+		UE::AssetValidation::AppendMessages(Context, InAssetData, EMessageSeverity::Error, OutResult.Errors);
+		UE::AssetValidation::AppendMessages(Context, InAssetData, EMessageSeverity::Warning, OutResult.Warnings);
 
 		Class = Blueprint->GeneratedClass;
         Object = Class->GetDefaultObject();
@@ -50,8 +50,8 @@ EDataValidationResult UAssetValidator_Properties::ValidateLoadedAsset_Implementa
 	FPropertyValidationResult OutResult = ValidatorSubsystem->ValidateObject(Object);
 	Result &= OutResult.ValidationResult;
 	
-	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, OutResult.Errors);
-	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, OutResult.Warnings);
+	UE::AssetValidation::AppendMessages(Context, InAssetData, EMessageSeverity::Error, OutResult.Errors);
+	UE::AssetValidation::AppendMessages(Context, InAssetData, EMessageSeverity::Warning, OutResult.Warnings);
 	
 	return Result;
 }

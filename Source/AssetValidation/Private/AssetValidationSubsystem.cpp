@@ -295,7 +295,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 
 			return false;
 		}));
-		UE::AssetValidation::AppendAssetValidationMessages(DataValidationLog, ValidationContext);
+		UE::AssetValidation::AppendMessages(DataValidationLog, ValidationContext);
 		DataValidationLog.Flush();
 	}
 	// ASSET VALIDATION END
@@ -384,7 +384,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateAssetsInternal(
 // ASSET VALIDATION END
 		
 		// Don't add more messages to ValidationContext after this point because we will no longer add them to the message log
-		UE::AssetValidation::AppendAssetValidationMessages(DataValidationLog, AssetData, ValidationContext);
+		UE::AssetValidation::AppendMessages(DataValidationLog, AssetData, ValidationContext);
 
 		const bool bAnyWarnings = ValidationContext.GetNumWarnings() > 0;
 
@@ -512,7 +512,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(
 		}
 // ASSET VALIDATION END
 
-		UE::DataValidation::AddAssetValidationMessages(DataValidationLog, ValidationContext);
+		UE::AssetValidation::AppendMessages(DataValidationLog, ValidationContext);
 		DataValidationLog.Flush();
 	}
 
@@ -521,7 +521,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(
 	{
 		FDataValidationContext ValidationContext(false, Settings.ValidationUsecase, {}); // No associated objects for changelist
 		GatherAssetsToValidateFromChangelist(Changelist, Settings, AssetsToValidate, ValidationContext);
-		UE::DataValidation::AddAssetValidationMessages(DataValidationLog, ValidationContext);
+		UE::AssetValidation::AppendMessages(DataValidationLog, ValidationContext);
 		DataValidationLog.Flush();
 	}
 
@@ -542,7 +542,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelistsInternal(
 			return false;
 		}));
 // ASSET VALIDATION END
-		UE::DataValidation::AddAssetValidationMessages(DataValidationLog, ValidationContext);
+		UE::AssetValidation::AppendMessages(DataValidationLog, ValidationContext);
 		DataValidationLog.Flush();
 	}
 
@@ -588,7 +588,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 
 		// make a human readable append to data validation context. @see UEditorValidatorSubsystem.cpp 504
 		// Associate any load errors with this asset in the message log
-		UE::AssetValidation::AppendAssetValidationMessages(InContext, AssetData, LogGatherer);
+		UE::AssetValidation::AppendMessages(InContext, AssetData, LogGatherer);
 
 		MarkPackageLoaded(AssetData.PackageName);
 	}
@@ -598,7 +598,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 		// call default implementation that loads an asset and calls IsObjectValid
 		UE::DataValidation::FScopedLogMessageGatherer LogGatherer(CurrentSettings->bCaptureLogsDuringValidation);
 		Result &= Super::IsAssetValidWithContext(AssetData, InContext);
-		UE::AssetValidation::AppendAssetValidationMessages(InContext, AssetData, LogGatherer);
+		UE::AssetValidation::AppendMessages(InContext, AssetData, LogGatherer);
 	}
 	else
 	{

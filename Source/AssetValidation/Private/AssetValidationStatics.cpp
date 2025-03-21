@@ -353,7 +353,7 @@ namespace UE::AssetValidation
 		}
 	}
 
-	void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext)
+	void AppendMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext)
 	{
 		for (const FDataValidationContext::FIssue& Issue : ValidationContext.GetIssues())
 		{
@@ -368,22 +368,22 @@ namespace UE::AssetValidation
 		}
 	}
 
-	void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
+	void AppendMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext)
 	{
 		UE::DataValidation::AddAssetValidationMessages(AssetData, MessageLog, ValidationContext);
 	}
 
-	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer)
+	void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer)
 	{
 		TArray<FString> Warnings{}, Errors{};
 		Gatherer.Stop(Warnings, Errors);
 
-		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
-		AppendAssetValidationMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
+		AppendMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
+		AppendMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
 	}
 	
 
-	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
+	void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
 	{
 		for (const FText& Msg: Messages)
 		{
@@ -391,7 +391,7 @@ namespace UE::AssetValidation
 		}
 	}
 
-	void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages)
+	void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages)
 	{
 		for (const FString& Msg: Messages)
 		{

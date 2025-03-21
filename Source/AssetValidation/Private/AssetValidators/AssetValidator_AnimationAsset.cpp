@@ -181,8 +181,8 @@ EDataValidationResult UAssetValidator_AnimationAsset::ValidateAnimNotifies(const
 			UObject* Target = AnimNotify.Notify ? static_cast<UObject*>(AnimNotify.Notify) : static_cast<UObject*>(AnimNotify.NotifyStateClass);
 			FPropertyValidationResult ValidationResult = PropertyValidators->ValidateObject(Target);
 			
-			UE::AssetValidation::AppendAssetValidationMessages(Context, AnimSequenceAsset, EMessageSeverity::Error, ValidationResult.Errors);
-			UE::AssetValidation::AppendAssetValidationMessages(Context, AnimSequenceAsset, EMessageSeverity::Warning, ValidationResult.Warnings);
+			UE::AssetValidation::AppendMessages(Context, AnimSequenceAsset, EMessageSeverity::Error, ValidationResult.Errors);
+			UE::AssetValidation::AppendMessages(Context, AnimSequenceAsset, EMessageSeverity::Warning, ValidationResult.Warnings);
 
 			Result &= ValidationResult.ValidationResult;
 		}

@@ -21,8 +21,8 @@ EDataValidationResult UAssetValidator_WidgetBlueprint::ValidateLoadedAsset_Imple
 
 	FPropertyValidationResult Result = PropertyValidators->ValidateObject(WidgetBlueprint->WidgetTree);
 	
-	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Error, Result.Errors);
-	UE::AssetValidation::AppendAssetValidationMessages(Context, InAssetData, EMessageSeverity::Warning, Result.Warnings);
+	UE::AssetValidation::AppendMessages(Context, InAssetData, EMessageSeverity::Error, Result.Errors);
+	UE::AssetValidation::AppendMessages(Context, InAssetData, EMessageSeverity::Warning, Result.Warnings);
 
 	return Result.ValidationResult;
 }

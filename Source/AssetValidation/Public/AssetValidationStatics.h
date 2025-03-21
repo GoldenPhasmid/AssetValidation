@@ -29,6 +29,7 @@ struct FScopedLogMessageGatherer: public FOutputDevice
 
 	virtual ~FScopedLogMessageGatherer() override;
 
+	virtual bool CanBeUsedOnMultipleThreads() const override { return true; }
 	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override;
 
 private:
@@ -147,7 +148,7 @@ namespace Private
 	TSharedRef<FTokenizedMessage> AddToken(const TSharedRef<FTokenizedMessage>& Message, const T* Token);
 } // Private
 	
-	/** @return tokenized message */
+	/** create and @return tokenized message */
 	template <typename ...TParams>
 	TSharedRef<FTokenizedMessage> CreateTokenMessage(EMessageSeverity::Type Severity, TParams&&... Params)
 	{
@@ -157,6 +158,7 @@ namespace Private
 		return Message;
 	}
 
+	/** create and add tokenized message to the data validation context */
 	template <typename ...TParams>
 	void AddTokenMessage(FDataValidationContext& Context, EMessageSeverity::Type Severity, TParams&&... Params)
 	{
@@ -166,11 +168,14 @@ namespace Private
 		Context.AddMessage(Message);
 	}
 	
-	/** Add validation messages to validation context in "data validation format" */
+	/** Clear log listing defined by the message log */
 	ASSETVALIDATION_API void ClearLogMessages(FMessageLog& MessageLog);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
-	ASSETVALIDATION_API void AppendAssetValidationMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
+	/** Transfer gathered warnings and errors from Data Validation context to the message log, in "data validation format" */
+	ASSETVALIDATION_API void AppendMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);
+	ASSETVALIDATION_API void AppendMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
+	/** Transfer gathered messages by the scoped log and transfer them to the Data Validation context */
+	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);
+	/** Add a list of messages related to the @AssetData with a specified @Severity */
+	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
+	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);
 } // UE::AssetValidation
