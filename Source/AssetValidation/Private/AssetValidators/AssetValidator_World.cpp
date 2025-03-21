@@ -292,7 +292,7 @@ EDataValidationResult UAssetValidator_World::ValidateExternalAssets(const FAsset
 	for (const FAssetData& ExternalAsset: Context.GetAssociatedExternalObjects())
 	{
 		// gather error and warning messages produced by loading an external asset
-		FScopedLogMessageGatherer Gatherer{ExternalAsset, Context};
+		FScopedAssetContext Gatherer{ExternalAsset, Context};
 		if (UObject* Asset = ExternalAsset.GetAsset({ULevel::LoadAllExternalObjectsTag}))
 		{
 			TGuardValue AssetGuard{CurrentExternalAsset, Asset};

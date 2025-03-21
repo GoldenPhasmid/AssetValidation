@@ -27,7 +27,7 @@
 namespace UE::AssetValidation
 {
 	
-FScopedLogMessageGatherer::FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext)
+FScopedAssetContext::FScopedAssetContext(const FAssetData& InAssetData, FDataValidationContext& InContext)
 	: FOutputDevice()
     , AssetData(InAssetData)
     , Context(InContext)
@@ -35,20 +35,25 @@ FScopedLogMessageGatherer::FScopedLogMessageGatherer(const FAssetData& InAssetDa
     GLog->AddOutputDevice(this);
 }
 
-FScopedLogMessageGatherer::FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext, TFunction<FString(const FString&)> InLogConverter)
-	: FScopedLogMessageGatherer(InAssetData, InContext)
+FScopedAssetContext::FScopedAssetContext(const FAssetData& InAssetData, FDataValidationContext& InContext, TFunction<FString(const FString&)> InLogConverter)
+	: FScopedAssetContext(InAssetData, InContext)
 {
 	LogConverter = InLogConverter;
 }
 
-FScopedLogMessageGatherer::~FScopedLogMessageGatherer()
+FScopedAssetContext::~FScopedAssetContext()
 {
     std::scoped_lock Lock{CriticalSection};
     GLog->RemoveOutputDevice(this);
 }
 
-void FScopedLogMessageGatherer::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
+void FScopedAssetContext::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
 {
+	if (Verbosity > ELogVerbosity::Warning)
+	{
+		return;
+	}
+	
     std::scoped_lock Lock{CriticalSection};
 
 	FString Message{V};
@@ -70,7 +75,63 @@ void FScopedLogMessageGatherer::Serialize(const TCHAR* V, ELogVerbosity::Type Ve
     	break;
     }
 }
+
+FScopedLogMessageGatherer::FScopedLogMessageGatherer(bool bInEnabled)
+	: bEnabled(bInEnabled)
+{
+	if (bEnabled)
+	{
+		GLog->AddOutputDevice(this);
+	}
 	
+}
+
+FScopedLogMessageGatherer::~FScopedLogMessageGatherer()
+{
+	if (bEnabled)
+	{
+		std::scoped_lock Lock{CriticalSection};
+		GLog->RemoveOutputDevice(this);
+	}
+}
+
+void FScopedLogMessageGatherer::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
+{
+	if (!bEnabled)
+	{
+		return;
+	}
+	
+	if (Verbosity > ELogVerbosity::Warning)
+	{
+		return;
+	}
+
+	std::scoped_lock Lock{CriticalSection};
+	switch (Verbosity)
+	{
+	case ELogVerbosity::Warning:
+		Warnings.Add(FString{V});
+		break;
+	case ELogVerbosity::Error:
+		Errors.Add(FString{V});
+		break;
+	default:
+		break;
+	}
+}
+
+void FScopedLogMessageGatherer::Stop(TArray<FString>& OutWarnings, TArray<FString>& OutErrors)
+{
+	if (!bEnabled)
+	{
+		return;
+	}
+	
+	std::scoped_lock Lock{CriticalSection};
+	OutWarnings = MoveTemp(Warnings);
+	OutErrors = MoveTemp(Errors);
+}
 } // UE::AssetValidation
 
 namespace UE::AssetValidation
@@ -373,7 +434,7 @@ namespace UE::AssetValidation
 		UE::DataValidation::AddAssetValidationMessages(AssetData, MessageLog, ValidationContext);
 	}
 
-	void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer)
+	void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::AssetValidation::FScopedLogMessageGatherer& Gatherer)
 	{
 		TArray<FString> Warnings{}, Errors{};
 		Gatherer.Stop(Warnings, Errors);
@@ -381,7 +442,6 @@ namespace UE::AssetValidation
 		AppendMessages(ValidationContext, AssetData, EMessageSeverity::Error, Errors);
 		AppendMessages(ValidationContext, AssetData, EMessageSeverity::Warning, Warnings);
 	}
-	
 
 	void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages)
 	{

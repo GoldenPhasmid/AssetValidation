@@ -52,7 +52,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 	if (Package == nullptr)
 	{
 		// Not in memory, just load it
-		UE::AssetValidation::FScopedLogMessageGatherer Gatherer{AssetData, ValidationContext};
+		UE::AssetValidation::FScopedAssetContext Gatherer{AssetData, ValidationContext};
 		Package = LoadPackage(nullptr, *PackageName, LOAD_None);
 		return true;
 	}
@@ -99,7 +99,7 @@ bool UAssetValidator_LoadPackage::GetPackageLoadErrors(const FString& PackageNam
 
 			return MoveTemp(Msg);
 		};
-		UE::AssetValidation::FScopedLogMessageGatherer Gatherer{AssetData, ValidationContext, ConvertMessage};
+		UE::AssetValidation::FScopedAssetContext Gatherer{AssetData, ValidationContext, ConvertMessage};
 
 		const int32 LoadFlags = LOAD_ForDiff | LOAD_DisableCompileOnLoad;
 		UPackage* DestPackage = LoadPackage(nullptr, *DestPackageName, LoadFlags);

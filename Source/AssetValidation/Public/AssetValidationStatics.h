@@ -7,11 +7,6 @@
 
 class IAssetRegistry;
 
-namespace UE::DataValidation
-{
-	struct FScopedLogMessageGatherer;
-}
-
 class UEditorValidatorBase;
 struct FValidateAssetsResults;
 struct FValidateAssetsSettings;
@@ -22,12 +17,18 @@ enum class EDataValidationUsecase : uint8;
 namespace UE::AssetValidation
 {
 
-struct FScopedLogMessageGatherer: public FOutputDevice
+/**
+ * While in scope, any messages received by this output device automatically have asset info added to the tokenized message
+ * @InAssetData asset data
+ * @InContext validation context
+ * @InLogConverter additional message post processing
+ */
+struct FScopedAssetContext: public FOutputDevice
 {
-	FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext);
-	FScopedLogMessageGatherer(const FAssetData& InAssetData, FDataValidationContext& InContext, TFunction<FString(const FString&)> InLogConverter);
+	FScopedAssetContext(const FAssetData& InAssetData, FDataValidationContext& InContext);
+	FScopedAssetContext(const FAssetData& InAssetData, FDataValidationContext& InContext, TFunction<FString(const FString&)> InLogConverter);
 
-	virtual ~FScopedLogMessageGatherer() override;
+	virtual ~FScopedAssetContext() override;
 
 	virtual bool CanBeUsedOnMultipleThreads() const override { return true; }
 	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override;
@@ -37,6 +38,26 @@ private:
 	FAssetData AssetData;
 	FDataValidationContext& Context;
 	TFunction<FString(const FString&)> LogConverter;
+};
+
+/**
+ * While in scope, any messages received by this output device 
+ */
+struct FScopedLogMessageGatherer: public FOutputDevice
+{
+	explicit FScopedLogMessageGatherer(bool bInEnabled);
+	virtual ~FScopedLogMessageGatherer() override;
+
+	virtual bool CanBeUsedOnMultipleThreads() const override { return true; }
+	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override;
+
+	void Stop(TArray<FString>& OutWarnings, TArray<FString>& OutErrors);
+
+private:
+	std::recursive_mutex CriticalSection;
+	TArray<FString> Warnings;
+	TArray<FString> Errors;
+	bool bEnabled = false;
 };
 	
 } // UE::AssetValidation
@@ -174,7 +195,7 @@ namespace Private
 	ASSETVALIDATION_API void AppendMessages(FMessageLog& MessageLog, FDataValidationContext& ValidationContext);
 	ASSETVALIDATION_API void AppendMessages(FMessageLog& MessageLog, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
 	/** Transfer gathered messages by the scoped log and transfer them to the Data Validation context */
-	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, UE::DataValidation::FScopedLogMessageGatherer& Gatherer);
+	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, FScopedLogMessageGatherer& Gatherer);
 	/** Add a list of messages related to the @AssetData with a specified @Severity */
 	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FText> Messages);
 	ASSETVALIDATION_API void AppendMessages(FDataValidationContext& ValidationContext, const FAssetData& AssetData, EMessageSeverity::Type Severity, TConstArrayView<FString> Messages);

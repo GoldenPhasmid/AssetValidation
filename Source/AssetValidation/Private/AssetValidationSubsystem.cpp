@@ -578,7 +578,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	if (Asset == nullptr && ShouldLoadAsset(AssetData))
 	{
 		UE_LOG(LogAssetValidation, Verbose, TEXT("Loading asset %s for validation"), *AssetData.ToSoftObjectPath().ToString());
-		UE::DataValidation::FScopedLogMessageGatherer LogGatherer{CurrentSettings->bCaptureAssetLoadLogs};
+		UE::AssetValidation::FScopedLogMessageGatherer LogGatherer{CurrentSettings->bCaptureAssetLoadLogs};
 		Asset = AssetData.GetAsset(); // Do not load external objects, validators should load external objects that they want via GetAssociatedExternalObjects in the validation context 
 
 		{
@@ -596,7 +596,7 @@ EDataValidationResult UAssetValidationSubsystem::IsAssetValidWithContext(const F
 	if (Asset)
 	{
 		// call default implementation that loads an asset and calls IsObjectValid
-		UE::DataValidation::FScopedLogMessageGatherer LogGatherer(CurrentSettings->bCaptureLogsDuringValidation);
+		UE::AssetValidation::FScopedLogMessageGatherer LogGatherer(CurrentSettings->bCaptureLogsDuringValidation);
 		Result &= Super::IsAssetValidWithContext(AssetData, InContext);
 		UE::AssetValidation::AppendMessages(InContext, AssetData, LogGatherer);
 	}
