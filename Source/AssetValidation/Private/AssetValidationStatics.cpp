@@ -43,7 +43,8 @@ FScopedAssetContext::FScopedAssetContext(const FAssetData& InAssetData, FDataVal
 
 FScopedAssetContext::~FScopedAssetContext()
 {
-    std::scoped_lock Lock{CriticalSection};
+	// we do not need to lock our critical section, as FOutputDeviceRedirectorState holds a Read Lock before calling Serialize,
+	// and RemoveOutputDevice tries to acquire a Write Lock from the same state. So if we lock ourselves here it will cause a deadlock
     GLog->RemoveOutputDevice(this);
 }
 
@@ -90,7 +91,8 @@ FScopedLogMessageGatherer::~FScopedLogMessageGatherer()
 {
 	if (bEnabled)
 	{
-		std::scoped_lock Lock{CriticalSection};
+		// we do not need to lock our critical section, as FOutputDeviceRedirectorState holds a Read Lock before calling Serialize,
+		// and RemoveOutputDevice tries to acquire a Write Lock from the same state. So if we lock ourselves here it will cause a deadlock
 		GLog->RemoveOutputDevice(this);
 	}
 }
