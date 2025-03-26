@@ -655,6 +655,16 @@ EDataValidationResult UAssetValidationSubsystem::IsActorValidWithContext(const F
 	return Result;
 }
 
+UEditorValidatorBase* UAssetValidationSubsystem::GetValidator(TSubclassOf<UAssetValidator> ValidatorClass) const
+{
+	if (const TObjectPtr<UEditorValidatorBase>* ValidatorPtr = Validators.Find(ValidatorClass->GetClassPathName()))
+	{
+		return *ValidatorPtr;
+	}
+
+	return nullptr;
+}
+
 bool UAssetValidationSubsystem::ShouldShowCancelButton(int32 NumAssets, const FValidateAssetsSettings& InSettings) const
 {
 	return (InSettings.ValidationUsecase == EDataValidationUsecase::Manual || InSettings.ValidationUsecase == EDataValidationUsecase::Script)

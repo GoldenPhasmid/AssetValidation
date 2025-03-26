@@ -36,7 +36,16 @@ public:
 	//~End EditorValidatorSubsystem interface
 
 	EDataValidationResult IsActorValidWithContext(const FAssetData& AssetData, AActor* Actor, FDataValidationContext& InContext) const;
+
+	/** @return editor validator of a requested type */
+	UEditorValidatorBase* GetValidator(TSubclassOf<UAssetValidator> ValidatorClass) const;
 	
+	/** @return editor validator of a requested type */
+	template <typename TValidatorType> requires std::is_base_of_v<UEditorValidatorBase, TValidatorType>
+	TValidatorType* GetValidator() const
+	{
+		return CastChecked<TValidatorType>(GetValidator(TValidatorType::StaticClass()));
+	}
 protected:
 	
 	bool ShouldShowCancelButton(int32 NumAssets, const FValidateAssetsSettings& InSettings) const;
