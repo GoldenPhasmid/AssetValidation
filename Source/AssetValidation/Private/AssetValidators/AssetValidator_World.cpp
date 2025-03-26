@@ -103,7 +103,13 @@ EDataValidationResult UAssetValidator_World::ValidateAsset_Implementation(const 
 			Result &= ValidateLoadedAsset_Implementation(AssetData, World, Context);
 		}
 		// force unload package, otherwise engine may crash trying to re-load the same world
-		UPackageTools::UnloadPackages({WorldPackage});
+		FText OutError{};
+		UPackageTools::UnloadPackages({WorldPackage}, OutError, true);
+
+		if (!OutError.IsEmpty())
+		{
+			Context.AddError(OutError);
+		}
 	}
 
 	return Result;
@@ -194,7 +200,13 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	}
 	else
 	{
-		// @todo: load all sublevels for non-partitioned worlds
+		// load all sublevels: always loaded, persistent and dynamic
+		for (ULevelStreaming* LevelStreaming: World->GetStreamingLevels())
+		{
+			LevelStreaming->SetShouldBeLoaded(true);
+			LevelStreaming->SetShouldBeVisible(true);
+			World->FlushLevelStreaming(EFlushLevelStreamingType::Full);
+		}
 	}
 	
 	UAssetValidationSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetValidationSubsystem>();
@@ -207,9 +219,9 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	
 	EDataValidationResult Result = EDataValidationResult::Valid;
 	// don't validate world settings explicitly, actor iterator will walk over it
-	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel, Context);
-	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
-	Result &= ValidateAssetInternal(*Subsystem, World->PersistentLevel->GetLevelScriptActor(), Context);
+	Result &= ValidateObject(*Subsystem, World->PersistentLevel, Context);
+	Result &= ValidateObject(*Subsystem, World->PersistentLevel->LevelScriptBlueprint, Context);
+	Result &= ValidateActor(*Subsystem, World->PersistentLevel->GetLevelScriptActor(), Context);
 	
 	if (const UWorldPartition* WorldPartition = World->GetWorldPartition())
 	{
@@ -223,9 +235,9 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
         {
         	if (ULevel* Level = LevelStreaming->GetLoadedLevel())
         	{
-        		Result &= ValidateAssetInternal(*Subsystem, Level, Context);
-        		Result &= ValidateAssetInternal(*Subsystem, Level->LevelScriptBlueprint, Context);
-        		Result &= ValidateAssetInternal(*Subsystem, Level->GetLevelScriptActor(), Context);
+        		Result &= ValidateObject(*Subsystem, Level, Context);
+        		Result &= ValidateObject(*Subsystem, Level->LevelScriptBlueprint, Context);
+        		Result &= ValidateActor(*Subsystem, Level->GetLevelScriptActor(), Context);
         	}
         }
 	}
@@ -236,7 +248,7 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	{
 		for (AActor* Actor: Level->Actors)
 		{
-			Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
+			Result &= ValidateActor(*Subsystem, Actor, Context);
 		}
 	}
 
@@ -245,7 +257,7 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	{
 		for (AActor* Actor: World->PersistentLevel->Actors)
 		{
-			Result &= ValidateAssetInternal(*Subsystem, Actor, Context);
+			Result &= ValidateActor(*Subsystem, Actor, Context);
 		}
 	}
 
@@ -254,7 +266,7 @@ EDataValidationResult UAssetValidator_World::ValidateWorld(const FAssetData& Ass
 	return Result;
 }
 
-EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateActor(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context)
 {
 	if (Actor == nullptr)
 	{
@@ -267,7 +279,7 @@ EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetV
 	return ValidationSubsystem.IsActorValidWithContext(AssetData, Actor, Context);
 }
 
-EDataValidationResult UAssetValidator_World::ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
+EDataValidationResult UAssetValidator_World::ValidateObject(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Asset, FDataValidationContext& Context)
 {
 	if (Asset == nullptr)
 	{

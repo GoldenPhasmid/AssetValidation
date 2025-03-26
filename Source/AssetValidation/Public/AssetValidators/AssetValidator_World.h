@@ -25,8 +25,8 @@ protected:
 
 	EDataValidationResult ValidateWorld(const FAssetData& AssetData, UWorld* World, FDataValidationContext& Context);
 
-	EDataValidationResult ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context);
-	EDataValidationResult ValidateAssetInternal(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Object, FDataValidationContext& Context);
+	EDataValidationResult ValidateActor(const UAssetValidationSubsystem& ValidationSubsystem, AActor* Actor, FDataValidationContext& Context);
+	EDataValidationResult ValidateObject(const UAssetValidationSubsystem& ValidationSubsystem, UObject* Object, FDataValidationContext& Context);
 
 	EDataValidationResult ValidateExternalAssets(const FAssetData& InAssetData, FDataValidationContext& Context);
 	/** @return approximate asset count that would be validated as part of world validation */
