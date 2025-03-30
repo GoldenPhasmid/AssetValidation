@@ -4,7 +4,7 @@
 
 #include "AssetValidator_LoadPackage.generated.h"
 
-UCLASS()
+UCLASS(Config = Editor, DefaultConfig)
 class ASSETVALIDATION_API UAssetValidator_LoadPackage: public UAssetValidator
 {
 	GENERATED_BODY()
@@ -26,4 +26,7 @@ public:
 	 * @return true if package was loaded, false otherwise
 	 */
 	static bool GetPackageLoadErrors(const FString& PackageName, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
+	TArray<FTopLevelAssetPath> ClassPathsToIgnore;
 };

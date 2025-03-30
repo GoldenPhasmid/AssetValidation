@@ -147,6 +147,8 @@ UAssetValidator_LoadPackage::UAssetValidator_LoadPackage()
 	bRequiresLoadedAsset = false;
 	bRequiresTopLevelAsset = true;
 	bCanValidateActors = false;
+	
+	ClassPathsToIgnore.Add(UWorld::StaticClass()->GetClassPathName());
 }
 
 bool UAssetValidator_LoadPackage::IsEnabled() const
@@ -160,6 +162,15 @@ bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetDa
 	if (InContext.GetValidationUsecase() == EDataValidationUsecase::Save)
 	{
 		return false;
+	}
+
+	const FTopLevelAssetPath& ClassPath = InAssetData.AssetClassPath;
+	for (const FTopLevelAssetPath& IgnoreClass: ClassPathsToIgnore)
+	{
+		if (IgnoreClass == ClassPath)
+		{
+			return false;
+		}
 	}
 	
 	return Super::CanValidateAsset_Implementation(InAssetData, InObject, InContext);
