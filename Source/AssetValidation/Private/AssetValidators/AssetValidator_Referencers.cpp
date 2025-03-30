@@ -116,7 +116,7 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 	check(Subsystem);
 
 	EDataValidationResult Result = EDataValidationResult::Valid;
-	if (UAssetValidator* LoadPackageValidator = Subsystem->GetValidator<UAssetValidator_LoadPackage>(); LoadPackageValidator->)
+	if (UAssetValidator* LoadPackageValidator = Subsystem->GetValidator<UAssetValidator_LoadPackage>())
 	{
 		for (const auto& [Package, Asset]: AllReferencers)
 		{
