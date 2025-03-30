@@ -148,7 +148,7 @@ UAssetValidator_LoadPackage::UAssetValidator_LoadPackage()
 	bRequiresTopLevelAsset = true;
 	bCanValidateActors = false;
 	
-	ClassPathsToIgnore.Add(UWorld::StaticClass()->GetClassPathName());
+	ClassPathsToIgnore.Add(FSoftClassPath{UWorld::StaticClass()});
 }
 
 bool UAssetValidator_LoadPackage::IsEnabled() const
@@ -165,9 +165,9 @@ bool UAssetValidator_LoadPackage::CanValidateAsset_Implementation(const FAssetDa
 	}
 
 	const FTopLevelAssetPath& ClassPath = InAssetData.AssetClassPath;
-	for (const FTopLevelAssetPath& IgnoreClass: ClassPathsToIgnore)
+	for (const FSoftClassPath& IgnoreClass: ClassPathsToIgnore)
 	{
-		if (IgnoreClass == ClassPath)
+		if (IgnoreClass.GetAssetPath() == ClassPath)
 		{
 			return false;
 		}

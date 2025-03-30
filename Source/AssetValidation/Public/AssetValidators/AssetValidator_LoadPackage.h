@@ -28,5 +28,5 @@ public:
 	static bool GetPackageLoadErrors(const FString& PackageName, const FAssetData& AssetData, FDataValidationContext& ValidationContext);
 
 	UPROPERTY(Config, EditAnywhere, Category = "Asset Validation")
-	TArray<FTopLevelAssetPath> ClassPathsToIgnore;
+	TArray<FSoftClassPath> ClassPathsToIgnore;
 };
