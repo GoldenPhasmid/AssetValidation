@@ -2,6 +2,7 @@
 
 #include "AssetValidationDefines.h"
 #include "AssetValidationStatics.h"
+#include "AssetValidationSubsystem.h"
 #include "Algo/RemoveIf.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "AssetValidators/AssetValidator_LoadPackage.h"
@@ -111,13 +112,18 @@ EDataValidationResult UAssetValidator_Referencers::ValidateLoadedAsset_Implement
 		Packages = MoveTemp(NextPackages);
 	}
 
-	const uint32 NumErrors = Context.GetNumErrors();
-	for (const auto& [Package, Asset]: AllReferencers)
+	UAssetValidationSubsystem* Subsystem = UAssetValidationSubsystem::Get();
+	check(Subsystem);
+
+	EDataValidationResult Result = EDataValidationResult::Valid;
+	if (UAssetValidator* LoadPackageValidator = Subsystem->GetValidator<UAssetValidator_LoadPackage>(); LoadPackageValidator->)
 	{
-		// load referencer packages and gather errors
-		UAssetValidator_LoadPackage::GetPackageLoadErrors(Package.ToString(), Asset, Context);
+		for (const auto& [Package, Asset]: AllReferencers)
+		{
+			// invoke load package validation for referencers
+			Result &= LoadPackageValidator->ValidateAsset(Asset, Context);
+		}
 	}
 	
-	EDataValidationResult Result = NumErrors < Context.GetNumErrors() ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 	return Result;
 }
