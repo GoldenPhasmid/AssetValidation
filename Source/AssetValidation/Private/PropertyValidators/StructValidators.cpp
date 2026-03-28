@@ -9,6 +9,7 @@
 #include "Engine/AssetManager.h"
 
 #include "PropertyValidators/PropertyValidation.h"
+#include "StructUtils/InstancedStruct.h"
 #include "Windows/Accessibility/WindowsUIAPropertyGetters.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"

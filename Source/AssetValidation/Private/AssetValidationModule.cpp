@@ -9,6 +9,7 @@
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "PropertyExtensionTypes.h"
+#include "PropertyValidationSettings.h"
 #include "SourceControlProxy.h"
 #include "Misc/MessageDialog.h"
 #include "ToolMenus.h"
@@ -114,8 +115,8 @@ void FAssetValidationModule::StartupModule()
 	}
 
 	FPropertyEditorModule& PropertyEditor = FModuleManager::Get().LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyEditor.RegisterCustomClassLayout(StaticClass<UAssetValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FAssetValidationSettingsCustomization::MakeInstance));
-	PropertyEditor.RegisterCustomClassLayout(StaticClass<UPropertyValidationSettings>()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyValidationSettingsCustomization::MakeInstance));
+	PropertyEditor.RegisterCustomClassLayout(UAssetValidationSettings::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FAssetValidationSettingsCustomization::MakeInstance));
+	PropertyEditor.RegisterCustomClassLayout(UPropertyValidationSettings::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyValidationSettingsCustomization::MakeInstance));
 	PropertyEditor.RegisterCustomPropertyTypeLayout(StaticStruct<FPropertyMetaDataExtension>()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&UE::AssetValidation::FPropertyMetaDataExtensionCustomization::MakeInstance));
 	
 	FEditorDelegates::OnEditorInitialized.AddLambda([this](double Duration)

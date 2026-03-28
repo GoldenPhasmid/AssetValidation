@@ -69,7 +69,7 @@ bool UAssetValidationSubsystem::IsPackageAlreadyLoaded(const FName& PackageName)
 	return ValidationSubsystem->LoadedPackageNames.Contains(PackageName);
 }	
 
-int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
+int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const
 {
 	checkf(bRecursiveCall == false, TEXT("%s: can't handle recursive calls."), *FString(__FUNCTION__));
 	TGuardValue RecursionGuard{bRecursiveCall, true};
@@ -92,7 +92,7 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 	CurrentSettings = TOptional{InSettings};
 	FValidateAssetsResults PrevResults = OutResults;
 	
-	ValidateAssetsInternalResolver(DataValidationLog, AssetDataList, InSettings, OutResults);
+	EDataValidationResult Result = ValidateAssetsInternalResolver(DataValidationLog, AssetDataList, InSettings, OutResults);
 
 	// override asset count calculation to account for recursive validation
 	// also include previous results in case @OutResults was used more than once
@@ -102,7 +102,7 @@ int32 UAssetValidationSubsystem::ValidateAssetsWithSettings(const TArray<FAssetD
 	OutResults.NumInvalid			= PrevResults.NumInvalid + ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
 	OutResults.NumUnableToValidate	= PrevResults.NumUnableToValidate + ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
 	
-	LogAssetValidationSummary(DataValidationLog, InSettings, OutResults);
+	LogAssetValidationSummary(DataValidationLog, InSettings, Result, OutResults);
 
 	// request garbage collection, as some validators do very heavy lifting
 	GEngine->ForceGarbageCollection(true);
@@ -146,7 +146,7 @@ EDataValidationResult UAssetValidationSubsystem::ValidateChangelists(const TArra
 	OutResults.NumInvalid			= PrevResults.NumInvalid + ValidationResults[static_cast<uint8>(EDataValidationResult::Invalid)];
 	OutResults.NumUnableToValidate	= PrevResults.NumUnableToValidate + ValidationResults[static_cast<uint8>(EDataValidationResult::NotValidated)];
 	
-	LogAssetValidationSummary(DataValidationLog, InSettings, OutResults);
+	LogAssetValidationSummary(DataValidationLog, InSettings, Result, OutResults);
 	
 	// request garbage collection, as some validators do very heavy lifting
 	GEngine->ForceGarbageCollection(true);

@@ -4,6 +4,7 @@
 #include "PropertyValidatorSubsystem.h"
 #include "Engine/UserDefinedEnum.h"
 #include "Engine/UserDefinedStruct.h"
+#include "StructUtils/UserDefinedStruct.h"
 
 UAssetValidator_Properties::UAssetValidator_Properties()
 {

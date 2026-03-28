@@ -7,13 +7,21 @@ public class AssetValidation : ModuleRules
 	public AssetValidation(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		OptimizeCode = CodeOptimization.Always;
 		bUseUnity = false;
 		
 		PrivateDefinitions.AddRange(new string[]
 		{
             "WITH_ASSET_VALIDATION_TESTS=1"
 		});
+		
+		if (Target.Version.MinorVersion >= 5)
+		{
+			PrivateDefinitions.Add("AUTOTEST_APPLICATION_MASK=EAutomationTestFlags_ApplicationContextMask");
+		}
+		else
+		{
+			PrivateDefinitions.Add("AUTOTEST_APPLICATION_MASK=EAutomationTestFlags::ApplicationContextMask");
+		}
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -53,11 +61,12 @@ public class AssetValidation : ModuleRules
 				"StructUtils", 
 				"MessageLog",
 				"BlueprintGraph", 
-				"ScriptPlugin",
+				// "ScriptPlugin",
 				"AssetTools", 
 				"AssetReferenceRestrictions", 
 				"Blutility",
-				"AssetManagerEditor",
+				"AssetManagerEditor", 
+				// "ScriptPlugin",
 			}
 		);
 	}

@@ -3,6 +3,7 @@
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 #include "InstancedStruct.h"
+#include "StructUtils/InstancedStruct.h"
 
 #include "StructValidatorTests.generated.h"
 
@@ -277,7 +278,7 @@ class UValidationTestObject_DirectoryPath: public UObject
 	{
 		ContentDirPath.Path = TEXT("/Game");
 		InvalidDirPath.Path = TEXT("/Game/Temp/Temp/Temp/+-=*");
-		EmptyPathArray.AddDefaulted_GetRef();
+		(void)EmptyPathArray.AddDefaulted_GetRef();
 	}
 
 	UPROPERTY(EditAnywhere, meta = (Validate))
@@ -315,7 +316,7 @@ class UValidationTestObject_FilePath: public UObject
 	{
 		ValidFilePath.FilePath = TEXT("/Engine/WorldPartition/WorldPartitionUnitTest");
 		InvalidFilePath.FilePath = TEXT("/Engine/Temp/Temp/Temp/SomeAsset");
-		EmptyPathArray.AddDefaulted_GetRef();
+		(void)EmptyPathArray.AddDefaulted_GetRef();
 	}
 
 	UPROPERTY(EditAnywhere, meta = (Validate))

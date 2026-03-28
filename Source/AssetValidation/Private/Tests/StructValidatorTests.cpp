@@ -5,6 +5,7 @@
 #include "PropertyValidatorSubsystem.h"
 #include "PropertyValidatorTests.h"
 #include "AutomationHelpers.h"
+#include "StructUtils/InstancedStruct.h"
 
 using UE::AssetValidation::AutomationFlags;
 

@@ -27,7 +27,7 @@ public:
 	static bool IsPackageAlreadyLoaded(const FName& PackageName);
 	
 	//~Begin EditorValidatorSubsystem interface
-	virtual int32 ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
+	virtual int32 ValidateAssetsWithSettings(const TArray<FAssetData>& AssetDataList, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;
 	virtual EDataValidationResult IsAssetValidWithContext(const FAssetData& AssetData, FDataValidationContext& InContext) const override;
 	virtual EDataValidationResult IsObjectValidWithContext(UObject* InAsset, FDataValidationContext& InContext) const override;
 	virtual EDataValidationResult ValidateChangelist(UDataValidationChangelist* InChangelist, const FValidateAssetsSettings& InSettings, FValidateAssetsResults& OutResults) const override;

@@ -2,7 +2,6 @@
 
 #include "AssetValidationDefines.h"
 #include "AssetValidationStatics.h"
-#include "ScriptBlueprint.h"
 
 #define LOCTEXT_NAMESPACE "AssetValidation"
 
@@ -23,7 +22,7 @@ bool UAssetValidator_TickFunction::CanValidateAsset_Implementation(const FAssetD
 		return false;
 	}
 
-	if (const UScriptBlueprint* Blueprint = Cast<UScriptBlueprint>(InObject))
+	if (const UBlueprint* Blueprint = Cast<UBlueprint>(InObject))
 	{
 		const UObject* DefaultObject = Blueprint->GeneratedClass->GetDefaultObject();
 		if (DefaultObject->IsA<AActor>() || DefaultObject->IsA<UActorComponent>())
