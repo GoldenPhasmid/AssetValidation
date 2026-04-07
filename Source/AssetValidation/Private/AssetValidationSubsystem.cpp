@@ -29,20 +29,24 @@ UAssetValidationSubsystem::UAssetValidationSubsystem()
 
 void UAssetValidationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	Super::Initialize(Collection);
-
-	ForEachEnabledValidator([this](UEditorValidatorBase* EditorValidator)
+	// add callback BEFORE parent class so we're called AFTER base class. YES
+	FCoreDelegates::OnPostEngineInit.AddWeakLambda(this, [this]
 	{
-		if (UAssetValidator* AssetValidator = Cast<UAssetValidator>(EditorValidator))
+		ForEachEnabledValidator([this](UEditorValidatorBase* EditorValidator)
 		{
-			if (AssetValidator->CanValidateActors())
+			if (UAssetValidator* AssetValidator = Cast<UAssetValidator>(EditorValidator))
 			{
-				ActorValidators.Add(AssetValidator);
+				if (AssetValidator->CanValidateActors())
+				{
+					ActorValidators.Add(AssetValidator);
+				}
 			}
-		}
 
-		return true;
+			return true;
+		});
 	});
+	
+	Super::Initialize(Collection);
 }
 
 void UAssetValidationSubsystem::Deinitialize()
